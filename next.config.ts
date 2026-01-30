@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  turbopack: {
+    root: "/home/arnecronomica/Utilities/Projects/inspireadminv2",
+  },
 };
 
 export default nextConfig;

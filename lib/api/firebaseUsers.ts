@@ -25,6 +25,8 @@ const buildQueryString = (params: GetUsersParams): string => {
   if (params.kycStatus) queryParams.append("kycStatus", params.kycStatus);
   if (params.sortBy) queryParams.append("sortBy", params.sortBy);
   if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
+  if (params.agent === true) queryParams.append("agent", "true");
+  if (params.agent === false) queryParams.append("agent", "false");
   return queryParams.toString();
 };
 

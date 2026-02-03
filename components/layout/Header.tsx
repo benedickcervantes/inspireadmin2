@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Button, Stack } from "rsuite";
+import HeaderDrawers from "./HeaderDrawers";
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
@@ -29,57 +30,78 @@ const Icons = {
 };
 
 export default function Header() {
+  const [sessionsDrawerOpen, setSessionsDrawerOpen] = useState(false);
+  const [requestsDrawerOpen, setRequestsDrawerOpen] = useState(false);
+  const [reviewsDrawerOpen, setReviewsDrawerOpen] = useState(false);
+
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[var(--surface-elevated)] border border-[var(--border)] flex items-center justify-center text-xs font-semibold text-[var(--primary)]">
-            IA
+    <>
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[var(--surface-elevated)] border border-[var(--border)] flex items-center justify-center text-xs font-semibold text-[var(--primary)]">
+              IA
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-[var(--text-primary)]">Dashboard Overview</div>
+              <div className="text-xs text-[var(--text-muted)]">Updated a few seconds ago</div>
+            </div>
+            <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-accent)] bg-[var(--primary-soft)] px-2 py-0.5 text-[11px] text-[var(--primary)] font-medium">
+              Active
+            </span>
           </div>
-          <div>
-            <div className="text-sm font-semibold text-[var(--text-primary)]">Dashboard Overview</div>
-            <div className="text-xs text-[var(--text-muted)]">Updated a few seconds ago</div>
-          </div>
-          <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-accent)] bg-[var(--primary-soft)] px-2 py-0.5 text-[11px] text-[var(--primary)] font-medium">
-            Active
-          </span>
+
+          <Stack direction="row" spacing={8} className="flex-wrap">
+            <Button size="sm" appearance="default" className="!h-8 !px-3 !rounded-md !text-xs !text-[var(--text-secondary)] !border-[var(--border)] !bg-[var(--surface)] !shadow-none hover:!bg-[var(--surface-hover)] hover:!border-[var(--border-strong)]">
+              <span className="flex items-center gap-2">
+                <Icons.Calendar className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                Feb 2025
+                <Icons.ChevronDown className="w-3 h-3 text-[var(--text-muted)]" />
+              </span>
+            </Button>
+            <Button size="sm" appearance="primary" className="!h-8 !px-3 !rounded-md !bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] hover:!shadow-[var(--shadow-glow-cyan)]">
+              <span className="flex items-center gap-2">
+                <Icons.Download className="w-3.5 h-3.5" />
+                Export
+              </span>
+            </Button>
+          </Stack>
         </div>
 
-        <Stack direction="row" spacing={8} className="flex-wrap">
-          <Button size="sm" appearance="default" className="!h-8 !px-3 !rounded-md !text-xs !text-[var(--text-secondary)] !border-[var(--border)] !bg-[var(--surface)] !shadow-none hover:!bg-[var(--surface-hover)] hover:!border-[var(--border-strong)]">
-            <span className="flex items-center gap-2">
-              <Icons.Calendar className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-              Feb 2025
-              <Icons.ChevronDown className="w-3 h-3 text-[var(--text-muted)]" />
-            </span>
-          </Button>
-          <Button size="sm" appearance="primary" className="!h-8 !px-3 !rounded-md !bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] hover:!shadow-[var(--shadow-glow-cyan)]">
-            <span className="flex items-center gap-2">
-              <Icons.Download className="w-3.5 h-3.5" />
-              Export
-            </span>
-          </Button>
-        </Stack>
+        <div className="grid grid-cols-3 gap-2">
+          <div 
+            onClick={() => setSessionsDrawerOpen(true)}
+            className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-2 transition-all hover:border-[var(--border)] hover:bg-[var(--surface-hover)] hover:scale-[1.02] cursor-pointer"
+          >
+            <div className="text-[11px] text-[var(--text-muted)]">Active Sessions</div>
+            <div className="text-[13px] font-semibold text-[var(--text-primary)]">128</div>
+          </div>
+          <div 
+            onClick={() => setRequestsDrawerOpen(true)}
+            className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-2 transition-all hover:border-[var(--border)] hover:bg-[var(--surface-hover)] hover:scale-[1.02] cursor-pointer"
+          >
+            <div className="text-[11px] text-[var(--text-muted)]">New Requests</div>
+            <div className="text-[13px] font-semibold text-[var(--primary)]">24</div>
+          </div>
+          <div 
+            onClick={() => setReviewsDrawerOpen(true)}
+            className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-2 transition-all hover:border-[var(--border)] hover:bg-[var(--surface-hover)] hover:scale-[1.02] cursor-pointer"
+          >
+            <div className="text-[11px] text-[var(--text-muted)]">Pending Reviews</div>
+            <div className="text-[13px] font-semibold text-[var(--accent)]">8</div>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-2 transition-all hover:border-[var(--border)] hover:bg-[var(--surface-hover)]">
-          <div className="text-[11px] text-[var(--text-muted)]">Last Sync</div>
-          <div className="text-[13px] font-semibold text-[var(--text-primary)]">Just now</div>
-        </div>
-        <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-2 transition-all hover:border-[var(--border)] hover:bg-[var(--surface-hover)]">
-          <div className="text-[11px] text-[var(--text-muted)]">Active Sessions</div>
-          <div className="text-[13px] font-semibold text-[var(--text-primary)]">128</div>
-        </div>
-        <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-2 transition-all hover:border-[var(--border)] hover:bg-[var(--surface-hover)]">
-          <div className="text-[11px] text-[var(--text-muted)]">New Requests</div>
-          <div className="text-[13px] font-semibold text-[var(--primary)]">24</div>
-        </div>
-        <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-soft)] px-3 py-2 transition-all hover:border-[var(--border)] hover:bg-[var(--surface-hover)]">
-          <div className="text-[11px] text-[var(--text-muted)]">Pending Reviews</div>
-          <div className="text-[13px] font-semibold text-[var(--accent)]">8</div>
-        </div>
-      </div>
-    </div>
+      {/* Drawers */}
+      <HeaderDrawers
+        sessionsDrawerOpen={sessionsDrawerOpen}
+        setSessionsDrawerOpen={setSessionsDrawerOpen}
+        requestsDrawerOpen={requestsDrawerOpen}
+        setRequestsDrawerOpen={setRequestsDrawerOpen}
+        reviewsDrawerOpen={reviewsDrawerOpen}
+        setReviewsDrawerOpen={setReviewsDrawerOpen}
+      />
+    </>
   );
 }

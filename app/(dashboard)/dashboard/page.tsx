@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
+import { Drawer } from "rsuite";
 import Header from "@/components/layout/Header";
 import StatsCard from "./_components/StatsCard";
 import TransactionTable, { Transaction, TransactionStatus } from "./_components/TransactionTable";
@@ -320,7 +321,100 @@ const buildDashboardInsights = (users: User[]) => {
   };
 };
 
+type IconProps = React.SVGProps<SVGSVGElement>;
+
+const Icons = {
+  Users: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
+  Shield: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  ),
+  TrendingUp: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+      <polyline points="17 6 23 6 23 12" />
+    </svg>
+  ),
+  TestTube: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5s-2.5-1.1-2.5-2.5V2" />
+      <path d="M8.5 2h7" />
+      <path d="M14.5 16h-5" />
+    </svg>
+  ),
+  Play: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polygon points="5 3 19 12 5 21 5 3" />
+    </svg>
+  ),
+  X: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  ),
+  DollarSign: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="12" y1="1" x2="12" y2="23" />
+      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    </svg>
+  ),
+  Wallet: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+      <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+      <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+    </svg>
+  ),
+  PiggyBank: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2h0V5z" />
+      <path d="M2 9v1c0 1.1.9 2 2 2h1" />
+      <path d="M16 11h0" />
+    </svg>
+  ),
+  Clock: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  ),
+  CheckCircle: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  ),
+  AlertCircle: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+  ),
+  Calendar: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  ),
+};
+
 export default function Dashboard() {
+  const [usersDrawerOpen, setUsersDrawerOpen] = useState(false);
+  const [depositsDrawerOpen, setDepositsDrawerOpen] = useState(false);
+  const [balanceDrawerOpen, setBalanceDrawerOpen] = useState(false);
+  
   const { data: summaryData, isLoading: isSummaryLoading } = useQuery({
     queryKey: ["dashboard-summary"],
     queryFn: getDashboardSummary
@@ -352,6 +446,99 @@ export default function Dashboard() {
 
   const statsLoading = isSummaryLoading;
 
+  // Calculate user type breakdown
+  const userBreakdown = useMemo(() => {
+    const agents = users.filter(u => u.agent === true).length;
+    const investors = users.filter(u => u.agent !== true).length;
+    const demoAccounts = users.filter(u => {
+      const email = (u.emailAddress || '').toLowerCase();
+      return email.includes('demo') || email.includes('test+demo');
+    }).length;
+    const testAccounts = users.filter(u => {
+      const email = (u.emailAddress || '').toLowerCase();
+      return email.includes('test') && !email.includes('demo');
+    }).length;
+
+    return {
+      agents,
+      investors,
+      demoAccounts,
+      testAccounts,
+      total: totalUsers
+    };
+  }, [users, totalUsers]);
+
+  // Calculate time deposits breakdown
+  const depositsBreakdown = useMemo(() => {
+    let activeDeposits = 0;
+    let completedDeposits = 0;
+    let pendingDeposits = 0;
+    let totalAmount = 0;
+
+    users.forEach(user => {
+      const inspireAuto = user.subcollections?.inspireAuto;
+      if (Array.isArray(inspireAuto)) {
+        inspireAuto.forEach((contract: any) => {
+          const amount = typeof contract.amount === 'number' ? contract.amount : 0;
+          totalAmount += amount;
+          
+          const status = (contract.status || '').toLowerCase();
+          const isActive = contract.isActive;
+          
+          if (status.includes('active') || isActive === true) {
+            activeDeposits++;
+          } else if (status.includes('complete') || status.includes('matured')) {
+            completedDeposits++;
+          } else if (status.includes('pend')) {
+            pendingDeposits++;
+          }
+        });
+      }
+    });
+
+    return {
+      active: activeDeposits,
+      completed: completedDeposits,
+      pending: pendingDeposits,
+      total: activeDeposits + completedDeposits + pendingDeposits,
+      totalAmount
+    };
+  }, [users]);
+
+  // Calculate balance breakdown
+  const balanceBreakdown = useMemo(() => {
+    let totalWallet = 0;
+    let totalAvailable = 0;
+    let usersWithBalance = 0;
+    let highestBalance = 0;
+    let lowestBalance = Infinity;
+
+    users.forEach(user => {
+      const wallet = user.walletAmount || 0;
+      const available = user.availBalanceAmount || 0;
+      
+      totalWallet += wallet;
+      totalAvailable += available;
+      
+      if (wallet > 0) {
+        usersWithBalance++;
+        if (wallet > highestBalance) highestBalance = wallet;
+        if (wallet < lowestBalance) lowestBalance = wallet;
+      }
+    });
+
+    const averageBalance = usersWithBalance > 0 ? totalWallet / usersWithBalance : 0;
+
+    return {
+      totalWallet,
+      totalAvailable,
+      usersWithBalance,
+      averageBalance,
+      highestBalance,
+      lowestBalance: lowestBalance === Infinity ? 0 : lowestBalance
+    };
+  }, [users]);
+
   return (
     <MotionDiv
       className="flex w-full flex-col gap-4"
@@ -382,6 +569,7 @@ export default function Dashboard() {
           trendAmount={formatSigned(depositTrend?.diff || 0, formatCurrency)}
           trendText={statsLoading ? "updating" : "from last month"}
           index={0}
+          onClick={() => setDepositsDrawerOpen(true)}
         />
         <StatsCard
           title="Total Available Balance"
@@ -390,6 +578,7 @@ export default function Dashboard() {
           trendAmount={formatSigned(balanceTrend?.diff || 0, formatCurrency)}
           trendText={statsLoading ? "updating" : "from last month"}
           index={1}
+          onClick={() => setBalanceDrawerOpen(true)}
         />
         <StatsCard
           title="Total Users"
@@ -398,6 +587,7 @@ export default function Dashboard() {
           trendAmount={formatSigned(userTrend?.diff || 0, (value) => value.toLocaleString())}
           trendText={statsLoading ? "updating" : "from last month"}
           index={2}
+          onClick={() => setUsersDrawerOpen(true)}
         />
       </MotionSection>
 
@@ -431,7 +621,7 @@ export default function Dashboard() {
           transition={{ delay: 0.5, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         >
           <OutflowChart
-            title="Activity Mix"
+            title="IWALLET Activities"
             items={activityItems}
             total={hasActivity ? activityTotal : undefined}
             changePercent={hasActivity ? activityChange : undefined}
@@ -439,6 +629,530 @@ export default function Dashboard() {
           />
         </motion.div>
       </motion.section>
+
+      {/* Users Breakdown Drawer */}
+      <Drawer
+        open={usersDrawerOpen}
+        onClose={() => setUsersDrawerOpen(false)}
+        placement="right"
+        size="sm"
+        className="!w-[400px] dark-drawer"
+      >
+        <Drawer.Header className="!p-0 !border-b-0">
+          <div className="flex items-center justify-between p-4 border-b border-[var(--border-subtle)]">
+            <h3 className="text-base font-semibold text-[var(--text-primary)]">User Breakdown</h3>
+            <button
+              onClick={() => setUsersDrawerOpen(false)}
+              className="w-8 h-8 rounded-lg hover:bg-[var(--surface-hover)] hover:scale-110 hover:rotate-90 flex items-center justify-center text-[var(--text-muted)] transition-all duration-200"
+            >
+              <Icons.X className="w-4 h-4" />
+            </button>
+          </div>
+        </Drawer.Header>
+        <Drawer.Body className="!p-4 !bg-[var(--surface)]">
+          <div className="space-y-3">
+            {/* Total Users Card */}
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-gradient-to-br from-[var(--primary-soft)] to-[var(--surface)] p-4 shadow-[var(--shadow-md)]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">Total Users</div>
+                  <div className="text-3xl font-bold text-[var(--text-primary)] mt-1">
+                    {userBreakdown.total.toLocaleString()}
+                  </div>
+                  <div className="text-xs text-[var(--text-muted)] mt-1">
+                    <span className="font-semibold text-[var(--primary)]">{formatSigned(userTrend?.diff || 0, (value) => value.toLocaleString())}</span> from last month
+                  </div>
+                </div>
+                <div className="w-14 h-14 rounded-xl bg-[var(--primary-soft)] border border-[var(--border-accent)] flex items-center justify-center">
+                  <Icons.Users className="w-7 h-7 text-[var(--primary)]" />
+                </div>
+              </div>
+            </div>
+
+            {/* User Type Breakdown */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-1">User Types</h4>
+              
+              {/* Investors */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[var(--accent-soft)] border border-[var(--border-purple)] flex items-center justify-center">
+                      <Icons.TrendingUp className="w-5 h-5 text-[var(--accent)]" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--text-primary)]">Investors</div>
+                      <div className="text-xs text-[var(--text-muted)]">Regular users</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xl font-bold text-[var(--text-primary)]">
+                      {userBreakdown.investors.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-[var(--text-muted)]">
+                      {userBreakdown.total > 0 ? Math.round((userBreakdown.investors / userBreakdown.total) * 100) : 0}%
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Agents */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[var(--primary-soft)] border border-[var(--border-accent)] flex items-center justify-center">
+                      <Icons.Shield className="w-5 h-5 text-[var(--primary)]" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--text-primary)]">Agents</div>
+                      <div className="text-xs text-[var(--text-muted)]">Verified agents</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xl font-bold text-[var(--text-primary)]">
+                      {userBreakdown.agents.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-[var(--text-muted)]">
+                      {userBreakdown.total > 0 ? Math.round((userBreakdown.agents / userBreakdown.total) * 100) : 0}%
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Demo Accounts */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[var(--warning-soft)] border border-[rgba(245,158,11,0.3)] flex items-center justify-center">
+                      <Icons.Play className="w-5 h-5 text-[var(--warning)]" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--text-primary)]">Demo Accounts</div>
+                      <div className="text-xs text-[var(--text-muted)]">Testing accounts</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xl font-bold text-[var(--text-primary)]">
+                      {userBreakdown.demoAccounts.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-[var(--text-muted)]">
+                      {userBreakdown.total > 0 ? Math.round((userBreakdown.demoAccounts / userBreakdown.total) * 100) : 0}%
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Test Accounts */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 }}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[var(--surface-elevated)] border border-[var(--border)] flex items-center justify-center">
+                      <Icons.TestTube className="w-5 h-5 text-[var(--text-muted)]" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--text-primary)]">Test Accounts</div>
+                      <div className="text-xs text-[var(--text-muted)]">Development testing</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xl font-bold text-[var(--text-primary)]">
+                      {userBreakdown.testAccounts.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-[var(--text-muted)]">
+                      {userBreakdown.total > 0 ? Math.round((userBreakdown.testAccounts / userBreakdown.total) * 100) : 0}%
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Summary Stats */}
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4 mt-4">
+              <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">Quick Stats</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--text-secondary)]">Active Users</span>
+                  <span className="font-semibold text-[var(--text-primary)]">
+                    {(userBreakdown.investors + userBreakdown.agents).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--text-secondary)]">Test/Demo</span>
+                  <span className="font-semibold text-[var(--text-primary)]">
+                    {(userBreakdown.demoAccounts + userBreakdown.testAccounts).toLocaleString()}
+                  </span>
+                </div>
+                <div className="h-px bg-[var(--border-subtle)] my-2" />
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--text-secondary)]">Agent Ratio</span>
+                  <span className="font-semibold text-[var(--primary)]">
+                    {userBreakdown.total > 0 
+                      ? `1:${Math.round(userBreakdown.investors / Math.max(userBreakdown.agents, 1))}`
+                      : '0:0'
+                    }
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Drawer.Body>
+      </Drawer>
+
+      {/* Time Deposits Breakdown Drawer */}
+      <Drawer
+        open={depositsDrawerOpen}
+        onClose={() => setDepositsDrawerOpen(false)}
+        placement="right"
+        size="sm"
+        className="!w-[400px] dark-drawer"
+      >
+        <Drawer.Header className="!p-0 !border-b-0">
+          <div className="flex items-center justify-between p-4 border-b border-[var(--border-subtle)]">
+            <h3 className="text-base font-semibold text-[var(--text-primary)]">Time Deposits Breakdown</h3>
+            <button
+              onClick={() => setDepositsDrawerOpen(false)}
+              className="w-8 h-8 rounded-lg hover:bg-[var(--surface-hover)] hover:scale-110 hover:rotate-90 flex items-center justify-center text-[var(--text-muted)] transition-all duration-200"
+            >
+              <Icons.X className="w-4 h-4" />
+            </button>
+          </div>
+        </Drawer.Header>
+        <Drawer.Body className="!p-4 !bg-[var(--surface)]">
+          <div className="space-y-3">
+            {/* Total Deposits Card */}
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-gradient-to-br from-[var(--primary-soft)] to-[var(--surface)] p-4 shadow-[var(--shadow-md)]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">Total Time Deposits</div>
+                  <div className="text-2xl font-bold text-[var(--text-primary)] mt-1">
+                    {formatCurrency(totalTimeDeposits)}
+                  </div>
+                  <div className="text-xs text-[var(--text-muted)] mt-1">
+                    <span className="font-semibold text-[var(--primary)]">{formatSigned(depositTrend?.diff || 0, formatCurrency)}</span> from last month
+                  </div>
+                </div>
+                <div className="w-14 h-14 rounded-xl bg-[var(--primary-soft)] border border-[var(--border-accent)] flex items-center justify-center">
+                  <Icons.PiggyBank className="w-7 h-7 text-[var(--primary)]" />
+                </div>
+              </div>
+            </div>
+
+            {/* Deposit Status Breakdown */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-1">Deposit Status</h4>
+              
+              {/* Active Deposits */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[var(--success-soft)] border border-[rgba(34,197,94,0.3)] flex items-center justify-center">
+                      <Icons.CheckCircle className="w-5 h-5 text-[var(--success)]" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--text-primary)]">Active Deposits</div>
+                      <div className="text-xs text-[var(--text-muted)]">Currently running</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xl font-bold text-[var(--text-primary)]">
+                      {depositsBreakdown.active.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-[var(--text-muted)]">
+                      {depositsBreakdown.total > 0 ? Math.round((depositsBreakdown.active / depositsBreakdown.total) * 100) : 0}%
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Completed Deposits */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[var(--primary-soft)] border border-[var(--border-accent)] flex items-center justify-center">
+                      <Icons.CheckCircle className="w-5 h-5 text-[var(--primary)]" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--text-primary)]">Completed</div>
+                      <div className="text-xs text-[var(--text-muted)]">Matured deposits</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xl font-bold text-[var(--text-primary)]">
+                      {depositsBreakdown.completed.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-[var(--text-muted)]">
+                      {depositsBreakdown.total > 0 ? Math.round((depositsBreakdown.completed / depositsBreakdown.total) * 100) : 0}%
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Pending Deposits */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[var(--warning-soft)] border border-[rgba(245,158,11,0.3)] flex items-center justify-center">
+                      <Icons.Clock className="w-5 h-5 text-[var(--warning)]" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--text-primary)]">Pending</div>
+                      <div className="text-xs text-[var(--text-muted)]">Awaiting approval</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xl font-bold text-[var(--text-primary)]">
+                      {depositsBreakdown.pending.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-[var(--text-muted)]">
+                      {depositsBreakdown.total > 0 ? Math.round((depositsBreakdown.pending / depositsBreakdown.total) * 100) : 0}%
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Summary Stats */}
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4 mt-4">
+              <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">Quick Stats</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--text-secondary)]">Total Contracts</span>
+                  <span className="font-semibold text-[var(--text-primary)]">
+                    {depositsBreakdown.total.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--text-secondary)]">Total Amount</span>
+                  <span className="font-semibold text-[var(--text-primary)]">
+                    {formatCurrency(depositsBreakdown.totalAmount)}
+                  </span>
+                </div>
+                <div className="h-px bg-[var(--border-subtle)] my-2" />
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--text-secondary)]">Avg per Contract</span>
+                  <span className="font-semibold text-[var(--primary)]">
+                    {depositsBreakdown.total > 0 
+                      ? formatCurrency(depositsBreakdown.totalAmount / depositsBreakdown.total)
+                      : formatCurrency(0)
+                    }
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Drawer.Body>
+      </Drawer>
+
+      {/* Available Balance Breakdown Drawer */}
+      <Drawer
+        open={balanceDrawerOpen}
+        onClose={() => setBalanceDrawerOpen(false)}
+        placement="right"
+        size="sm"
+        className="!w-[400px] dark-drawer"
+      >
+        <Drawer.Header className="!p-0 !border-b-0">
+          <div className="flex items-center justify-between p-4 border-b border-[var(--border-subtle)]">
+            <h3 className="text-base font-semibold text-[var(--text-primary)]">Balance Breakdown</h3>
+            <button
+              onClick={() => setBalanceDrawerOpen(false)}
+              className="w-8 h-8 rounded-lg hover:bg-[var(--surface-hover)] hover:scale-110 hover:rotate-90 flex items-center justify-center text-[var(--text-muted)] transition-all duration-200"
+            >
+              <Icons.X className="w-4 h-4" />
+            </button>
+          </div>
+        </Drawer.Header>
+        <Drawer.Body className="!p-4 !bg-[var(--surface)]">
+          <div className="space-y-3">
+            {/* Total Balance Card */}
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-gradient-to-br from-[var(--success-soft)] to-[var(--surface)] p-4 shadow-[var(--shadow-md)]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">Total Available Balance</div>
+                  <div className="text-2xl font-bold text-[var(--text-primary)] mt-1">
+                    {formatCurrency(totalAvailBalance)}
+                  </div>
+                  <div className="text-xs text-[var(--text-muted)] mt-1">
+                    <span className="font-semibold text-[var(--success)]">{formatSigned(balanceTrend?.diff || 0, formatCurrency)}</span> from last month
+                  </div>
+                </div>
+                <div className="w-14 h-14 rounded-xl bg-[var(--success-soft)] border border-[rgba(34,197,94,0.3)] flex items-center justify-center">
+                  <Icons.Wallet className="w-7 h-7 text-[var(--success)]" />
+                </div>
+              </div>
+            </div>
+
+            {/* Balance Metrics */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide px-1">Balance Metrics</h4>
+              
+              {/* Total Wallet Balance */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[var(--primary-soft)] border border-[var(--border-accent)] flex items-center justify-center">
+                      <Icons.Wallet className="w-5 h-5 text-[var(--primary)]" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--text-primary)]">Total Wallet</div>
+                      <div className="text-xs text-[var(--text-muted)]">All user wallets</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-[var(--text-primary)]">
+                      {formatCurrency(balanceBreakdown.totalWallet)}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Average Balance */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[var(--accent-soft)] border border-[var(--border-purple)] flex items-center justify-center">
+                      <Icons.DollarSign className="w-5 h-5 text-[var(--accent)]" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--text-primary)]">Average Balance</div>
+                      <div className="text-xs text-[var(--text-muted)]">Per active user</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-[var(--text-primary)]">
+                      {formatCurrency(balanceBreakdown.averageBalance)}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Highest Balance */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[var(--success-soft)] border border-[rgba(34,197,94,0.3)] flex items-center justify-center">
+                      <Icons.TrendingUp className="w-5 h-5 text-[var(--success)]" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--text-primary)]">Highest Balance</div>
+                      <div className="text-xs text-[var(--text-muted)]">Top user wallet</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-[var(--text-primary)]">
+                      {formatCurrency(balanceBreakdown.highestBalance)}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Lowest Balance */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 }}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[var(--surface-elevated)] border border-[var(--border)] flex items-center justify-center">
+                      <Icons.AlertCircle className="w-5 h-5 text-[var(--text-muted)]" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--text-primary)]">Lowest Balance</div>
+                      <div className="text-xs text-[var(--text-muted)]">Minimum active</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-[var(--text-primary)]">
+                      {formatCurrency(balanceBreakdown.lowestBalance)}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Summary Stats */}
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4 mt-4">
+              <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">Quick Stats</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--text-secondary)]">Users with Balance</span>
+                  <span className="font-semibold text-[var(--text-primary)]">
+                    {balanceBreakdown.usersWithBalance.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--text-secondary)]">Available Balance</span>
+                  <span className="font-semibold text-[var(--text-primary)]">
+                    {formatCurrency(balanceBreakdown.totalAvailable)}
+                  </span>
+                </div>
+                <div className="h-px bg-[var(--border-subtle)] my-2" />
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--text-secondary)]">Balance Coverage</span>
+                  <span className="font-semibold text-[var(--success)]">
+                    {totalUsers > 0 
+                      ? `${Math.round((balanceBreakdown.usersWithBalance / totalUsers) * 100)}%`
+                      : '0%'
+                    }
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Drawer.Body>
+      </Drawer>
     </MotionDiv>
   );
 }

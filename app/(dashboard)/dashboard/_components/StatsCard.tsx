@@ -34,9 +34,10 @@ interface StatsCardProps {
   trendText: string;
   icon?: React.ReactNode;
   index?: number;
+  onClick?: () => void;
 }
 
-export default function StatsCard({ title, amount, percentage, trendAmount, trendText, icon, index = 0 }: StatsCardProps) {
+export default function StatsCard({ title, amount, percentage, trendAmount, trendText, icon, index = 0, onClick }: StatsCardProps) {
   const isPositive = !percentage.trim().startsWith("-");
 
   // Mouse parallax effect
@@ -84,7 +85,8 @@ export default function StatsCard({ title, amount, percentage, trendAmount, tren
         transition: smoothSpring
       }}
       whileTap={{ scale: 0.99 }}
-      className="group relative bg-[var(--surface)] rounded-[12px] border border-[var(--border-subtle)] shadow-[var(--shadow-card)] p-3 flex items-center justify-between gap-4 transition-colors duration-300 hover:border-[var(--border)] hover:shadow-[var(--shadow-glow-cyan)] overflow-hidden cursor-default"
+      onClick={onClick}
+      className={`group relative bg-[var(--surface)] rounded-[12px] border border-[var(--border-subtle)] shadow-[var(--shadow-card)] p-3 flex items-center justify-between gap-4 transition-colors duration-300 hover:border-[var(--border)] hover:shadow-[var(--shadow-glow-cyan)] overflow-hidden ${onClick ? 'cursor-pointer' : 'cursor-default'}`}
     >
       {/* Animated gradient overlay on hover */}
       <motion.div

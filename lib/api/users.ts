@@ -15,6 +15,7 @@ export interface User {
   agentNumber?: string;
   agentCode?: string;
   refferedAgent?: string;
+  company?: string;
   status?: string;
   kycStatus?: string;
   kycApproved?: boolean;
@@ -113,6 +114,8 @@ export interface GetUsersParams {
   kycStatus?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  /** When true: agents only. When false: non-agents (account/investor). When undefined: all. */
+  agent?: boolean;
 }
 
 const getAuthToken = (): string | null => {
@@ -140,6 +143,8 @@ export const getUsers = async (params: GetUsersParams = {}): Promise<UsersRespon
   if (params.kycStatus) queryParams.append('kycStatus', params.kycStatus);
   if (params.sortBy) queryParams.append('sortBy', params.sortBy);
   if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+  if (params.agent === true) queryParams.append('agent', 'true');
+  if (params.agent === false) queryParams.append('agent', 'false');
 
   const queryString = queryParams.toString();
   const url = `${API_BASE_URL}/api/users${queryString ? `?${queryString}` : ''}`;

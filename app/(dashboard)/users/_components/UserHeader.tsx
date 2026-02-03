@@ -29,7 +29,13 @@ const Icons = {
   )
 };
 
-export default function UserHeader() {
+interface UserHeaderProps {
+  totalCount?: number | null;
+}
+
+export default function UserHeader({ totalCount }: UserHeaderProps) {
+  const displayCount = totalCount != null ? totalCount.toLocaleString() : "—";
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
@@ -85,7 +91,7 @@ export default function UserHeader() {
                 ease: "easeInOut"
               }}
             />
-            5,203 users
+            {displayCount} users
           </motion.span>
         </div>
 

@@ -4388,3 +4388,88 @@ body>div:not(#__next):not(.app-root) .rs-dropdown-menu .rs-dropdown-item-active 
 [data-theme="light"] * {
   transition-timing-function: ease-out;
 }
+
+/* ==========================================================================
+   DROPDOWN PORTAL RENDERING - Render Outside Container
+   ========================================================================== */
+
+/* Force dropdowns to render in body portal with highest z-index */
+.user-filter-dropdown .rs-dropdown-menu,
+.user-filter-dropdown .rs-picker-menu {
+  position: fixed !important;
+  z-index: 99999 !important;
+}
+
+/* Ensure dropdown button container doesn't clip */
+.user-filter-dropdown {
+  overflow: visible !important;
+  position: relative !important;
+  z-index: 1000 !important;
+}
+
+/* Motion div containing dropdowns should not clip */
+motion-div:has(.user-filter-dropdown) {
+  overflow: visible !important;
+  z-index: 1000 !important;
+}
+
+/* Stack container should not clip */
+.rs-stack:has(.user-filter-dropdown) {
+  overflow: visible !important;
+  z-index: 1000 !important;
+}
+
+/* Filter container should allow overflow */
+[class*="Filters"] {
+  overflow: visible !important;
+}
+
+/* Ensure dropdown menus render above everything */
+body > .rs-dropdown-menu,
+body > .rs-picker-menu,
+body > .rs-picker-popup,
+body > div[class*="rs-dropdown"],
+body > div[class*="rs-picker"] {
+  z-index: 99999 !important;
+  position: fixed !important;
+}
+
+/* Dropdown menu smooth appearance with higher z-index */
+.rs-dropdown-menu {
+  animation: dropdownSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  z-index: 99999 !important;
+}
+
+@keyframes dropdownSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Ensure tables and tabs stay below dropdowns */
+.rs-table-container,
+.rs-table,
+.rs-tabs,
+.rs-nav {
+  z-index: 1 !important;
+}
+
+/* Modal and drawer should be below dropdowns */
+.rs-modal-wrapper {
+  z-index: 1050 !important;
+}
+
+.rs-drawer-wrapper {
+  z-index: 1050 !important;
+}
+
+/* But dropdowns inside modals should still be on top */
+.rs-modal .rs-dropdown-menu,
+.rs-drawer .rs-dropdown-menu {
+  z-index: 99999 !important;
+}

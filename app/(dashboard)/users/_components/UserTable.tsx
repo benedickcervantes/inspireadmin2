@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from "motion/react";
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Table, Drawer, Button, Modal, Nav, Badge, Avatar, Divider, Progress, ButtonGroup, Loader, Pagination } from 'rsuite';
+import { Table, Drawer, Button, Modal, Nav, Badge, Avatar, Divider, Progress, ButtonGroup, Loader, Pagination, Dropdown } from 'rsuite';
 import { getFirebaseUserById, getFirebaseUsers } from '@/lib/api/firebaseUsers';
+import type { UserTypeTab } from './UserFilters';
 
 const { Column, HeaderCell, Cell } = Table;
 
@@ -103,6 +104,26 @@ const Icons = {
       <polyline points="12 6 12 12 16 14" />
     </svg>
   ),
+  User: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  ),
+  Plus: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  ),
+  Trash2: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
+  ),
 };
 
 interface Transaction {
@@ -124,6 +145,7 @@ interface User {
   lastName?: string;
   emailAddress?: string;
   accountNumber?: string;
+  company?: string;
   status?: string;
   kycStatus?: string;
   kycApproved?: boolean;
@@ -548,6 +570,26 @@ const AgentBadge = ({ isAgent, agentCode }: { isAgent?: boolean; agentCode?: str
     <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border bg-[var(--primary-soft)] text-[var(--primary)] border-[var(--border-accent)] text-[11px] font-medium w-fit">
       <Icons.Shield className="w-3 h-3" />
       Agent
+    </div>
+  );
+};
+
+const TypeBadge = ({ isAgent }: { isAgent?: boolean }) => {
+  const isAgentType = isAgent === true;
+
+  return (
+    <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${isAgentType ? 'bg-[var(--primary-soft)] text-[var(--primary)] border-[var(--border-accent)]' : 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--border-purple)]'} text-[11px] font-medium w-fit`}>
+      {isAgentType ? (
+        <>
+          <Icons.Shield className="w-3 h-3" />
+          Agent
+        </>
+      ) : (
+        <>
+          <Icons.TrendingUp className="w-3 h-3" />
+          Investor
+        </>
+      )}
     </div>
   );
 };
@@ -1255,7 +1297,7 @@ const UserDetailPanel = ({ user, onClose, onViewTransactions }: { user: User; on
 
         {/* Subcollections Info */}
         {subcollectionCount > 0 && (
-          <div className="bg-[var(--surface-soft)] rounded-xl p-3 border border-[var(--border-subtle)]">
+          <div className="bg-[var(--surface-soft)] rounded-xl p-3 mb-3 border border-[var(--border-subtle)]">
             <h5 className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-2">Data Overview</h5>
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <div className="flex justify-between">
@@ -1269,50 +1311,126 @@ const UserDetailPanel = ({ user, onClose, onViewTransactions }: { user: User; on
             </div>
           </div>
         )}
-      </div>
 
-      {/* Footer Actions */}
-      <div className="p-3 border-t border-[var(--border-subtle)] flex gap-2">
-        <div className="flex-1">
-          <Button size="sm" appearance="primary" block className="!bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] !rounded-lg hover:scale-[1.02] active:scale-[0.98] transition-transform">
-            Edit User
-          </Button>
-        </div>
-        <div className="flex-1">
-          <Button size="sm" appearance="default" block className="!rounded-lg !border-[var(--border)] !bg-[var(--surface-soft)] !text-[var(--text-secondary)] hover:!bg-[var(--surface-hover)] hover:scale-[1.02] active:scale-[0.98] transition-transform" onClick={onViewTransactions}>
-            View Transactions
-          </Button>
+        {/* Actions - below Data Overview (or below Balance Summary when no Data Overview) */}
+        <div className="mt-1">
+          <Dropdown
+            renderToggle={(props, ref) => (
+              <Button
+                {...props}
+                ref={ref}
+                size="sm"
+                appearance="primary"
+                block
+                className="!bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] !rounded-lg hover:scale-[1.02] active:scale-[0.98] transition-transform"
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <Icons.MoreHorizontal className="w-4 h-4" />
+                  Actions
+                </span>
+              </Button>
+            )}
+          >
+            <Dropdown.Item className="!text-xs" onSelect={onViewTransactions}>
+              <span className="flex items-center gap-2">
+                <Icons.Eye className="w-3.5 h-3.5" />
+                View Transactions
+              </span>
+            </Dropdown.Item>
+            <Dropdown.Item className="!text-xs" onSelect={() => {}}>
+              <span className="flex items-center gap-2">
+                <Icons.Phone className="w-3.5 h-3.5" />
+                Contact details
+              </span>
+            </Dropdown.Item>
+            <Dropdown.Item className="!text-xs" onSelect={() => {}}>
+              <span className="flex items-center gap-2">
+                <Icons.Shield className="w-3.5 h-3.5" />
+                Remove agent
+              </span>
+            </Dropdown.Item>
+            <Dropdown.Item className="!text-xs" onSelect={() => {}}>
+              <span className="flex items-center gap-2">
+                <Icons.User className="w-3.5 h-3.5" />
+                Assigned to me
+              </span>
+            </Dropdown.Item>
+            <Dropdown.Item className="!text-xs" onSelect={() => {}}>
+              <span className="flex items-center gap-2">
+                <Icons.Plus className="w-3.5 h-3.5" />
+                Add 10 points
+              </span>
+            </Dropdown.Item>
+            <Dropdown.Item className="!text-xs" onSelect={() => {}}>
+              <span className="flex items-center gap-2">
+                <Icons.Edit className="w-3.5 h-3.5" />
+                Edit
+              </span>
+            </Dropdown.Item>
+            <Dropdown.Item className="!text-xs !text-[var(--danger)]" onSelect={() => {}}>
+              <span className="flex items-center gap-2">
+                <Icons.Trash2 className="w-3.5 h-3.5" />
+                Delete user
+              </span>
+            </Dropdown.Item>
+          </Dropdown>
         </div>
       </div>
     </div>
   );
 };
 
-interface UserTableProps {
-  searchQuery?: string;
+function userTypeToAgent(userType: UserTypeTab): boolean | undefined {
+  if (userType === 'all') return undefined;
+  if (userType === 'agent') return true;
+  return false; // account | investor => non-agents
 }
 
-export default function UserTable({ searchQuery }: UserTableProps) {
+function filterUsersByType(users: User[], userType: UserTypeTab): User[] {
+  if (userType === 'all') return users;
+  if (userType === 'agent') return users.filter((u) => u.agent === true);
+  return users.filter((u) => u.agent !== true); // account | investor
+}
+
+interface UserTableProps {
+  searchQuery?: string;
+  userType?: UserTypeTab;
+  onTotalChange?: (total: number) => void;
+}
+
+export default function UserTable({ searchQuery, userType = 'all', onTotalChange }: UserTableProps) {
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
 
+  const agentParam = userTypeToAgent(userType);
+
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['firebase-users', { page, limit, searchQuery }],
+    queryKey: ['firebase-users', { page, limit, searchQuery, userType, agent: agentParam }],
     queryFn: () => getFirebaseUsers({
       page,
       limit,
       search: searchQuery || undefined,
+      agent: agentParam,
       sortBy: 'createdAt',
       sortOrder: 'desc'
     }),
     placeholderData: keepPreviousData,
   });
 
-  const users = (data?.data?.users ?? []) as User[];
+  const rawUsers = (data?.data?.users ?? []) as User[];
+  const users = filterUsersByType(rawUsers, userType);
   const total = data?.data?.pagination.total ?? 0;
+
+  useEffect(() => {
+    setPage(1);
+  }, [userType]);
+
+  useEffect(() => {
+    onTotalChange?.(total);
+  }, [total, onTotalChange]);
   const errorMessage = error instanceof Error ? error.message : 'Failed to fetch users';
 
   const selectedUserId = selectedUser?._id;
@@ -1369,11 +1487,11 @@ export default function UserTable({ searchQuery }: UserTableProps) {
 
   return (
       <>
-        <div className="bg-[var(--surface)] rounded-xl shadow-[var(--shadow-card)] border border-[var(--border-subtle)] flex flex-col overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="bg-[var(--surface)] rounded-xl shadow-[var(--shadow-card)] border border-[var(--border-subtle)] flex flex-col overflow-hidden flex-1 min-h-0">
+          <div className="overflow-x-auto flex-1 min-h-[200px]">
           <Table
             data={users}
-            height={Math.max(users.length * 56 + 40, 200)}
+            height={Math.max(users.length * 56 + 40, 300)}
             rowHeight={56}
             headerHeight={40}
             hover
@@ -1391,6 +1509,26 @@ export default function UserTable({ searchQuery }: UserTableProps) {
                       <div className="text-[13px] font-medium text-[var(--text-primary)] leading-tight truncate">{getFullName(rowData)}</div>
                       <div className="text-[11px] text-[var(--text-muted)] truncate">{rowData.emailAddress || 'No email'}</div>
                     </div>
+                  </div>
+                )}
+              </Cell>
+            </Column>
+
+            <Column flexGrow={1} minWidth={100} align="left">
+              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Type</HeaderCell>
+              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
+                {(rowData: User) => (
+                  <TypeBadge isAgent={rowData.agent} />
+                )}
+              </Cell>
+            </Column>
+
+            <Column flexGrow={1} minWidth={150} align="left">
+              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Company Name</HeaderCell>
+              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
+                {(rowData: User) => (
+                  <div className="text-[12px] text-[var(--text-secondary)] truncate">
+                    {rowData.company || 'N/A'}
                   </div>
                 )}
               </Cell>
@@ -1440,18 +1578,6 @@ export default function UserTable({ searchQuery }: UserTableProps) {
                 {(rowData: User) => (
                   <div className="text-[12px] text-[var(--text-muted)] truncate">{getRelativeTime(rowData.lastLogin || rowData.lastSignedIn)}</div>
                 )}
-              </Cell>
-            </Column>
-
-            <Column width={60} align="right">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Actions</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
-                <button
-                  className="w-7 h-7 rounded-lg hover:bg-[var(--surface-hover)] hover:scale-110 active:scale-90 flex items-center justify-center text-[var(--text-muted)] transition-all duration-150"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Icons.MoreHorizontal className="w-4 h-4" />
-                </button>
               </Cell>
             </Column>
           </Table>

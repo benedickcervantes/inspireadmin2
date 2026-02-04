@@ -231,14 +231,18 @@ export default function Sidebar({ expanded, onToggle, user, onLogout }: SidebarP
         initial={isInitialMount ? { opacity: 0 } : false}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3, duration: 0.4 }}
-        className={`flex-1 ${expanded ? "overflow-hidden" : "overflow-visible"}`}
+        className={`flex-1 min-h-0 ${expanded ? "overflow-y-auto overflow-x-hidden" : "overflow-visible"}`}
+        style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgba(139, 148, 158, 0.2) transparent'
+        }}
       >
         <Sidenav
           appearance="subtle"
           expanded={expanded}
           openKeys={openKeys}
           onOpenChange={(nextKeys) => setOpenKeys(nextKeys as string[])}
-          className={`app-sidenav app-sidenav-dark flex-1 ${expanded ? "app-sidenav-expanded" : "app-sidenav-compact"}`}
+          className={`app-sidenav app-sidenav-dark ${expanded ? "app-sidenav-expanded" : "app-sidenav-compact"}`}
         >
           <Sidenav.Body>
             <Nav activeKey={pathname}>

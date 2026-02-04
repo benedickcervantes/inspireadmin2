@@ -81,9 +81,59 @@ interface MonthlySalesChartProps {
 
 export function MonthlySalesChart({ total, isLoading = false }: MonthlySalesChartProps) {
   const [isExpanded, setIsExpanded] = React.useState(false);
+  const [visibleLines, setVisibleLines] = React.useState<Set<string>>(new Set(['timeDeposits', 'availBalance', 'wallet', 'agentWallet', 'stock']));
+  const [timeScale, setTimeScale] = React.useState<'year' | 'month' | 'week' | 'day'>('year');
+  const [showTimeMenu, setShowTimeMenu] = React.useState(false);
   const displayTotal = typeof total === "number" ? total : 12876;
   const ref = React.useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-50px" });
+
+  // Close menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = () => {
+      if (showTimeMenu) {
+        setShowTimeMenu(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showTimeMenu]);
+
+  const toggleLine = (lineId: string) => {
+    setVisibleLines(prev => {
+      // If this line is the only one visible, show all lines
+      if (prev.size === 1 && prev.has(lineId)) {
+        return new Set(['timeDeposits', 'availBalance', 'wallet', 'agentWallet', 'stock']);
+      }
+      // Otherwise, show only this line
+      return new Set([lineId]);
+    });
+  };
+
+  const getTimeLabels = () => {
+    switch (timeScale) {
+      case 'year':
+        return ["2019", "2020", "2021", "2022", "2023", "2024", "2025"];
+      case 'month':
+        return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      case 'week':
+        return ["Week 1", "Week 2", "Week 3", "Week 4"];
+      case 'day':
+        return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      default:
+        return ["2019", "2020", "2021", "2022", "2023", "2024", "2025"];
+    }
+  };
+
+  const timeLabels = getTimeLabels();
+
+  const lines = [
+    { id: 'timeDeposits', color: '#22d3ee', label: 'Time Deposits', path: 'M0 250 C 150 200, 300 280, 450 150 S 700 50, 850 100 S 1100 200, 1200 150', endY: 150 },
+    { id: 'availBalance', color: '#a855f7', label: 'Avail Balance', path: 'M0 220 C 150 180, 300 250, 450 130 S 700 70, 850 120 S 1100 180, 1200 130', endY: 130 },
+    { id: 'wallet', color: '#22c55e', label: 'Total Wallet', path: 'M0 270 C 150 240, 300 260, 450 180 S 700 90, 850 140 S 1100 220, 1200 170', endY: 170 },
+    { id: 'agentWallet', color: '#f59e0b', label: 'Agent Wallet', path: 'M0 240 C 150 210, 300 270, 450 160 S 700 80, 850 130 S 1100 190, 1200 140', endY: 140 },
+    { id: 'stock', color: '#3b82f6', label: 'Stock Amount', path: 'M0 260 C 150 230, 300 240, 450 170 S 700 100, 850 150 S 1100 210, 1200 160', endY: 160 }
+  ];
 
   return (
     <>
@@ -138,7 +188,7 @@ export function MonthlySalesChart({ total, isLoading = false }: MonthlySalesChar
             animate={isInView ? { opacity: 1, x: 0 } : {}}
             transition={{ delay: 0.2, duration: 0.4 }}
           >
-            Monthly Sales {isExpanded && '(Click to minimize)'}
+            IWALLET GRAPHS {isExpanded && '(Click to minimize)'}
           </motion.div>
           <motion.div
             className={`font-semibold text-[var(--text-primary)] font-display transition-all duration-300 ${isExpanded ? 'text-3xl' : 'text-lg'}`}
@@ -153,13 +203,54 @@ export function MonthlySalesChart({ total, isLoading = false }: MonthlySalesChar
             )}
           </motion.div>
         </div>
-        <motion.button
-          className="w-7 h-7 rounded-md border border-[var(--border)] bg-[var(--surface-soft)] hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Icons.More className="w-3.5 h-3.5" />
-        </motion.button>
+        <div className="relative">
+          <motion.button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowTimeMenu(!showTimeMenu);
+            }}
+            className="w-7 h-7 rounded-md border border-[var(--border)] bg-[var(--surface-soft)] hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Icons.More className="w-3.5 h-3.5" />
+          </motion.button>
+
+          {/* Dropdown Menu */}
+          {showTimeMenu && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="absolute right-0 top-full mt-2 w-32 bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg shadow-[var(--shadow-lg)] overflow-hidden z-50"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {[
+                { value: 'year' as const, label: 'Year' },
+                { value: 'month' as const, label: 'Month' },
+                { value: 'week' as const, label: 'Week' },
+                { value: 'day' as const, label: 'Day' }
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTimeScale(option.value);
+                    setShowTimeMenu(false);
+                  }}
+                  className={`w-full px-3 py-2 text-left text-xs transition-colors ${
+                    timeScale === option.value
+                      ? 'bg-[var(--primary-soft)] text-[var(--primary)] font-semibold'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </div>
       </div>
 
       <div className={`relative w-full ${isExpanded ? 'h-[500px]' : 'h-[130px] lg:h-[180px]'} transition-all duration-300`}>
@@ -176,73 +267,137 @@ export function MonthlySalesChart({ total, isLoading = false }: MonthlySalesChar
           ))}
         </div>
         <div className={`absolute bottom-[-16px] w-full flex justify-between text-[var(--text-muted)] transition-all duration-300 ${isExpanded ? 'text-xs' : 'text-[8px]'}`}>
-          {["2019", "2020", "2021", "2022", "2023", "2024", "2025"].map((year, i) => (
+          {timeLabels.map((label, i) => (
             <motion.span
-              key={year}
+              key={`${label}-${i}`}
               initial={{ opacity: 0, y: 5 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ delay: 0.4 + i * 0.05, duration: 0.3 }}
             >
-              {year}
+              {label}
             </motion.span>
           ))}
         </div>
 
         <svg viewBox="0 0 1200 300" className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
           <defs>
-            <linearGradient id="salesGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.2" />
-              <stop offset="50%" stopColor="#a855f7" stopOpacity="0.1" />
-              <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
-            </linearGradient>
-            <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#22d3ee" />
-              <stop offset="50%" stopColor="#a855f7" />
-              <stop offset="100%" stopColor="#22d3ee" />
-            </linearGradient>
+            {lines.map(line => (
+              <linearGradient key={`${line.id}Gradient`} id={`${line.id}Gradient`} x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor={line.color} stopOpacity="0.15" />
+                <stop offset="100%" stopColor={line.color} stopOpacity="0" />
+              </linearGradient>
+            ))}
           </defs>
 
-          {/* Animated area fill */}
-          <motion.path
-            d="M0 250 C 150 200, 300 280, 450 150 S 700 50, 850 100 S 1100 200, 1200 150 V 300 H 0 Z"
-            fill="url(#salesGradient)"
-            stroke="none"
-            initial={{ opacity: 0, scaleY: 0 }}
-            animate={isInView ? { opacity: 1, scaleY: 1 } : {}}
-            transition={{ delay: 0.6, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            style={{ transformOrigin: "bottom" }}
-          />
-
-          {/* Animated line path */}
-          <motion.path
-            d="M0 250 C 150 200, 300 280, 450 150 S 700 50, 850 100 S 1100 200, 1200 150"
-            fill="none"
-            stroke="url(#lineGradient)"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-            className="drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]"
-            initial={{ pathLength: 0, opacity: 0 }}
-            animate={isInView ? { pathLength: 1, opacity: 1 } : {}}
-            transition={{
-              pathLength: { delay: 0.3, duration: 1.5, ease: [0.22, 1, 0.36, 1] },
-              opacity: { delay: 0.3, duration: 0.3 }
-            }}
-          />
-
-          {/* Animated glowing dot at the end */}
-          <motion.circle
-            cx="1200"
-            cy="150"
-            r="6"
-            fill="#22d3ee"
-            className="drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={isInView ? { scale: [0, 1.2, 1], opacity: 1 } : {}}
-            transition={{ delay: 1.8, duration: 0.4, ease: "easeOut" }}
-          />
+          {lines.map((line, index) => {
+            const isVisible = visibleLines.has(line.id);
+            return (
+              <React.Fragment key={line.id}>
+                {/* Area fill */}
+                <motion.path
+                  d={`${line.path} V 300 H 0 Z`}
+                  fill={`url(#${line.id}Gradient)`}
+                  stroke="none"
+                  initial={{ opacity: 0, scaleY: 0 }}
+                  animate={{ 
+                    opacity: isVisible ? 1 : 0, 
+                    scaleY: isVisible ? 1 : 0 
+                  }}
+                  transition={{ 
+                    duration: 0.5, 
+                    ease: [0.22, 1, 0.36, 1] 
+                  }}
+                  style={{ transformOrigin: "bottom" }}
+                />
+                {/* Line path */}
+                <motion.path
+                  d={line.path}
+                  fill="none"
+                  stroke={line.color}
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  vectorEffect="non-scaling-stroke"
+                  className={`drop-shadow-[0_0_8px_${line.color}80]`}
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{ 
+                    pathLength: isVisible ? 1 : 0, 
+                    opacity: isVisible ? 1 : 0 
+                  }}
+                  transition={{
+                    duration: 0.5,
+                    ease: [0.22, 1, 0.36, 1]
+                  }}
+                />
+                {/* End dot */}
+                <motion.circle 
+                  cx="1200" 
+                  cy={line.endY} 
+                  r="5" 
+                  fill={line.color} 
+                  className={`drop-shadow-[0_0_10px_${line.color}CC]`}
+                  initial={{ scale: 0, opacity: 0 }} 
+                  animate={{ 
+                    scale: isVisible ? 1 : 0, 
+                    opacity: isVisible ? 1 : 0 
+                  }} 
+                  transition={{ duration: 0.3, ease: "easeOut" }} 
+                />
+              </React.Fragment>
+            );
+          })}
         </svg>
       </div>
+
+      {/* Legend */}
+      <motion.div
+        className={`flex flex-wrap gap-3 mt-3 ${isExpanded ? 'justify-center' : 'justify-start'}`}
+        initial={{ opacity: 0, y: 10 }}
+        animate={isInView ? { opacity: 1, y: 0 } : {}}
+        transition={{ delay: 2.3, duration: 0.4 }}
+      >
+        {lines.map((line, index) => {
+          const isVisible = visibleLines.has(line.id);
+          return (
+            <motion.button
+              key={line.id}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleLine(line.id);
+              }}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-all duration-200 ${
+                isVisible 
+                  ? 'bg-[var(--surface-soft)] hover:bg-[var(--surface-hover)] border border-[var(--border)]' 
+                  : 'bg-transparent hover:bg-[var(--surface-soft)] border border-transparent opacity-40'
+              }`}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={isInView ? { opacity: 1, scale: 1 } : {}}
+              transition={{ delay: 2.3 + index * 0.05, duration: 0.3 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <motion.div
+                className="w-2.5 h-2.5 rounded-full"
+                style={{ 
+                  backgroundColor: line.color, 
+                  boxShadow: isVisible ? `0 0 6px ${line.color}80` : 'none'
+                }}
+                animate={{
+                  scale: isVisible ? 1 : 0.7,
+                  opacity: isVisible ? 1 : 0.5
+                }}
+                transition={{ duration: 0.2 }}
+              />
+              <span 
+                className={`transition-all duration-300 ${isExpanded ? 'text-xs' : 'text-[9px]'} ${
+                  isVisible ? 'text-[var(--text-secondary)]' : 'text-[var(--text-muted)]'
+                }`}
+              >
+                {line.label}
+              </span>
+            </motion.button>
+          );
+        })}
+      </motion.div>
     </MotionDiv>
     </>
   );

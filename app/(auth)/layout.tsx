@@ -136,16 +136,26 @@ export default function AuthLayout({ children }: PropsWithChildren) {
 
         {/* Right side - Auth form */}
         <section className="flex w-full items-center justify-center lg:justify-center">
-          {/* Mobile logo - still image for performance */}
+          {/* Mobile logo with company name */}
           <div className="absolute left-6 top-6 lg:hidden">
-            <Image
-              src="/logo.jpeg"
-              alt="Inspire Alliance"
-              width={140}
-              height={50}
-              className="h-auto w-32"
-              priority
-            />
+            <div className="flex items-center gap-3">
+              <Image
+                src="/logo.jpeg"
+                alt="Inspire Alliance"
+                width={50}
+                height={50}
+                className="h-auto w-12"
+                priority
+              />
+              <div className="flex flex-col">
+                <span className="text-sm font-bold text-[var(--text-primary)] font-google-sans leading-tight">
+                  INSPIRE ALLIANCE
+                </span>
+                <span className="text-[10px] font-semibold text-[var(--primary)] font-google-sans uppercase tracking-wider leading-tight">
+                  FUND GROUP INC.
+                </span>
+              </div>
+            </div>
           </div>
 
           {children}

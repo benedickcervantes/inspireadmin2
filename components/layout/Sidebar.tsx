@@ -215,6 +215,36 @@ export default function Sidebar({ expanded, onToggle, user, onLogout }: SidebarP
             unoptimized
           />
         </motion.div>
+        
+        {/* Brand Text - Company Name */}
+        <AnimatePresence mode="wait">
+          {expanded && (
+            <motion.div
+              className="rail-brand-text"
+              variants={brandTextVariants}
+              initial="collapsed"
+              animate="expanded"
+              exit="collapsed"
+            >
+              <motion.span
+                className="rail-title"
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.3 }}
+              >
+                INSPIRE ALLIANCE
+              </motion.span>
+              <motion.span
+                className="rail-subtitle"
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25, duration: 0.3 }}
+              >
+                FUND GROUP INC.
+              </motion.span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       {/* Divider */}

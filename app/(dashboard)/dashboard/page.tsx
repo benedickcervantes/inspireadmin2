@@ -3,7 +3,8 @@
 import React, { useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
-import { Drawer } from "rsuite";
+import { Drawer, Button } from "rsuite";
+import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import StatsCard from "./_components/StatsCard";
 import TransactionTable, { Transaction, TransactionStatus } from "./_components/TransactionTable";
@@ -411,6 +412,7 @@ const Icons = {
 };
 
 export default function Dashboard() {
+  const router = useRouter();
   const [usersDrawerOpen, setUsersDrawerOpen] = useState(false);
   const [depositsDrawerOpen, setDepositsDrawerOpen] = useState(false);
   const [balanceDrawerOpen, setBalanceDrawerOpen] = useState(false);
@@ -640,7 +642,23 @@ export default function Dashboard() {
       >
         <Drawer.Header className="!p-0 !border-b-0">
           <div className="flex items-center justify-between p-4 border-b border-[var(--border-subtle)]">
-            <h3 className="text-base font-semibold text-[var(--text-primary)]">User Breakdown</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-semibold text-[var(--text-primary)]">User Breakdown</h3>
+              <Button 
+                size="sm" 
+                appearance="primary" 
+                className="!h-8 !px-3 !rounded-md !bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] hover:!shadow-[var(--shadow-glow-cyan)]"
+                onClick={() => {
+                  router.push('/users');
+                  setUsersDrawerOpen(false);
+                }}
+              >
+                <span className="flex items-center gap-2">
+                  <Icons.Users className="w-3.5 h-3.5" />
+                  View All
+                </span>
+              </Button>
+            </div>
             <button
               onClick={() => setUsersDrawerOpen(false)}
               className="w-8 h-8 rounded-lg hover:bg-[var(--surface-hover)] hover:scale-110 hover:rotate-90 flex items-center justify-center text-[var(--text-muted)] transition-all duration-200"

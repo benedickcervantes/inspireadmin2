@@ -3,6 +3,7 @@
 import React from "react";
 import { Drawer } from "rsuite";
 import { motion } from "motion/react";
+import { useRouter } from "next/navigation";
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
@@ -87,6 +88,13 @@ export default function HeaderDrawers({
   reviewsDrawerOpen,
   setReviewsDrawerOpen,
 }: HeaderDrawersProps) {
+  const router = useRouter();
+
+  const handleNavigate = (path: string, closeDrawer: () => void) => {
+    router.push(path);
+    closeDrawer();
+  };
+
   return (
     <>
       {/* Active Sessions Drawer */}
@@ -240,7 +248,8 @@ export default function HeaderDrawers({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 }}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+                onClick={() => handleNavigate('/deposit-request', () => setRequestsDrawerOpen(false))}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200 cursor-pointer"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -263,7 +272,8 @@ export default function HeaderDrawers({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2 }}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+                onClick={() => handleNavigate('/withdrawal-request', () => setRequestsDrawerOpen(false))}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200 cursor-pointer"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -286,7 +296,8 @@ export default function HeaderDrawers({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+                onClick={() => handleNavigate('/kyc-requests', () => setRequestsDrawerOpen(false))}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200 cursor-pointer"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">

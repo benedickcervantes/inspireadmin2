@@ -214,8 +214,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--text-primary);
-  --font-sans: var(--font-inter);
-  --font-display: var(--font-jakarta);
+  --font-sans: var(--font-quest-trial);
+  --font-display: var(--font-google-sans);
 }
 
 html,
@@ -226,7 +226,7 @@ body {
 body {
   background: var(--background);
   color: var(--text-primary);
-  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-quest-trial), system-ui, -apple-system, sans-serif;
   letter-spacing: -0.011em;
 }
 
@@ -371,6 +371,35 @@ body {
 .app-rail--expanded {
   width: 260px;
   align-items: center;
+}
+
+/* Sidebar scrollbar styling */
+.app-rail ::-webkit-scrollbar {
+  width: 6px;
+}
+
+.app-rail ::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 8px 0;
+}
+
+.app-rail ::-webkit-scrollbar-thumb {
+  background: rgba(139, 148, 158, 0.2);
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+
+.app-rail ::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 148, 158, 0.35);
+}
+
+/* Light theme scrollbar */
+[data-theme="light"] .app-rail ::-webkit-scrollbar-thumb {
+  background: rgba(45, 49, 54, 0.15);
+}
+
+[data-theme="light"] .app-rail ::-webkit-scrollbar-thumb:hover {
+  background: rgba(45, 49, 54, 0.25);
 }
 
 /* RSuite nav colors for dark sidebar */
@@ -1327,6 +1356,40 @@ html[data-theme="light"] body .app-rail--collapsed .rs-dropdown[data-active-desc
   min-width: 200px !important;
 }
 
+/* Expanded sidebar dropdown items - transparent background */
+.app-rail--expanded .rs-sidenav-item-panel {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  min-width: auto !important;
+}
+
+.app-rail--expanded .rs-sidenav-item-panel .rs-dropdown-item,
+.app-rail--expanded .rs-sidenav-item-panel .rs-nav-item,
+.app-rail--expanded .rs-sidenav-item-panel a {
+  background: transparent !important;
+  color: var(--text-secondary) !important;
+  padding: 10px 16px !important;
+  border-radius: var(--radius-xs) !important;
+  transition: all 0.15s ease !important;
+}
+
+.app-rail--expanded .rs-sidenav-item-panel .rs-dropdown-item:hover,
+.app-rail--expanded .rs-sidenav-item-panel .rs-nav-item:hover,
+.app-rail--expanded .rs-sidenav-item-panel a:hover {
+  background: var(--sidebar-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+.app-rail--expanded .rs-sidenav-item-panel .rs-dropdown-item-active,
+.app-rail--expanded .rs-sidenav-item-panel .rs-nav-item-active,
+.app-rail--expanded .rs-sidenav-item-panel a.active {
+  background: var(--sidebar-active) !important;
+  color: var(--text-primary) !important;
+  box-shadow: inset 3px 0 0 var(--primary) !important;
+}
+
 .rs-sidenav-item-panel-title {
   color: var(--text-muted) !important;
   font-size: 10px !important;
@@ -1372,6 +1435,13 @@ html[data-theme="light"] body .app-rail--collapsed .rs-dropdown[data-active-desc
   box-shadow: var(--shadow-lg) !important;
 }
 
+/* Expanded sidebar menu wrapper - transparent background */
+.app-rail--expanded .rs-sidenav-item-menu-wrapper {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 .rs-sidenav-item-menu-wrapper .rs-dropdown-menu {
   background: transparent !important;
   border: none !important;
@@ -1384,6 +1454,23 @@ html[data-theme="light"] body .app-rail--collapsed .rs-dropdown[data-active-desc
   font-size: 13px !important;
   padding: 10px 12px !important;
   border-radius: var(--radius-xs) !important;
+}
+
+/* Expanded sidebar menu wrapper dropdown items */
+.app-rail--expanded .rs-sidenav-item-menu-wrapper .rs-dropdown-item {
+  background: transparent !important;
+  padding: 10px 16px !important;
+}
+
+.app-rail--expanded .rs-sidenav-item-menu-wrapper .rs-dropdown-item:hover {
+  background: var(--sidebar-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+.app-rail--expanded .rs-sidenav-item-menu-wrapper .rs-dropdown-item-active {
+  background: var(--sidebar-active) !important;
+  color: var(--text-primary) !important;
+  box-shadow: inset 3px 0 0 var(--primary) !important;
 }
 
 .rs-sidenav-item-menu-wrapper .rs-dropdown-item:hover {
@@ -1405,6 +1492,16 @@ html[data-theme="light"] body .app-rail--collapsed .rs-dropdown[data-active-desc
   min-width: 200px !important;
 }
 
+/* Expanded sidebar nav menu - transparent background */
+.app-rail--expanded .rs-nav-menu,
+.app-sidenav-expanded .rs-nav-menu {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  min-width: auto !important;
+}
+
 .rs-nav-menu .rs-dropdown-item,
 .rs-nav-menu .rs-nav-item {
   color: var(--text-secondary) !important;
@@ -1413,10 +1510,38 @@ html[data-theme="light"] body .app-rail--collapsed .rs-dropdown[data-active-desc
   border-radius: var(--radius-xs) !important;
 }
 
+/* Expanded sidebar nav menu items */
+.app-rail--expanded .rs-nav-menu .rs-dropdown-item,
+.app-rail--expanded .rs-nav-menu .rs-nav-item,
+.app-sidenav-expanded .rs-nav-menu .rs-dropdown-item,
+.app-sidenav-expanded .rs-nav-menu .rs-nav-item {
+  background: transparent !important;
+  padding: 10px 16px !important;
+}
+
 .rs-nav-menu .rs-dropdown-item:hover,
 .rs-nav-menu .rs-nav-item:hover {
   background: var(--surface-hover) !important;
   color: var(--text-primary) !important;
+}
+
+/* Expanded sidebar nav menu items hover */
+.app-rail--expanded .rs-nav-menu .rs-dropdown-item:hover,
+.app-rail--expanded .rs-nav-menu .rs-nav-item:hover,
+.app-sidenav-expanded .rs-nav-menu .rs-dropdown-item:hover,
+.app-sidenav-expanded .rs-nav-menu .rs-nav-item:hover {
+  background: var(--sidebar-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Expanded sidebar nav menu items active */
+.app-rail--expanded .rs-nav-menu .rs-dropdown-item-active,
+.app-rail--expanded .rs-nav-menu .rs-nav-item-active,
+.app-sidenav-expanded .rs-nav-menu .rs-dropdown-item-active,
+.app-sidenav-expanded .rs-nav-menu .rs-nav-item-active {
+  background: var(--sidebar-active) !important;
+  color: var(--text-primary) !important;
+  box-shadow: inset 3px 0 0 var(--primary) !important;
 }
 
 .rs-popover {
@@ -1465,6 +1590,19 @@ div[class*="Sidenav"] .rs-dropdown-menu {
   padding: 6px !important;
 }
 
+/* Override for expanded sidebar - blend with background */
+.app-rail--expanded div[class*="sidenav"] .rs-dropdown-menu,
+.app-rail--expanded div[class*="Sidenav"] .rs-dropdown-menu,
+.app-rail--expanded .rs-dropdown-menu[role="menu"],
+.app-rail--expanded .rs-nav-menu[role="menu"],
+.app-sidenav-expanded .rs-dropdown-menu,
+.app-sidenav-expanded .rs-nav-menu {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
 .rs-dropdown-menu[role="menu"] .rs-dropdown-item,
 .rs-nav-menu[role="menu"] .rs-dropdown-item,
 .rs-nav-menu[role="menu"] .rs-nav-item {
@@ -1472,11 +1610,42 @@ div[class*="Sidenav"] .rs-dropdown-menu {
   background: transparent !important;
 }
 
+/* Expanded sidebar dropdown items */
+.app-rail--expanded .rs-dropdown-menu[role="menu"] .rs-dropdown-item,
+.app-rail--expanded .rs-nav-menu[role="menu"] .rs-dropdown-item,
+.app-rail--expanded .rs-nav-menu[role="menu"] .rs-nav-item,
+.app-sidenav-expanded .rs-dropdown-menu .rs-dropdown-item,
+.app-sidenav-expanded .rs-nav-menu .rs-nav-item {
+  background: transparent !important;
+  padding: 10px 16px !important;
+}
+
 .rs-dropdown-menu[role="menu"] .rs-dropdown-item:hover,
 .rs-nav-menu[role="menu"] .rs-dropdown-item:hover,
 .rs-nav-menu[role="menu"] .rs-nav-item:hover {
   background: var(--surface-hover) !important;
   color: var(--text-primary) !important;
+}
+
+/* Expanded sidebar dropdown items hover */
+.app-rail--expanded .rs-dropdown-menu[role="menu"] .rs-dropdown-item:hover,
+.app-rail--expanded .rs-nav-menu[role="menu"] .rs-dropdown-item:hover,
+.app-rail--expanded .rs-nav-menu[role="menu"] .rs-nav-item:hover,
+.app-sidenav-expanded .rs-dropdown-menu .rs-dropdown-item:hover,
+.app-sidenav-expanded .rs-nav-menu .rs-nav-item:hover {
+  background: var(--sidebar-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Expanded sidebar dropdown items active */
+.app-rail--expanded .rs-dropdown-menu[role="menu"] .rs-dropdown-item-active,
+.app-rail--expanded .rs-nav-menu[role="menu"] .rs-dropdown-item-active,
+.app-rail--expanded .rs-nav-menu[role="menu"] .rs-nav-item-active,
+.app-sidenav-expanded .rs-dropdown-menu .rs-dropdown-item-active,
+.app-sidenav-expanded .rs-nav-menu .rs-nav-item-active {
+  background: var(--sidebar-active) !important;
+  color: var(--text-primary) !important;
+  box-shadow: inset 3px 0 0 var(--primary) !important;
 }
 
 body>div:not(#__next):not(.app-root) .rs-dropdown-menu {
@@ -1523,6 +1692,9 @@ body>div:not(#__next):not(.app-root) .rs-dropdown-menu .rs-dropdown-item-active 
   margin: 4px 0 4px 16px;
   padding: 4px 0 4px 12px;
   border-left: 2px solid var(--border-accent);
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
 }
 
 .app-sidenav-expanded .rs-dropdown-item {
@@ -1530,15 +1702,16 @@ body>div:not(#__next):not(.app-root) .rs-dropdown-menu .rs-dropdown-item-active 
   padding: 8px 12px;
   border-radius: var(--radius-xs);
   color: var(--text-secondary);
+  background: transparent !important;
 }
 
 .app-sidenav-expanded .rs-dropdown-item:hover {
-  background: var(--surface-hover);
+  background: var(--sidebar-hover) !important;
   color: var(--text-primary);
 }
 
 .app-sidenav-expanded .rs-dropdown-item-active {
-  background: var(--sidebar-active);
+  background: var(--sidebar-active) !important;
   color: var(--text-primary);
 }
 
@@ -1705,8 +1878,51 @@ body>div:not(#__next):not(.app-root) .rs-dropdown-menu .rs-dropdown-item-active 
 }
 
 .font-display {
-  font-family: var(--font-jakarta), var(--font-inter), sans-serif;
+  font-family: var(--font-google-sans), var(--font-quest-trial), sans-serif;
   letter-spacing: -0.02em;
+}
+
+/* Font utility classes for Google Sans (titles, headers, numbers) */
+.font-google-sans {
+  font-family: var(--font-google-sans), system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.font-quest-trial {
+  font-family: var(--font-quest-trial), system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.011em;
+}
+
+/* Apply Google Sans to headings and numbers */
+h1, h2, h3, h4, h5, h6,
+.text-lg, .text-xl, .text-2xl, .text-3xl, .text-4xl, .text-5xl, .text-6xl,
+.font-semibold, .font-bold, .font-extrabold,
+[class*="font-semibold"], [class*="font-bold"], [class*="font-extrabold"] {
+  font-family: var(--font-google-sans), system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Apply Google Sans to numbers and numeric content */
+.tabular-nums,
+[class*="text-"][class*="font-semibold"],
+[class*="text-"][class*="font-bold"],
+.font-mono,
+.rail-badge,
+.theme-toggle-label,
+.rail-user-name,
+input[type="number"],
+.rs-input[type="number"],
+/* Additional numeric and UI elements */
+.rs-table-cell-content,
+.rs-pagination-btn,
+.rs-badge-content,
+.rs-nav-item-content,
+.rs-dropdown-toggle,
+.rs-btn,
+.rs-modal-title,
+.rs-drawer-title {
+  font-family: var(--font-google-sans), ui-monospace, monospace;
+  font-feature-settings: "tnum";
 }
 
 .text-primary-color {

@@ -114,6 +114,7 @@ export default function TransactionTable({
   pageSize = DEFAULT_PAGE_SIZE,
   height = DEFAULT_TABLE_HEIGHT
 }: TransactionTableProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const tableData = data ?? transactions;
   const total = tableData.length;
   const [page, setPage] = useState(1);
@@ -143,13 +144,34 @@ export default function TransactionTable({
   }, [page, pageSize, tableData]);
 
   return (
-    <MotionDiv
-      ref={ref}
-      variants={fadeUpVariant}
-      initial="hidden"
-      animate={isInView ? "visible" : "hidden"}
-      className="bg-[var(--surface)] rounded-[12px] border border-[var(--border-subtle)] shadow-[var(--shadow-card)] transition-all duration-300 hover:border-[var(--border)] overflow-hidden"
-    >
+    <>
+      {/* Backdrop overlay when expanded */}
+      {isExpanded && (
+        <motion.div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998]"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setIsExpanded(false)}
+        />
+      )}
+      
+      <MotionDiv
+        ref={ref}
+        variants={fadeUpVariant}
+        initial="hidden"
+        animate={isInView ? "visible" : "hidden"}
+        onClick={(e: React.MouseEvent) => {
+          e.stopPropagation();
+          setIsExpanded(!isExpanded);
+        }}
+        className={`bg-[var(--surface)] rounded-[12px] border border-[var(--border-subtle)] shadow-[var(--shadow-card)] transition-all duration-300 hover:border-[var(--border)] overflow-hidden cursor-pointer ${
+          isExpanded ? 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-6xl z-[9999] max-h-[85vh] overflow-auto shadow-2xl' : ''
+        }`}
+        style={{
+          transformStyle: 'preserve-3d',
+        }}
+      >
       <motion.div
         className="px-3 pt-3 pb-2 flex items-center justify-between"
         initial={{ opacity: 0, y: -10 }}
@@ -165,12 +187,12 @@ export default function TransactionTable({
             <Icons.Activity className="w-3.5 h-3.5 text-[var(--primary)]" />
           </motion.div>
           <motion.h3
-            className="text-[13px] font-semibold text-[var(--text-primary)]"
+            className={`font-semibold text-[var(--text-primary)] transition-all duration-300 ${isExpanded ? 'text-xl' : 'text-[13px]'}`}
             initial={{ opacity: 0, x: -10 }}
             animate={isInView ? { opacity: 1, x: 0 } : {}}
             transition={{ delay: 0.35, duration: 0.4 }}
           >
-            Transactions
+            Latest Transactions {isExpanded && '(Click to minimize)'}
           </motion.h3>
         </div>
         <motion.button
@@ -213,15 +235,15 @@ export default function TransactionTable({
             >
               <Table
                 data={pagedData}
-                height={height}
-                rowHeight={44}
-                headerHeight={32}
+                height={isExpanded ? 500 : height}
+                rowHeight={isExpanded ? 56 : 44}
+                headerHeight={isExpanded ? 40 : 32}
                 hover={false}
                 className="app-table !bg-transparent"
                 rowKey="id"
               >
                 <Column flexGrow={1} minWidth={180} align="left">
-                  <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Name</HeaderCell>
+                  <HeaderCell className={`!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !uppercase !tracking-wide transition-all duration-300 ${isExpanded ? '!text-sm' : '!text-[11px]'}`}>Name</HeaderCell>
                   <Cell className="!bg-[var(--surface)] border-b border-[var(--border-subtle)]">
                     {(rowData: Transaction, rowIndex?: number) => (
                       <motion.div
@@ -234,7 +256,7 @@ export default function TransactionTable({
                           <motion.img
                             src={rowData.avatar}
                             alt={rowData.name}
-                            className="w-6 h-6 rounded-full object-cover border border-[var(--border)] flex-shrink-0"
+                            className={`rounded-full object-cover border border-[var(--border)] flex-shrink-0 transition-all duration-300 ${isExpanded ? 'w-10 h-10' : 'w-6 h-6'}`}
                             initial={!hasAnimated ? { scale: 0 } : false}
                             animate={{ scale: 1 }}
                             transition={{ delay: (rowIndex ?? 0) * 0.05 + 0.1, type: "spring", stiffness: 300 }}
@@ -242,7 +264,7 @@ export default function TransactionTable({
                           />
                         ) : (
                           <motion.div
-                            className="w-6 h-6 rounded-full bg-[var(--surface-elevated)] text-[var(--text-muted)] flex items-center justify-center text-[10px] font-bold border border-[var(--border)] flex-shrink-0"
+                            className={`rounded-full bg-[var(--surface-elevated)] text-[var(--text-muted)] flex items-center justify-center font-bold border border-[var(--border)] flex-shrink-0 transition-all duration-300 ${isExpanded ? 'w-10 h-10 text-sm' : 'w-6 h-6 text-[10px]'}`}
                             initial={!hasAnimated ? { scale: 0 } : false}
                             animate={{ scale: 1 }}
                             transition={{ delay: (rowIndex ?? 0) * 0.05 + 0.1, type: "spring", stiffness: 300 }}
@@ -252,8 +274,8 @@ export default function TransactionTable({
                           </motion.div>
                         )}
                         <div className="flex flex-col min-w-0">
-                          <span className="text-[13px] font-semibold text-[var(--text-primary)] leading-tight truncate">{rowData.name}</span>
-                          <span className="text-[9px] text-[var(--text-muted)] truncate">{rowData.category}</span>
+                          <span className={`font-semibold text-[var(--text-primary)] leading-tight truncate transition-all duration-300 ${isExpanded ? 'text-base' : 'text-[13px]'}`}>{rowData.name}</span>
+                          <span className={`text-[var(--text-muted)] truncate transition-all duration-300 ${isExpanded ? 'text-xs' : 'text-[9px]'}`}>{rowData.category}</span>
                         </div>
                       </motion.div>
                     )}
@@ -261,11 +283,11 @@ export default function TransactionTable({
                 </Column>
 
                 <Column width={130} align="left">
-                  <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Date</HeaderCell>
+                  <HeaderCell className={`!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !uppercase !tracking-wide transition-all duration-300 ${isExpanded ? '!text-sm' : '!text-[11px]'}`}>Date</HeaderCell>
                   <Cell className="!bg-[var(--surface)] border-b border-[var(--border-subtle)]" dataKey="date">
                     {(rowData: Transaction, rowIndex?: number) => (
                       <motion.span
-                        className="text-[12px] text-[var(--text-secondary)]"
+                        className={`text-[var(--text-secondary)] transition-all duration-300 ${isExpanded ? 'text-sm' : 'text-[12px]'}`}
                         initial={!hasAnimated ? { opacity: 0 } : false}
                         animate={{ opacity: 1 }}
                         transition={{ delay: (rowIndex ?? 0) * 0.05 + 0.15, duration: 0.3 }}
@@ -277,11 +299,11 @@ export default function TransactionTable({
                 </Column>
 
                 <Column width={120} align="right">
-                  <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Amount</HeaderCell>
+                  <HeaderCell className={`!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !uppercase !tracking-wide transition-all duration-300 ${isExpanded ? '!text-sm' : '!text-[11px]'}`}>Amount</HeaderCell>
                   <Cell className="!bg-[var(--surface)] border-b border-[var(--border-subtle)]">
                     {(rowData: Transaction, rowIndex?: number) => (
                       <motion.div
-                        className="text-[13px] font-semibold text-[var(--text-primary)] font-display"
+                        className={`font-semibold text-[var(--text-primary)] font-display transition-all duration-300 ${isExpanded ? 'text-lg' : 'text-[13px]'}`}
                         initial={!hasAnimated ? { opacity: 0, scale: 0.9 } : false}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: (rowIndex ?? 0) * 0.05 + 0.2, duration: 0.3 }}
@@ -293,7 +315,7 @@ export default function TransactionTable({
                 </Column>
 
                 <Column width={100} align="left">
-                  <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Status</HeaderCell>
+                  <HeaderCell className={`!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !uppercase !tracking-wide transition-all duration-300 ${isExpanded ? '!text-sm' : '!text-[11px]'}`}>Status</HeaderCell>
                   <Cell className="!bg-[var(--surface)] border-b border-[var(--border-subtle)]">
                     {(rowData: Transaction) => (
                       <StatusPill status={rowData.status} />
@@ -326,7 +348,7 @@ export default function TransactionTable({
             transition={{ delay: 0.5, duration: 0.4 }}
           >
             <motion.div
-              className="text-[11px] text-[var(--text-muted)]"
+              className={`text-[var(--text-muted)] transition-all duration-300 ${isExpanded ? 'text-sm' : 'text-[11px]'}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6, duration: 0.3 }}
@@ -346,6 +368,7 @@ export default function TransactionTable({
           </motion.div>
         )}
       </AnimatePresence>
-    </MotionDiv>
+      </MotionDiv>
+    </>
   );
 }

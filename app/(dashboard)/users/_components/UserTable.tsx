@@ -158,6 +158,7 @@ interface User {
   walletAmount?: number;
   availBalanceAmount?: number;
   accumulatedPoints?: number;
+  accountType?: string;
   subcollections?: {
     transactions?: SubcollectionItem[];
     withdrawals?: SubcollectionItem[];
@@ -1389,7 +1390,9 @@ function userTypeToAgent(userType: UserTypeTab): boolean | undefined {
 function filterUsersByType(users: User[], userType: UserTypeTab): User[] {
   if (userType === 'all') return users;
   if (userType === 'agent') return users.filter((u) => u.agent === true);
-  return users.filter((u) => u.agent !== true); // account | investor
+  if (userType === 'demo') return users.filter((u) => u.accountType === 'demo');
+  if (userType === 'test') return users.filter((u) => u.accountType === 'test');
+  return users.filter((u) => u.agent !== true && u.accountType !== 'demo' && u.accountType !== 'test'); // investor
 }
 
 interface UserTableProps {
@@ -1495,13 +1498,13 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
             rowHeight={56}
             headerHeight={40}
             hover
-            className="app-table !bg-transparent min-w-[720px] cursor-pointer"
+            className="app-table !bg-transparent min-w-[720px] cursor-pointer [&_.rs-table-row:hover_.rs-table-cell]:!bg-[var(--surface-hover)] [&_.rs-table-row:hover_.rs-table-cell]:!transition-colors [&_.rs-table-row:hover_.rs-table-cell]:!duration-200"
             rowKey="_id"
             onRowClick={(rowData) => handleRowClick(rowData as User)}
           >
             <Column flexGrow={2} minWidth={200} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">User</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
+              <Cell className="!border-b !border-[var(--border-subtle)]">
                 {(rowData: User) => (
                   <div className="flex items-center gap-3">
                     <img src={getAvatarUrl(rowData)} alt={getFullName(rowData)} className="w-8 h-8 rounded-full object-cover border border-[var(--border)] flex-shrink-0" />
@@ -1516,7 +1519,7 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
 
             <Column flexGrow={1} minWidth={100} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Type</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
+              <Cell className="!border-b !border-[var(--border-subtle)]">
                 {(rowData: User) => (
                   <TypeBadge isAgent={rowData.agent} />
                 )}
@@ -1525,7 +1528,7 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
 
             <Column flexGrow={1} minWidth={150} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Company Name</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
+              <Cell className="!border-b !border-[var(--border-subtle)]">
                 {(rowData: User) => (
                   <div className="text-[12px] text-[var(--text-secondary)] truncate">
                     {rowData.company || 'N/A'}
@@ -1536,7 +1539,7 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
 
             <Column flexGrow={1} minWidth={120} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Account</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
+              <Cell className="!border-b !border-[var(--border-subtle)]">
                 {(rowData: User) => (
                   <div className="text-[12px] text-[var(--text-secondary)] font-mono">{rowData.accountNumber || '-'}</div>
                 )}
@@ -1545,7 +1548,7 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
 
             <Column flexGrow={1} minWidth={100} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">KYC Status</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
+              <Cell className="!border-b !border-[var(--border-subtle)]">
                 {(rowData: User) => (
                   <KycBadge status={rowData.kycStatus} />
                 )}
@@ -1554,29 +1557,9 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
 
             <Column flexGrow={1} minWidth={90} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Status</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
+              <Cell className="!border-b !border-[var(--border-subtle)]">
                 {(rowData: User) => (
                   <OnlineBadge isOnline={rowData.isOnline} />
-                )}
-              </Cell>
-            </Column>
-
-            <Column flexGrow={1} minWidth={100} align="right">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Balance</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
-                {(rowData: User) => (
-                  <div className="text-[12px] font-semibold text-[var(--text-primary)]">
-                    {(rowData.walletAmount || 0).toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}
-                  </div>
-                )}
-              </Cell>
-            </Column>
-
-            <Column flexGrow={1} minWidth={100} align="left">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Last Active</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
-                {(rowData: User) => (
-                  <div className="text-[12px] text-[var(--text-muted)] truncate">{getRelativeTime(rowData.lastLogin || rowData.lastSignedIn)}</div>
                 )}
               </Cell>
             </Column>

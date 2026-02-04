@@ -158,6 +158,7 @@ interface User {
   walletAmount?: number;
   availBalanceAmount?: number;
   accumulatedPoints?: number;
+  accountType?: string;
   subcollections?: {
     transactions?: SubcollectionItem[];
     withdrawals?: SubcollectionItem[];
@@ -1389,7 +1390,9 @@ function userTypeToAgent(userType: UserTypeTab): boolean | undefined {
 function filterUsersByType(users: User[], userType: UserTypeTab): User[] {
   if (userType === 'all') return users;
   if (userType === 'agent') return users.filter((u) => u.agent === true);
-  return users.filter((u) => u.agent !== true); // account | investor
+  if (userType === 'demo') return users.filter((u) => u.accountType === 'demo');
+  if (userType === 'test') return users.filter((u) => u.accountType === 'test');
+  return users.filter((u) => u.agent !== true && u.accountType !== 'demo' && u.accountType !== 'test'); // investor
 }
 
 interface UserTableProps {

@@ -214,8 +214,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--text-primary);
-  --font-sans: var(--font-inter);
-  --font-display: var(--font-jakarta);
+  --font-sans: var(--font-quest-trial);
+  --font-display: var(--font-google-sans);
 }
 
 html,
@@ -226,7 +226,7 @@ body {
 body {
   background: var(--background);
   color: var(--text-primary);
-  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-quest-trial), system-ui, -apple-system, sans-serif;
   letter-spacing: -0.011em;
 }
 
@@ -1705,8 +1705,51 @@ body>div:not(#__next):not(.app-root) .rs-dropdown-menu .rs-dropdown-item-active 
 }
 
 .font-display {
-  font-family: var(--font-jakarta), var(--font-inter), sans-serif;
+  font-family: var(--font-google-sans), var(--font-quest-trial), sans-serif;
   letter-spacing: -0.02em;
+}
+
+/* Font utility classes for Google Sans (titles, headers, numbers) */
+.font-google-sans {
+  font-family: var(--font-google-sans), system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.font-quest-trial {
+  font-family: var(--font-quest-trial), system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.011em;
+}
+
+/* Apply Google Sans to headings and numbers */
+h1, h2, h3, h4, h5, h6,
+.text-lg, .text-xl, .text-2xl, .text-3xl, .text-4xl, .text-5xl, .text-6xl,
+.font-semibold, .font-bold, .font-extrabold,
+[class*="font-semibold"], [class*="font-bold"], [class*="font-extrabold"] {
+  font-family: var(--font-google-sans), system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Apply Google Sans to numbers and numeric content */
+.tabular-nums,
+[class*="text-"][class*="font-semibold"],
+[class*="text-"][class*="font-bold"],
+.font-mono,
+.rail-badge,
+.theme-toggle-label,
+.rail-user-name,
+input[type="number"],
+.rs-input[type="number"],
+/* Additional numeric and UI elements */
+.rs-table-cell-content,
+.rs-pagination-btn,
+.rs-badge-content,
+.rs-nav-item-content,
+.rs-dropdown-toggle,
+.rs-btn,
+.rs-modal-title,
+.rs-drawer-title {
+  font-family: var(--font-google-sans), ui-monospace, monospace;
+  font-feature-settings: "tnum";
 }
 
 .text-primary-color {

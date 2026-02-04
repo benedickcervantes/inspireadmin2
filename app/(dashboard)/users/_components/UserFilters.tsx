@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Input, InputGroup } from "rsuite";
 
-export type UserTypeTab = "all" | "investor" | "agent";
+export type UserTypeTab = "all" | "investor" | "agent" | "demo" | "test";
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
@@ -33,7 +33,9 @@ interface UserFiltersProps {
 const TABS: { key: UserTypeTab; label: string }[] = [
   { key: "all", label: "All Accounts" },
   { key: "investor", label: "Investor" },
-  { key: "agent", label: "Agent" }
+  { key: "agent", label: "Agent" },
+  { key: "demo", label: "Demo" },
+  { key: "test", label: "Test" }
 ];
 
 export default function UserFilters({
@@ -76,7 +78,7 @@ export default function UserFilters({
               </InputGroup.Addon>
               <Input
                 placeholder="Search users..."
-                className="!bg-transparent !text-xs !text-[var(--text-primary)] placeholder:!text-[var(--text-muted)]"
+                className="!bg-transparent !text-xs !text-[var(--text-primary)] placeholder:!text-[var(--text-muted)] font-quest-trial"
                 value={searchQuery}
                 onChange={onSearchChange}
                 onFocus={() => setIsFocused(true)}
@@ -114,7 +116,7 @@ export default function UserFilters({
                 key={tab.key}
                 type="button"
                 onClick={() => onUserTypeChange(tab.key)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-md text-xs font-medium font-google-sans transition-all ${
                   isActive
                     ? "bg-[var(--primary)] text-white shadow-sm"
                     : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"

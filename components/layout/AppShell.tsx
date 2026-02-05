@@ -38,6 +38,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
     return localStorage.getItem("adminSidebarExpanded") !== "0";
   });
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
@@ -103,14 +104,54 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app-root">
-      <Sidebar
-        expanded={isSidebarExpanded}
-        onToggle={handleToggleSidebar}
-        user={userDisplay}
-        onLogout={handleLogout}
-      />
+      {/* Mobile Hamburger Menu */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-transparent flex items-center px-4 z-50">
+        <button
+          onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+          className="w-10 h-10 rounded-lg hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-primary)] transition-colors"
+          aria-label="Toggle menu"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+      </div>
 
-      <div className="app-content-area">
+      {/* Mobile Sidebar Overlay */}
+      {isMobileSidebarOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        />
+      )}
+
+      {/* Desktop Sidebar - Hidden on mobile */}
+      <div className="hidden md:block">
+        <Sidebar
+          expanded={isSidebarExpanded}
+          onToggle={handleToggleSidebar}
+          user={userDisplay}
+          onLogout={handleLogout}
+        />
+      </div>
+
+      {/* Mobile Sidebar - Shown only on mobile when open */}
+      {isMobileSidebarOpen && (
+        <div className="md:hidden fixed inset-0 z-40 pt-14 overflow-hidden">
+          <div className="h-full overflow-y-auto">
+            <Sidebar
+              expanded={true}
+              onToggle={() => setIsMobileSidebarOpen(false)}
+              user={userDisplay}
+              onLogout={handleLogout}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="app-content-area md:pt-0 pt-14">
         <main className="app-main">
           <div className="app-panel">
             {children}

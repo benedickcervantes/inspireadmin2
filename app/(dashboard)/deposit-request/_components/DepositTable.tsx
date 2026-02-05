@@ -10,6 +10,15 @@ const { Column, HeaderCell, Cell } = Table;
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
+interface DepositTableProps {
+  filters: {
+    status: string;
+    paymentMethod: string;
+    searchQuery: string;
+    dateRange: [Date, Date] | null;
+  };
+}
+
 const Icons = {
   MoreHorizontal: (props: IconProps) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -428,7 +437,7 @@ const DepositDetailPanel = ({
   );
 };
 
-export default function DepositTable() {
+export default function DepositTable({ filters }: DepositTableProps) {
   const [selectedDeposit, setSelectedDeposit] = useState<DepositRequest | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [page, setPage] = useState(1);
@@ -441,6 +450,47 @@ export default function DepositTable() {
   });
 
   const deposits = (data?.data?.items ?? []) as DepositRequest[];
+  
+  const filteredDeposits = React.useMemo(() => {
+    let filtered = deposits;
+
+    if (filters.status !== "all") {
+      filtered = filtered.filter(deposit => 
+        (deposit.status || "pending").toLowerCase() === filters.status.toLowerCase()
+      );
+    }
+
+    if (filters.paymentMethod !== "all") {
+      filtered = filtered.filter(deposit => 
+        (deposit.paymentMethod || "bank_transfer").toLowerCase().replace(/\s+/g, '_') === filters.paymentMethod
+      );
+    }
+
+    if (filters.searchQuery) {
+      const query = filters.searchQuery.toLowerCase();
+      filtered = filtered.filter(deposit => {
+        const userName = getFullName(deposit.user).toLowerCase();
+        const email = (deposit.user.emailAddress || "").toLowerCase();
+        const reference = (deposit.referenceNumber || deposit._firebaseDocId).toLowerCase();
+        
+        return userName.includes(query) || 
+               email.includes(query) || 
+               reference.includes(query);
+      });
+    }
+
+    if (filters.dateRange && filters.dateRange[0] && filters.dateRange[1]) {
+      const [startDate, endDate] = filters.dateRange;
+      filtered = filtered.filter(deposit => {
+        if (!deposit.createdAt) return false;
+        const depositDate = new Date(deposit.createdAt);
+        return depositDate >= startDate && depositDate <= endDate;
+      });
+    }
+
+    return filtered;
+  }, [deposits, filters]);
+
   const total = data?.data?.pagination.total ?? 0;
   const errorMessage = error instanceof Error ? error.message : "Failed to fetch deposit requests";
 
@@ -494,15 +544,16 @@ export default function DepositTable() {
 
   return (
     <>
+      {/* Desktop Table View */}
       <motion.div
-        className="bg-[var(--surface)] rounded-xl shadow-sm border border-[var(--border)] flex flex-col"
+        className="bg-[var(--surface)] rounded-xl shadow-sm border border-[var(--border)] flex flex-col hidden md:flex"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
         <div className="overflow-x-auto rounded-t-xl">
           <Table
-            data={deposits}
+            data={filteredDeposits}
             autoHeight
             rowHeight={60}
             headerHeight={40}
@@ -643,6 +694,41 @@ export default function DepositTable() {
             className="deposit-pagination !text-xs"
           />
         </div>
+      </motion.div>
+
+      {/* Mobile Card View */}
+      <motion.div
+        className="md:hidden space-y-3"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.5 }}
+      >
+        {filteredDeposits.map((deposit: DepositRequest) => (
+          <motion.div
+            key={deposit._firebaseDocId}
+            className="bg-[var(--surface)] rounded-lg border border-[var(--border)] p-3 cursor-pointer hover:border-[var(--primary)] transition-colors"
+            onClick={() => handleRowClick(deposit)}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-mono text-[var(--primary)] truncate">{deposit.referenceNumber || deposit._firebaseDocId.substring(0, 8)}</div>
+                <div className="text-sm font-medium text-[var(--text-primary)] truncate">{getFullName(deposit.user)}</div>
+                <div className="text-xs text-[var(--text-muted)] truncate">{deposit.user.emailAddress}</div>
+              </div>
+              <StatusBadge status={deposit.status || 'pending'} />
+            </div>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div>
+                <div className="text-xs text-[var(--text-muted)]">Amount</div>
+                <div className="text-sm font-semibold text-[var(--text-primary)]">₱{(deposit.amount || 0).toLocaleString()}</div>
+              </div>
+              <PaymentMethodBadge method={deposit.paymentMethod || 'bank_transfer'} />
+            </div>
+            <div className="text-xs text-[var(--text-muted)]">{formatDate(deposit.createdAt)}</div>
+          </motion.div>
+        ))}
       </motion.div>
 
       {/* Detail Drawer */}

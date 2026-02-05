@@ -2070,6 +2070,12 @@ input[type="number"],
     width: 260px;
     padding: 16px 10px;
   }
+  
+  .rail-brand {
+    padding: 12px 6px;
+    margin-bottom: 6px;
+    margin-top: 40px;
+  }
 
   .app-panel {
     border-radius: var(--radius-lg);

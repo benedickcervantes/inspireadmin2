@@ -119,27 +119,6 @@ export default function MayaHeader() {
               E-wallet transactions and integrations
             </motion.div>
           </motion.div>
-          <motion.span
-            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--success)]/30 bg-[var(--success-soft)] px-2.5 py-0.5 text-[11px] text-[var(--success)] font-medium"
-            initial={{ opacity: 0, scale: 0.8, x: -10 }}
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            transition={{ delay: 0.3, type: "spring", stiffness: 300, damping: 20 }}
-            whileHover={{ scale: 1.05 }}
-          >
-            <motion.span
-              className="w-1.5 h-1.5 rounded-full bg-[var(--success)]"
-              animate={{
-                scale: [1, 1.2, 1],
-                opacity: [1, 0.7, 1]
-              }}
-              transition={{
-                repeat: Infinity,
-                duration: 2,
-                ease: "easeInOut"
-              }}
-            />
-            Live
-          </motion.span>
         </div>
 
         <motion.div

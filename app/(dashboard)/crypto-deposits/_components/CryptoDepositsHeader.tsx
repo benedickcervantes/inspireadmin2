@@ -148,27 +148,6 @@ export default function CryptoDepositsHeader({ stats }: CryptoDepositsHeaderProp
               >
                 Crypto Deposits
               </motion.h1>
-              <motion.span
-                className="inline-flex items-center gap-1.5 rounded-full bg-green-500/20 border border-green-400/30 px-2.5 py-0.5 text-xs text-green-100 font-medium w-fit"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.4, type: "spring", stiffness: 300, damping: 20 }}
-                whileHover={{ scale: 1.05 }}
-              >
-                <motion.span
-                  className="w-1.5 h-1.5 rounded-full bg-green-400"
-                  animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [1, 0.7, 1]
-                  }}
-                  transition={{
-                    repeat: Infinity,
-                    duration: 2,
-                    ease: "easeInOut"
-                  }}
-                />
-                EmailJS Configured
-              </motion.span>
             </div>
           </div>
 

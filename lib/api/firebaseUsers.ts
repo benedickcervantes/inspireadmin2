@@ -27,6 +27,9 @@ const buildQueryString = (params: GetUsersParams): string => {
   if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
   if (params.agent === true) queryParams.append("agent", "true");
   if (params.agent === false) queryParams.append("agent", "false");
+  if (params.accountType) queryParams.append("accountType", params.accountType);
+  if (params.isDummyAccount === true) queryParams.append("isDummyAccount", "true");
+  if (params.isDummyAccount === false) queryParams.append("isDummyAccount", "false");
   return queryParams.toString();
 };
 

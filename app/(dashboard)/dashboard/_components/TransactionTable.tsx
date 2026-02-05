@@ -90,7 +90,7 @@ const StatusPill = ({ status }: { status: TransactionStatus }) => {
         transition={{
           repeat: status === "Pending" ? Infinity : 0,
           duration: 1.5,
-          ease: "easeInOut"
+          ease: "easeInOut"   
         }}
       />
       {status}

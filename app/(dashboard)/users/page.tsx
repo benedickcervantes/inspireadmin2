@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import UserHeader from "./_components/UserHeader";
 import UserFilters from "./_components/UserFilters";
 import type { UserTypeTab } from "./_components/UserFilters";
@@ -11,6 +11,8 @@ export default function UsersPage() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [userType, setUserType] = useState<UserTypeTab>("all");
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [agentCount, setAgentCount] = useState(0);
+  const [investorCount, setInvestorCount] = useState(0);
 
   // Debounce search input
   useEffect(() => {
@@ -23,6 +25,12 @@ export default function UsersPage() {
     };
   }, [searchInput]);
 
+  // Use useCallback to prevent function recreation
+  const handleCountsChange = useCallback((agents: number, investors: number) => {
+    setAgentCount(agents);
+    setInvestorCount(investors);
+  }, []);
+
   return (
     <div className="flex w-full flex-col gap-3 flex-1 min-h-0">
       <UserHeader totalCount={totalCount} />
@@ -31,11 +39,15 @@ export default function UsersPage() {
         onSearchChange={setSearchInput}
         userType={userType}
         onUserTypeChange={setUserType}
+        agentCount={agentCount}
+        investorCount={investorCount}
+        totalCount={totalCount ?? 0}
       />
       <UserTable
         searchQuery={debouncedSearchQuery}
         userType={userType}
         onTotalChange={setTotalCount}
+        onCountsChange={handleCountsChange}
       />
     </div>
   );

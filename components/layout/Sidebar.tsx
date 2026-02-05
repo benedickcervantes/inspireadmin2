@@ -29,6 +29,7 @@ type SidebarProps = {
   onToggle?: () => void;
   user?: UserDisplay;
   onLogout?: () => void;
+  onNavigate?: () => void;
 };
 
 type IconProps = React.SVGProps<SVGSVGElement>;
@@ -163,7 +164,7 @@ const themeLabelVariants = {
   }
 };
 
-export default function Sidebar({ expanded, onToggle, user, onLogout }: SidebarProps) {
+export default function Sidebar({ expanded, onToggle, user, onLogout, onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const [openKeys, setOpenKeys] = useState<string[]>([]);
   const [isInitialMount, setIsInitialMount] = useState(true);
@@ -276,41 +277,41 @@ export default function Sidebar({ expanded, onToggle, user, onLogout }: SidebarP
         >
           <Sidenav.Body>
             <Nav activeKey={pathname}>
-              <Nav.Item eventKey="/dashboard" as={Link} href="/dashboard" icon={<DashboardIcon />} title="Dashboard">
+              <Nav.Item eventKey="/dashboard" as={Link} href="/dashboard" icon={<DashboardIcon />} title="Dashboard" onClick={onNavigate}>
                 Dashboard
               </Nav.Item>
-              <Nav.Item eventKey="/users" as={Link} href="/users" icon={<MemberIcon />} title="Users">
+              <Nav.Item eventKey="/users" as={Link} href="/users" icon={<MemberIcon />} title="Users" onClick={onNavigate}>
                 Users
               </Nav.Item>
               <Nav.Menu eventKey="deposits" title="Deposits" icon={<CreditCardPlusIcon />}>
-                <Nav.Item eventKey="/crypto-deposits" as={Link} href="/crypto-deposits">Crypto Deposits</Nav.Item>
-                <Nav.Item eventKey="/deposit-request" as={Link} href="/deposit-request">Deposit Request</Nav.Item>
+                <Nav.Item eventKey="/crypto-deposits" as={Link} href="/crypto-deposits" onClick={onNavigate}>Crypto Deposits</Nav.Item>
+                <Nav.Item eventKey="/deposit-request" as={Link} href="/deposit-request" onClick={onNavigate}>Deposit Request</Nav.Item>
               </Nav.Menu>
               <Nav.Menu eventKey="withdrawals" title="Withdrawals" icon={<SendIcon />}>
-                <Nav.Item eventKey="/withdrawal-request" as={Link} href="/withdrawal-request">Withdrawal Request</Nav.Item>
+                <Nav.Item eventKey="/withdrawal-request" as={Link} href="/withdrawal-request" onClick={onNavigate}>Withdrawal Request</Nav.Item>
               </Nav.Menu>
               <Nav.Menu eventKey="services" title="Services" icon={<GlobalIcon />}>
-                <Nav.Item eventKey="/maya" as={Link} href="/maya">Maya</Nav.Item>
-                <Nav.Item eventKey="/bank-services" as={Link} href="/bank-services">Bank Services</Nav.Item>
-                <Nav.Item eventKey="/travel-protection" as={Link} href="/travel-protection">Travel Protection</Nav.Item>
+                <Nav.Item eventKey="/maya" as={Link} href="/maya" onClick={onNavigate}>Maya</Nav.Item>
+                <Nav.Item eventKey="/bank-services" as={Link} href="/bank-services" onClick={onNavigate}>Bank Services</Nav.Item>
+                <Nav.Item eventKey="/travel-protection" as={Link} href="/travel-protection" onClick={onNavigate}>Travel Protection</Nav.Item>
               </Nav.Menu>
-              <Nav.Item eventKey="/kyc-requests" as={Link} href="/kyc-requests" icon={<DetailIcon />} title="KYC Requests">
+              <Nav.Item eventKey="/kyc-requests" as={Link} href="/kyc-requests" icon={<DetailIcon />} title="KYC Requests" onClick={onNavigate}>
                 KYC Requests
               </Nav.Item>
               <Nav.Menu eventKey="management" title="Task Management" icon={<TaskIcon />}>
-                <Nav.Item eventKey="/tasks" as={Link} href="/tasks">All Tasks</Nav.Item>
-                <Nav.Item eventKey="/tasks/my-tasks" as={Link} href="/tasks/my-tasks">My Tasks</Nav.Item>
+                <Nav.Item eventKey="/tasks" as={Link} href="/tasks" onClick={onNavigate}>All Tasks</Nav.Item>
+                <Nav.Item eventKey="/tasks/my-tasks" as={Link} href="/tasks/my-tasks" onClick={onNavigate}>My Tasks</Nav.Item>
               </Nav.Menu>
               <Nav.Menu eventKey="reports" title="Reports" icon={<PieChartIcon />}>
-                <Nav.Item eventKey="/admin-history" as={Link} href="/admin-history">Admin History Logs</Nav.Item>
-                <Nav.Item eventKey="/reports" as={Link} href="/reports">System Reports</Nav.Item>
+                <Nav.Item eventKey="/admin-history" as={Link} href="/admin-history" onClick={onNavigate}>Admin History Logs</Nav.Item>
+                <Nav.Item eventKey="/reports" as={Link} href="/reports" onClick={onNavigate}>System Reports</Nav.Item>
               </Nav.Menu>
-              <Nav.Item eventKey="/history" as={Link} href="/history" icon={<HistoryIcon />} title="History">
+              <Nav.Item eventKey="/history" as={Link} href="/history" icon={<HistoryIcon />} title="History" onClick={onNavigate}>
                 History
               </Nav.Item>
               <Nav.Menu eventKey="settings" title="Settings" icon={<GearIcon />}>
-                <Nav.Item eventKey="/settings" as={Link} href="/settings">General Settings</Nav.Item>
-                <Nav.Item eventKey="/settings/security" as={Link} href="/settings/security">Security</Nav.Item>
+                <Nav.Item eventKey="/settings" as={Link} href="/settings" onClick={onNavigate}>General Settings</Nav.Item>
+                <Nav.Item eventKey="/settings/security" as={Link} href="/settings/security" onClick={onNavigate}>Security</Nav.Item>
               </Nav.Menu>
             </Nav>
           </Sidenav.Body>

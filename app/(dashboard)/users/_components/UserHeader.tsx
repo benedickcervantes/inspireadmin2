@@ -72,27 +72,7 @@ export default function UserHeader({ totalCount }: UserHeaderProps) {
               Manage access, roles, and activity.
             </motion.div>
           </motion.div>
-          <motion.span
-            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-accent)] bg-[var(--primary-soft)] px-2.5 py-1 text-[11px] text-[var(--primary)] font-medium"
-            initial={{ opacity: 0, scale: 0.8, x: -10 }}
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            transition={{ delay: 0.3, type: "spring", stiffness: 300, damping: 20 }}
-            whileHover={{ scale: 1.05 }}
-          >
-            <motion.span
-              className="w-1.5 h-1.5 rounded-full bg-[var(--primary)]"
-              animate={{
-                scale: [1, 1.2, 1],
-                opacity: [1, 0.7, 1]
-              }}
-              transition={{
-                repeat: Infinity,
-                duration: 2,
-                ease: "easeInOut"
-              }}
-            />
-            {displayCount} users
-          </motion.span>
+         
         </div>
 
         <motion.div
@@ -109,22 +89,6 @@ export default function UserHeader({ totalCount }: UserHeaderProps) {
                 <span className="flex items-center gap-2">
                   <Icons.Mail className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                   Send Email
-                </span>
-              </Button>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.02, boxShadow: "var(--shadow-glow-cyan)" }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Button size="sm" appearance="primary" className="!h-8 !px-4 !rounded-lg !bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] hover:!shadow-[var(--shadow-glow-cyan)] transition-all">
-                <span className="flex items-center gap-2">
-                  <motion.span
-                    whileHover={{ rotate: 90 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Icons.Plus className="w-3.5 h-3.5" />
-                  </motion.span>
-                  Add User
                 </span>
               </Button>
             </motion.div>

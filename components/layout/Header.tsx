@@ -46,9 +46,6 @@ export default function Header() {
               <div className="text-sm font-semibold text-[var(--text-primary)]">Dashboard Overview</div>
               <div className="text-xs text-[var(--text-muted)]">Updated a few seconds ago</div>
             </div>
-            <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-accent)] bg-[var(--primary-soft)] px-2 py-0.5 text-[11px] text-[var(--primary)] font-medium">
-              Active
-            </span>
           </div>
 
           <Stack direction="row" spacing={8} className="flex-wrap">

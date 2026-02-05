@@ -6,6 +6,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Table, Drawer, Button, Modal, Nav, Badge, Avatar, Divider, Progress, ButtonGroup, Loader, Pagination, Dropdown } from 'rsuite';
 import { getFirebaseUserById, getFirebaseUsers } from '@/lib/api/firebaseUsers';
 import type { UserTypeTab } from './UserFilters';
+import EditUserDrawer from './EditUserDrawer';
 
 const { Column, HeaderCell, Cell } = Table;
 
@@ -152,6 +153,7 @@ interface User {
   agent?: boolean;
   agentCode?: string;
   isOnline?: boolean;
+  isDummyAccount?: boolean;
   createdAt?: string;
   lastLogin?: string;
   lastSignedIn?: string;
@@ -575,7 +577,8 @@ const AgentBadge = ({ isAgent, agentCode }: { isAgent?: boolean; agentCode?: str
   );
 };
 
-const TypeBadge = ({ isAgent }: { isAgent?: boolean }) => {
+const TypeBadge = ({ isAgent, isDummyAccount, accountType }: { isAgent?: boolean; isDummyAccount?: boolean; accountType?: string }) => {
+  // Only show Agent or Investor, ignore demo/test status in Type column
   const isAgentType = isAgent === true;
 
   return (
@@ -1205,7 +1208,7 @@ const TransactionModal = ({
 };
 
 // User Detail Panel Component - Dark Theme with CSS transitions
-const UserDetailPanel = ({ user, onClose, onViewTransactions }: { user: User; onClose: () => void; onViewTransactions: () => void }) => {
+const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit }: { user: User; onClose: () => void; onViewTransactions: () => void; onEdit: () => void }) => {
   const walletBalance = user.walletAmount || 0;
   const availBalance = user.availBalanceAmount || 0;
   const subcollectionCount = user.subcollections ? Object.keys(user.subcollections).length : 0;
@@ -1362,7 +1365,7 @@ const UserDetailPanel = ({ user, onClose, onViewTransactions }: { user: User; on
                 Add 10 points
               </span>
             </Dropdown.Item>
-            <Dropdown.Item className="!text-xs" onSelect={() => {}}>
+            <Dropdown.Item className="!text-xs" onSelect={onEdit}>
               <span className="flex items-center gap-2">
                 <Icons.Edit className="w-3.5 h-3.5" />
                 Edit
@@ -1381,51 +1384,89 @@ const UserDetailPanel = ({ user, onClose, onViewTransactions }: { user: User; on
   );
 };
 
-function userTypeToAgent(userType: UserTypeTab): boolean | undefined {
-  if (userType === 'all') return undefined;
-  if (userType === 'agent') return true;
-  return false; // account | investor => non-agents
+function userTypeToParams(userType: UserTypeTab): { agent?: boolean; accountType?: string; isDummyAccount?: boolean } {
+  if (userType === 'all') return {};
+  if (userType === 'agent') return { agent: true };
+  // For demo/test, don't send filter params - we'll filter client-side
+  // because backend might not support isDummyAccount/accountType filtering yet
+  if (userType === 'demo') return {};
+  if (userType === 'test') return {};
+  return { agent: false }; // investor: non-agents only
 }
 
 function filterUsersByType(users: User[], userType: UserTypeTab): User[] {
   if (userType === 'all') return users;
   if (userType === 'agent') return users.filter((u) => u.agent === true);
-  if (userType === 'demo') return users.filter((u) => u.accountType === 'demo');
+  if (userType === 'demo') return users.filter((u) => u.isDummyAccount === true || u.accountType === 'demo');
   if (userType === 'test') return users.filter((u) => u.accountType === 'test');
-  return users.filter((u) => u.agent !== true && u.accountType !== 'demo' && u.accountType !== 'test'); // investor
+  return users.filter((u) => 
+    u.agent !== true && 
+    u.isDummyAccount !== true && 
+    u.accountType !== 'demo' &&
+    u.accountType !== 'test'
+  ); // investor
 }
 
 interface UserTableProps {
   searchQuery?: string;
   userType?: UserTypeTab;
   onTotalChange?: (total: number) => void;
+  onCountsChange?: (agentCount: number, investorCount: number) => void;
 }
 
-export default function UserTable({ searchQuery, userType = 'all', onTotalChange }: UserTableProps) {
+export default function UserTable({ searchQuery, userType = 'all', onTotalChange, onCountsChange }: UserTableProps) {
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
 
-  const agentParam = userTypeToAgent(userType);
+  const filterParams = userTypeToParams(userType);
+  
+  // For demo/test tabs, fetch more records since we're filtering client-side
+  const effectiveLimit = (userType === 'demo' || userType === 'test') ? 50 : limit;
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['firebase-users', { page, limit, searchQuery, userType, agent: agentParam }],
+    queryKey: ['firebase-users', { page, limit: effectiveLimit, searchQuery, userType, ...filterParams }],
     queryFn: () => getFirebaseUsers({
       page,
-      limit,
+      limit: effectiveLimit,
       search: searchQuery || undefined,
-      agent: agentParam,
+      ...filterParams,
       sortBy: 'createdAt',
       sortOrder: 'desc'
     }),
     placeholderData: keepPreviousData,
   });
 
+  // Fetch agent and investor counts using pagination totals
+  const { data: agentData } = useQuery({
+    queryKey: ['firebase-users-agent-count'],
+    queryFn: () => getFirebaseUsers({
+      page: 1,
+      limit: 1,
+      agent: true,
+    }),
+  });
+
+  const { data: nonAgentData } = useQuery({
+    queryKey: ['firebase-users-non-agent-count'],
+    queryFn: () => getFirebaseUsers({
+      page: 1,
+      limit: 1,
+      agent: false,
+    }),
+  });
+
   const rawUsers = (data?.data?.users ?? []) as User[];
+  // Apply client-side filtering as backup in case API doesn't support isDummyAccount/accountType params
   const users = filterUsersByType(rawUsers, userType);
   const total = data?.data?.pagination.total ?? 0;
+
+  // Get counts from pagination totals
+  const agentCount = agentData?.data?.pagination.total ?? 0;
+  const investorCount = nonAgentData?.data?.pagination.total ?? 0;
 
   useEffect(() => {
     setPage(1);
@@ -1434,6 +1475,11 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
   useEffect(() => {
     onTotalChange?.(total);
   }, [total, onTotalChange]);
+
+  useEffect(() => {
+    onCountsChange?.(agentCount, investorCount);
+  }, [agentCount, investorCount, onCountsChange]);
+
   const errorMessage = error instanceof Error ? error.message : 'Failed to fetch users';
 
   const selectedUserId = selectedUser?._id;
@@ -1466,6 +1512,14 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
     setTransactionModalOpen(false);
   };
 
+  const handleEdit = () => {
+    setEditDrawerOpen(true);
+  };
+
+  const handleCloseEditDrawer = () => {
+    setEditDrawerOpen(false);
+  };
+
   if (isLoading) {
     return (
       <div className="bg-[var(--surface)] rounded-xl shadow-[var(--shadow-card)] border border-[var(--border-subtle)] p-8 flex items-center justify-center">
@@ -1491,29 +1545,45 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
   return (
       <>
         <div className="bg-[var(--surface)] rounded-xl shadow-[var(--shadow-card)] border border-[var(--border-subtle)] flex flex-col overflow-hidden flex-1 min-h-0">
-          <div className="overflow-x-auto flex-1 min-h-[200px]">
+          <div className="overflow-x-auto overflow-y-hidden flex-1 min-h-[200px] scrollbar-thin scrollbar-thumb-[var(--border)] scrollbar-track-transparent">
           <Table
             data={users}
             height={Math.max(users.length * 56 + 40, 300)}
             rowHeight={56}
             headerHeight={40}
             hover
-            className="app-table !bg-transparent min-w-[720px] cursor-pointer [&_.rs-table-row:hover_.rs-table-cell]:!bg-[var(--surface-hover)] [&_.rs-table-row:hover_.rs-table-cell]:!transition-colors [&_.rs-table-row:hover_.rs-table-cell]:!duration-200"
+            className="app-table !bg-transparent min-w-[900px] cursor-pointer [&_.rs-table-row:hover_.rs-table-cell]:!bg-[var(--surface-hover)] [&_.rs-table-row:hover_.rs-table-cell]:!transition-colors [&_.rs-table-row:hover_.rs-table-cell]:!duration-200"
             rowKey="_id"
             onRowClick={(rowData) => handleRowClick(rowData as User)}
           >
             <Column flexGrow={2} minWidth={200} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">User</HeaderCell>
               <Cell className="!border-b !border-[var(--border-subtle)]">
-                {(rowData: User) => (
-                  <div className="flex items-center gap-3">
-                    <img src={getAvatarUrl(rowData)} alt={getFullName(rowData)} className="w-8 h-8 rounded-full object-cover border border-[var(--border)] flex-shrink-0" />
-                    <div className="min-w-0">
-                      <div className="text-[13px] font-medium text-[var(--text-primary)] leading-tight truncate">{getFullName(rowData)}</div>
-                      <div className="text-[11px] text-[var(--text-muted)] truncate">{rowData.emailAddress || 'No email'}</div>
+                {(rowData: User) => {
+                  const isDemo = rowData.isDummyAccount === true || rowData.accountType === 'demo';
+                  const isTest = rowData.accountType === 'test';
+                  return (
+                    <div className="flex items-center gap-3">
+                      <img src={getAvatarUrl(rowData)} alt={getFullName(rowData)} className="w-8 h-8 rounded-full object-cover border border-[var(--border)] flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className="text-[13px] font-medium text-[var(--text-primary)] leading-tight truncate">{getFullName(rowData)}</div>
+                          {isDemo && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-[var(--warning-soft)] text-[var(--warning)] border border-[rgba(245,158,11,0.3)] flex-shrink-0">
+                              DEMO
+                            </span>
+                          )}
+                          {isTest && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-[var(--surface-soft)] text-[var(--text-muted)] border border-[var(--border)] flex-shrink-0">
+                              TEST
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-[var(--text-muted)] truncate">{rowData.emailAddress || 'No email'}</div>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                }}
               </Cell>
             </Column>
 
@@ -1521,7 +1591,7 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Type</HeaderCell>
               <Cell className="!border-b !border-[var(--border-subtle)]">
                 {(rowData: User) => (
-                  <TypeBadge isAgent={rowData.agent} />
+                  <TypeBadge isAgent={rowData.agent} isDummyAccount={rowData.isDummyAccount} accountType={rowData.accountType} />
                 )}
               </Cell>
             </Column>
@@ -1577,6 +1647,7 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
             size="xs"
             total={total}
             limit={limit}
+            maxButtons={4}
             activePage={page}
             onChangePage={setPage}
             className="!m-0 dark-pagination"
@@ -1612,6 +1683,7 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
                   user={activeUser}
                   onClose={handleCloseDrawer}
                   onViewTransactions={handleViewTransactions}
+                  onEdit={handleEdit}
                 />
               </motion.div>
             )}
@@ -1628,6 +1700,13 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
           isLoading={isUserDetailPending}
         />
       )}
+
+      {/* Edit User Drawer */}
+      <EditUserDrawer
+        open={editDrawerOpen}
+        onClose={handleCloseEditDrawer}
+        user={activeUser}
+      />
     </>
   );
 }

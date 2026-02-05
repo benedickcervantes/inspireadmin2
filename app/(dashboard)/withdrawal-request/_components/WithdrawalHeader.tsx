@@ -121,23 +121,6 @@ export default function WithdrawalHeader({ stats }: WithdrawalHeaderProps) {
               Process and manage withdrawal transactions
             </motion.div>
           </motion.div>
-          {displayStats.pending > 0 && (
-            <motion.span
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--warning)]/30 bg-[var(--warning-soft)] px-2.5 py-0.5 text-[11px] text-[var(--warning)] font-medium"
-              initial={{ opacity: 0, scale: 0.8, x: -10 }}
-              animate={{ opacity: 1, scale: 1, x: 0 }}
-              transition={{ delay: 0.3, type: "spring", stiffness: 300, damping: 20 }}
-              whileHover={{ scale: 1.05 }}
-            >
-              <motion.div
-                animate={{ rotate: [0, 10, -10, 0] }}
-                transition={{ repeat: Infinity, duration: 2 }}
-              >
-                <Icons.AlertTriangle className="w-3 h-3" />
-              </motion.div>
-              {displayStats.pending} awaiting
-            </motion.span>
-          )}
         </div>
 
         <motion.div

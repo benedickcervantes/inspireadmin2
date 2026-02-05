@@ -125,15 +125,6 @@ export default function BankHeader() {
               Bank transfers and account management
             </motion.div>
           </motion.div>
-          <motion.span
-            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--info)]/30 bg-[var(--info-soft)] px-2.5 py-0.5 text-[11px] text-[var(--info)] font-medium"
-            initial={{ opacity: 0, scale: 0.8, x: -10 }}
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            transition={{ delay: 0.3, type: "spring", stiffness: 300, damping: 20 }}
-            whileHover={{ scale: 1.05 }}
-          >
-            12 Banks Connected
-          </motion.span>
         </div>
 
         <motion.div

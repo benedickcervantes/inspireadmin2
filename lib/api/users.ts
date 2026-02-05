@@ -116,6 +116,10 @@ export interface GetUsersParams {
   sortOrder?: 'asc' | 'desc';
   /** When true: agents only. When false: non-agents (account/investor). When undefined: all. */
   agent?: boolean;
+  /** Filter by account type (e.g., 'demo', 'test') */
+  accountType?: string;
+  /** Filter by dummy account status */
+  isDummyAccount?: boolean;
 }
 
 const getAuthToken = (): string | null => {
@@ -145,6 +149,9 @@ export const getUsers = async (params: GetUsersParams = {}): Promise<UsersRespon
   if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
   if (params.agent === true) queryParams.append('agent', 'true');
   if (params.agent === false) queryParams.append('agent', 'false');
+  if (params.accountType) queryParams.append('accountType', params.accountType);
+  if (params.isDummyAccount === true) queryParams.append('isDummyAccount', 'true');
+  if (params.isDummyAccount === false) queryParams.append('isDummyAccount', 'false');
 
   const queryString = queryParams.toString();
   const url = `${API_BASE_URL}/api/users${queryString ? `?${queryString}` : ''}`;

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "motion/react";
 import Sidebar from "./Sidebar";
 import ChatSystem from "@/components/chat";
 
@@ -119,13 +120,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </button>
       </div>
 
-      {/* Mobile Sidebar Overlay */}
-      {isMobileSidebarOpen && (
-        <div
-          className="md:hidden fixed inset-0 bg-black/50 z-40"
-          onClick={() => setIsMobileSidebarOpen(false)}
-        />
-      )}
+      {/* Mobile Sidebar Overlay with Animation */}
+      <AnimatePresence>
+        {isMobileSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden fixed inset-0 bg-black/50"
+            style={{ zIndex: 1200 }}
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Desktop Sidebar - Hidden on mobile */}
       <div className="hidden md:block">
@@ -137,19 +145,29 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         />
       </div>
 
-      {/* Mobile Sidebar - Shown only on mobile when open */}
-      {isMobileSidebarOpen && (
-        <div className="md:hidden fixed inset-0 z-40 pt-14 overflow-hidden">
-          <div className="h-full overflow-y-auto">
-            <Sidebar
-              expanded={true}
-              onToggle={() => setIsMobileSidebarOpen(false)}
-              user={userDisplay}
-              onLogout={handleLogout}
-            />
-          </div>
-        </div>
-      )}
+      {/* Mobile Sidebar with Fade Animation */}
+      <AnimatePresence>
+        {isMobileSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden fixed overflow-hidden"
+            style={{ top: '56px', left: 0, bottom: 0, width: '280px', zIndex: 1250 }}
+          >
+            <div className="h-full overflow-y-auto">
+              <Sidebar
+                expanded={true}
+                onToggle={() => setIsMobileSidebarOpen(false)}
+                user={userDisplay}
+                onLogout={handleLogout}
+                onNavigate={() => setIsMobileSidebarOpen(false)}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="app-content-area md:pt-0 pt-14">
         <main className="app-main">

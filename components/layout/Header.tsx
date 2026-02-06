@@ -56,12 +56,7 @@ export default function Header() {
                 <Icons.ChevronDown className="w-3 h-3 text-[var(--text-muted)]" />
               </span>
             </Button>
-            <Button size="sm" appearance="primary" className="!h-8 !px-3 !rounded-md !bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] hover:!shadow-[var(--shadow-glow-cyan)]">
-              <span className="flex items-center gap-2">
-                <Icons.Download className="w-3.5 h-3.5" />
-                Export
-              </span>
-            </Button>
+            
           </Stack>
         </div>
 

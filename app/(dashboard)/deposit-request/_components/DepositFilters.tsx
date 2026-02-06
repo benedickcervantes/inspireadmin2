@@ -3,8 +3,14 @@
 import React from "react";
 import { motion } from "motion/react";
 import { Button, Input, InputGroup, SelectPicker, DateRangePicker } from "rsuite";
+import { DepositFiltersType } from "../page";
 
 type IconProps = React.SVGProps<SVGSVGElement>;
+
+interface DepositFiltersProps {
+  filters: DepositFiltersType;
+  onFiltersChange: (newFilters: Partial<DepositFiltersType>) => void;
+}
 
 const Icons = {
   Search: (props: IconProps) => (
@@ -52,7 +58,7 @@ const paymentMethodOptions = [
   { label: "Crypto", value: "crypto" },
 ];
 
-export default function DepositFilters() {
+export default function DepositFilters({ filters, onFiltersChange }: DepositFiltersProps) {
   return (
     <motion.div
       className="bg-[var(--surface)] rounded-xl px-4 py-3 shadow-sm border border-[var(--border)]"
@@ -75,6 +81,8 @@ export default function DepositFilters() {
             <Input
               placeholder="Search by ID, user, or reference..."
               className="!bg-transparent !text-sm !text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+              value={filters.searchQuery}
+              onChange={(value) => onFiltersChange({ searchQuery: value })}
             />
           </InputGroup>
         </motion.div>
@@ -92,13 +100,14 @@ export default function DepositFilters() {
           >
             <SelectPicker
               data={statusOptions}
-              defaultValue="all"
+              value={filters.status}
               searchable={false}
               cleanable={false}
               size="sm"
               className="!w-[130px] deposit-filter-select"
               popupClassName="!text-sm !bg-[var(--surface)] !border-[var(--border)]"
               placeholder="Status"
+              onChange={(value) => onFiltersChange({ status: value || "all" })}
               renderValue={(value, item) => (
                 <span className="text-xs text-[var(--text-secondary)]">{item?.label}</span>
               )}
@@ -111,13 +120,14 @@ export default function DepositFilters() {
           >
             <SelectPicker
               data={paymentMethodOptions}
-              defaultValue="all"
+              value={filters.paymentMethod}
               searchable={false}
               cleanable={false}
               size="sm"
               className="!w-[140px] deposit-filter-select"
               popupClassName="!text-sm !bg-[var(--surface)] !border-[var(--border)]"
               placeholder="Payment Method"
+              onChange={(value) => onFiltersChange({ paymentMethod: value || "all" })}
               renderValue={(value, item) => (
                 <span className="text-xs text-[var(--text-secondary)]">{item?.label}</span>
               )}
@@ -134,6 +144,8 @@ export default function DepositFilters() {
               className="!w-[200px] deposit-filter-date"
               character=" - "
               showOneCalendar
+              value={filters.dateRange}
+              onChange={(value) => onFiltersChange({ dateRange: value })}
             />
           </motion.div>
 
@@ -146,6 +158,7 @@ export default function DepositFilters() {
               size="sm"
               appearance="subtle"
               className="!h-8 !px-3 !rounded-lg !text-xs !text-[var(--text-muted)] hover:!text-[var(--text-primary)] hover:!bg-[var(--surface-hover)]"
+              onClick={() => onFiltersChange({ status: "all", paymentMethod: "all", searchQuery: "", dateRange: null })}
             >
               <span className="flex items-center gap-1.5">
                 <Icons.RefreshCw className="w-3.5 h-3.5" />

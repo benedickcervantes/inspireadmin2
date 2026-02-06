@@ -136,12 +136,7 @@ export default function MayaHeader() {
               </Button>
             </motion.div>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button size="sm" appearance="default" className="!h-8 !px-3 !rounded-lg !text-xs !text-[var(--text-secondary)] !border-[var(--border)] !bg-[var(--surface)] !shadow-none hover:!bg-[var(--surface-hover)]">
-                <span className="flex items-center gap-2">
-                  <Icons.Download className="w-3.5 h-3.5" />
-                  Export
-                </span>
-              </Button>
+              
             </motion.div>
           </Stack>
         </motion.div>

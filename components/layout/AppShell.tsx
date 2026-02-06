@@ -40,6 +40,34 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return localStorage.getItem("adminSidebarExpanded") !== "0";
   });
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [customUsername, setCustomUsername] = useState<string | null>(null);
+  const [customEmail, setCustomEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Listen for username and email changes
+    const handleStorageChange = () => {
+      const username = localStorage.getItem("adminUsername");
+      const email = localStorage.getItem("adminEmail");
+      setCustomUsername(username);
+      setCustomEmail(email);
+    };
+
+    // Initial load
+    handleStorageChange();
+
+    // Listen for storage events (from other tabs/windows)
+    window.addEventListener("storage", handleStorageChange);
+
+    // Custom events for same-tab updates
+    window.addEventListener("usernameChanged", handleStorageChange);
+    window.addEventListener("emailChanged", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("usernameChanged", handleStorageChange);
+      window.removeEventListener("emailChanged", handleStorageChange);
+    };
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
@@ -66,14 +94,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   const userDisplay = useMemo(() => {
+    // Use custom username and email from state if available
+    const displayEmail = customEmail || authUser?.emailAddress;
+    
+    if (customUsername) {
+      return { 
+        label: customUsername, 
+        secondary: displayEmail, 
+        initials: getInitials(authUser) 
+      };
+    }
+    
     const fullName = [authUser?.firstName, authUser?.lastName]
       .filter(Boolean)
       .join(" ")
       .trim();
-    const label = fullName || authUser?.emailAddress || "Admin";
-    const secondary = fullName ? authUser?.emailAddress : undefined;
+    const label = fullName || displayEmail || "Admin";
+    const secondary = fullName ? displayEmail : undefined;
     return { label, secondary, initials: getInitials(authUser) };
-  }, [authUser]);
+  }, [authUser, customUsername, customEmail]);
 
   const handleLogout = () => {
     localStorage.removeItem("authToken");

@@ -4731,3 +4731,39 @@ body > div[class*="rs-picker"] {
 .rs-drawer .rs-dropdown-menu {
   z-index: 99999 !important;
 }
+
+
+/* ==========================================================================
+   MODAL CENTERING - Center all RSuite modals
+   ========================================================================== */
+
+.rs-modal-wrapper {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.rs-modal {
+  margin: 0 !important;
+  top: auto !important;
+  transform: none !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
+.rs-modal-content {
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
+.rs-modal-header {
+  border-radius: 16px 16px 0 0 !important;
+}
+
+.rs-modal-body {
+  border-radius: 0 !important;
+}
+
+.rs-modal-footer {
+  border-radius: 0 0 16px 16px !important;
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import DepositHeader from "./_components/DepositHeader";
 import DepositFilters from "./_components/DepositFilters";
 import DepositTable from "./_components/DepositTable";

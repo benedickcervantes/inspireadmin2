@@ -11,12 +11,6 @@ const Icons = {
       <polyline points="12 6 12 12 16 14" />
     </svg>
   ),
-  Clock: (props: IconProps) => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
-    </svg>
-  ),
 };
 
 export default function HistoryPage() {
@@ -30,12 +24,12 @@ export default function HistoryPage() {
       >
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <motion.div
-            className="w-20 h-20 rounded-full bg-[var(--primary-soft)] border border-[var(--border-accent)] flex items-center justify-center mb-6"
+            className="w-20 h-20 rounded-full bg-[var(--warning-soft)] border border-[var(--warning)] flex items-center justify-center mb-6"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
           >
-            <Icons.History className="w-10 h-10 text-[var(--primary)]" />
+            <Icons.History className="w-10 h-10 text-[var(--warning)]" />
           </motion.div>
           <motion.h1
             className="text-2xl font-bold text-[var(--text-primary)] mb-2"
@@ -51,7 +45,7 @@ export default function HistoryPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            Transaction history and activity logs will be displayed here.
+            Transaction and activity history will be displayed here.
           </motion.p>
         </div>
       </motion.div>

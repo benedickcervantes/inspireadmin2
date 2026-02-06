@@ -53,7 +53,7 @@ export default function SettingsHeader() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3, duration: 0.4 }}
           >
-            General Settings
+            Settings
           </motion.h1>
           <motion.p
             className="text-sm text-[var(--text-muted)] font-[var(--font-quest-trial)]"

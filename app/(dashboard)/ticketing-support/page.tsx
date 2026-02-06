@@ -5,18 +5,14 @@ import { motion } from "motion/react";
 type IconProps = React.SVGProps<SVGSVGElement>;
 
 const Icons = {
-  Share: (props: IconProps) => (
+  MessageCircle: (props: IconProps) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <circle cx="18" cy="5" r="3" />
-      <circle cx="6" cy="12" r="3" />
-      <circle cx="18" cy="19" r="3" />
-      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
     </svg>
   ),
 };
 
-export default function SocialPage() {
+export default function TicketingSupportPage() {
   return (
     <div className="flex w-full flex-col gap-4">
       <motion.div
@@ -32,7 +28,7 @@ export default function SocialPage() {
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
           >
-            <Icons.Share className="w-10 h-10 text-[var(--primary)]" />
+            <Icons.MessageCircle className="w-10 h-10 text-[var(--primary)]" />
           </motion.div>
           <motion.h1
             className="text-2xl font-bold text-[var(--text-primary)] mb-2"
@@ -40,7 +36,7 @@ export default function SocialPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            Social
+            Ticketing Support
           </motion.h1>
           <motion.p
             className="text-[var(--text-muted)] max-w-md"
@@ -48,7 +44,7 @@ export default function SocialPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            Social features and community management will be displayed here.
+            Support ticket management and customer inquiries will be displayed here.
           </motion.p>
         </div>
       </motion.div>

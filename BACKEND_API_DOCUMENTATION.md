@@ -485,7 +485,172 @@ await db.passwordResets.create({
 
 ---
 
-## 5. Database Schema Recommendations
+## 5. Admin Activity Logs
+
+### 5.1 Get Admin Activity Logs
+**Endpoint:** `GET /api/admin/audit-logs`
+
+**Description:** Retrieves admin activity logs with filtering and pagination
+
+**Request Headers:**
+```json
+{
+  "Content-Type": "application/json",
+  "Authorization": "Bearer {token}"
+}
+```
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 50, max: 100)
+- `action` (optional): Filter by action type (e.g., "UPDATE_USERNAME", "SEND_NOTIFICATION")
+- `adminId` (optional): Filter by specific admin user
+- `startDate` (optional): Filter from date (ISO 8601)
+- `endDate` (optional): Filter to date (ISO 8601)
+- `resourceType` (optional): Filter by resource type (e.g., "USER", "SETTINGS", "NOTIFICATION")
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "log_123456",
+      "adminId": "admin_789",
+      "adminName": "John Admin",
+      "adminEmail": "admin@example.com",
+      "action": "UPDATE_USERNAME",
+      "actionLabel": "Updated Username",
+      "resourceType": "PROFILE",
+      "resourceId": "user_456",
+      "oldValue": {
+        "username": "OldName"
+      },
+      "newValue": {
+        "username": "NewName"
+      },
+      "ipAddress": "192.168.1.1",
+      "userAgent": "Mozilla/5.0...",
+      "createdAt": "2024-01-15T10:30:00Z"
+    },
+    {
+      "id": "log_123457",
+      "adminId": "admin_789",
+      "adminName": "John Admin",
+      "adminEmail": "admin@example.com",
+      "action": "SEND_NOTIFICATION",
+      "actionLabel": "Sent Push Notification",
+      "resourceType": "NOTIFICATION",
+      "resourceId": "notif_789",
+      "metadata": {
+        "title": "Important Update",
+        "sentCount": 1523,
+        "failedCount": 12
+      },
+      "ipAddress": "192.168.1.1",
+      "userAgent": "Mozilla/5.0...",
+      "createdAt": "2024-01-15T10:25:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 50,
+    "total": 250,
+    "totalPages": 5
+  }
+}
+```
+
+**Error Responses:**
+- `401 Unauthorized` - Invalid or missing token
+- `403 Forbidden` - Insufficient permissions
+- `500 Internal Server Error` - Server error
+
+**Backend Implementation Notes:**
+- Fetch logs from audit_logs table
+- Order by createdAt DESC
+- Implement filtering by action, admin, date range
+- Include admin user details (name, email)
+- Implement pagination
+- Consider caching for performance
+
+**Action Types:**
+- `UPDATE_USERNAME` - Admin changed username
+- `UPDATE_EMAIL` - Admin changed email
+- `UPDATE_PASSWORD` - Admin changed password
+- `UPDATE_INVESTMENT_RATES` - Admin updated investment rates
+- `SEND_NOTIFICATION` - Admin sent push notification
+- `SEND_PASSWORD_RESET` - Admin sent password reset link
+- `UPDATE_MAINTENANCE_MODE` - Admin toggled maintenance mode
+- `POST_EVENT` - Admin posted an event
+- `CREATE_USER` - Admin created a user
+- `UPDATE_USER` - Admin updated user details
+- `DELETE_USER` - Admin deleted a user
+- `LOGIN` - Admin logged in
+- `LOGOUT` - Admin logged out
+
+---
+
+### 5.2 Get Activity Statistics
+**Endpoint:** `GET /api/admin/audit-logs/stats`
+
+**Description:** Retrieves statistics about admin activities
+
+**Request Headers:**
+```json
+{
+  "Content-Type": "application/json",
+  "Authorization": "Bearer {token}"
+}
+```
+
+**Query Parameters:**
+- `period` (optional): Time period (today, week, month, year) (default: month)
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "stats": {
+    "totalActions": 1250,
+    "uniqueAdmins": 5,
+    "actionsByType": {
+      "UPDATE_USERNAME": 45,
+      "UPDATE_EMAIL": 23,
+      "SEND_NOTIFICATION": 156,
+      "UPDATE_INVESTMENT_RATES": 12,
+      "SEND_PASSWORD_RESET": 89
+    },
+    "actionsByDay": [
+      {
+        "date": "2024-01-15",
+        "count": 125
+      },
+      {
+        "date": "2024-01-14",
+        "count": 98
+      }
+    ],
+    "topAdmins": [
+      {
+        "adminId": "admin_789",
+        "adminName": "John Admin",
+        "actionCount": 456
+      }
+    ]
+  }
+}
+```
+
+**Backend Implementation Notes:**
+- Aggregate data from audit_logs table
+- Group by action type, date, admin
+- Calculate totals and counts
+- Consider caching for performance
+
+---
+
+## 6. Database Schema Recommendations
 
 ### Admin Users Table
 ```sql

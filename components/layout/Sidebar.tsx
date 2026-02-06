@@ -64,6 +64,26 @@ const Icons = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </svg>
+  ),
+  Shield: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  ),
+  MessageCircle: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+    </svg>
+  ),
+  Network: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="16" y="16" width="6" height="6" rx="1" />
+      <rect x="2" y="16" width="6" height="6" rx="1" />
+      <rect x="9" y="2" width="6" height="6" rx="1" />
+      <path d="M12 8v8" />
+      <path d="M12 16h7" />
+      <path d="M12 16H5" />
+    </svg>
   )
 };
 
@@ -73,13 +93,11 @@ const menuKeyByPath: Record<string, string> = {
   "/withdrawal-request": "withdrawals",
   "/maya": "services",
   "/bank-services": "services",
-  "/travel-protection": "services",
-  "/tasks": "management",
-  "/tasks/my-tasks": "management",
-  "/admin-history": "reports",
-  "/reports": "reports",
-  "/settings": "settings",
-  "/settings/security": "settings"
+  "/agent-hierarchy": "agents",
+  "/agent-request": "agents",
+  "/tasks": "tasks",
+  "/task-management": "tasks",
+  "/task-withdrawal": "tasks"
 };
 
 // Animation variants
@@ -293,26 +311,47 @@ export default function Sidebar({ expanded, onToggle, user, onLogout, onNavigate
               <Nav.Menu eventKey="services" title="Services" icon={<GlobalIcon />}>
                 <Nav.Item eventKey="/maya" as={Link} href="/maya" onClick={onNavigate}>Maya</Nav.Item>
                 <Nav.Item eventKey="/bank-services" as={Link} href="/bank-services" onClick={onNavigate}>Bank Services</Nav.Item>
-                <Nav.Item eventKey="/travel-protection" as={Link} href="/travel-protection" onClick={onNavigate}>Travel Protection</Nav.Item>
               </Nav.Menu>
               <Nav.Item eventKey="/kyc-requests" as={Link} href="/kyc-requests" icon={<DetailIcon />} title="KYC Requests" onClick={onNavigate}>
                 KYC Requests
               </Nav.Item>
-              <Nav.Menu eventKey="management" title="Task Management" icon={<TaskIcon />}>
-                <Nav.Item eventKey="/tasks" as={Link} href="/tasks" onClick={onNavigate}>All Tasks</Nav.Item>
-                <Nav.Item eventKey="/tasks/my-tasks" as={Link} href="/tasks/my-tasks" onClick={onNavigate}>My Tasks</Nav.Item>
-              </Nav.Menu>
-              <Nav.Menu eventKey="reports" title="Reports" icon={<PieChartIcon />}>
-                <Nav.Item eventKey="/admin-history" as={Link} href="/admin-history" onClick={onNavigate}>Admin History Logs</Nav.Item>
-                <Nav.Item eventKey="/reports" as={Link} href="/reports" onClick={onNavigate}>System Reports</Nav.Item>
-              </Nav.Menu>
-              <Nav.Item eventKey="/history" as={Link} href="/history" icon={<HistoryIcon />} title="History" onClick={onNavigate}>
-                History
+              <Nav.Item 
+                eventKey="/travel-protection" 
+                as={Link} 
+                href="/travel-protection" 
+                icon={<Icons.Shield className="rs-icon" style={{ width: '1em', height: '1em' }} />} 
+                title="Travel Protection" 
+                onClick={onNavigate}
+              >
+                Travel Protection
               </Nav.Item>
-              <Nav.Menu eventKey="settings" title="Settings" icon={<GearIcon />}>
-                <Nav.Item eventKey="/settings" as={Link} href="/settings" onClick={onNavigate}>General Settings</Nav.Item>
-                <Nav.Item eventKey="/settings/security" as={Link} href="/settings/security" onClick={onNavigate}>Security</Nav.Item>
+              <Nav.Item 
+                eventKey="/ticketing-support" 
+                as={Link} 
+                href="/ticketing-support" 
+                icon={<Icons.MessageCircle className="rs-icon" style={{ width: '1em', height: '1em' }} />} 
+                title="Ticketing Support" 
+                onClick={onNavigate}
+              >
+                Ticketing Support
+              </Nav.Item>
+              <Nav.Menu eventKey="agents" title="Agent Management" icon={<Icons.Network className="rs-icon" style={{ width: '1em', height: '1em' }} />}>
+                <Nav.Item eventKey="/agent-hierarchy" as={Link} href="/agent-hierarchy" onClick={onNavigate}>Agent Hierarchy</Nav.Item>
+                <Nav.Item eventKey="/agent-request" as={Link} href="/agent-request" onClick={onNavigate}>Agent Request</Nav.Item>
               </Nav.Menu>
+              <Nav.Menu eventKey="tasks" title="Tasks" icon={<TaskIcon />}>
+                <Nav.Item eventKey="/task-management" as={Link} href="/task-management" onClick={onNavigate}>Task Management</Nav.Item>
+                <Nav.Item eventKey="/task-withdrawal" as={Link} href="/task-withdrawal" onClick={onNavigate}>Task Withdrawal</Nav.Item>
+              </Nav.Menu>
+              <Nav.Item eventKey="/admin-history" as={Link} href="/admin-history" icon={<HistoryIcon />} title="Admin History" onClick={onNavigate}>
+                Admin History
+              </Nav.Item>
+              <Nav.Item eventKey="/reports" as={Link} href="/reports" icon={<PieChartIcon />} title="System Reports" onClick={onNavigate}>
+                System Reports
+              </Nav.Item>
+              <Nav.Item eventKey="/settings" as={Link} href="/settings" icon={<GearIcon />} title="Settings" onClick={onNavigate}>
+                Settings
+              </Nav.Item>
             </Nav>
           </Sidenav.Body>
         </Sidenav>

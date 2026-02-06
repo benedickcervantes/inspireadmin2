@@ -42,6 +42,26 @@ const Icons = {
       <line x1="12" y1="16" x2="12.01" y2="16" />
     </svg>
   ),
+  Image: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </svg>
+  ),
+  X: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  ),
+  Upload: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+    </svg>
+  ),
 };
 
 interface CustomEventsProps {
@@ -52,8 +72,51 @@ interface CustomEventsProps {
 export default function CustomEvents({ open, onClose }: CustomEventsProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
   const [isPosting, setIsPosting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        toaster.push(
+          <Message showIcon type="warning" closable>
+            Please select a valid image file
+          </Message>,
+          { placement: "topEnd", duration: 3000 }
+        );
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toaster.push(
+          <Message showIcon type="warning" closable>
+            Image size should be less than 5MB
+          </Message>,
+          { placement: "topEnd", duration: 3000 }
+        );
+        return;
+      }
+
+      setImage(file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImage(null);
+    setImagePreview("");
+  };
 
   const handlePost = async () => {
     if (!title.trim() || !description.trim()) {
@@ -73,17 +136,22 @@ export default function CustomEvents({ open, onClose }: CustomEventsProps) {
       const API_BASE_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL || "http://localhost:4000";
       const token = localStorage.getItem("authToken");
 
+      // Create FormData for multipart/form-data
+      const formData = new FormData();
+      formData.append("title", title.trim());
+      formData.append("description", description.trim());
+      formData.append("postedAt", new Date().toISOString());
+      
+      if (image) {
+        formData.append("image", image);
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/admin/events`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim(),
-          postedAt: new Date().toISOString(),
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -98,6 +166,7 @@ export default function CustomEvents({ open, onClose }: CustomEventsProps) {
         id: result.id || Date.now().toString(),
         title,
         description,
+        imageUrl: result.imageUrl || imagePreview,
         postedAt: new Date().toISOString(),
         postedBy: "Admin",
       };
@@ -139,6 +208,8 @@ export default function CustomEvents({ open, onClose }: CustomEventsProps) {
   const handleClose = () => {
     setTitle("");
     setDescription("");
+    setImage(null);
+    setImagePreview("");
     setShowPreview(false);
     onClose();
   };
@@ -217,6 +288,59 @@ export default function CustomEvents({ open, onClose }: CustomEventsProps) {
             </Form.HelpText>
           </Form.Group>
 
+          {/* Image Upload */}
+          <Form.Group>
+            <Form.ControlLabel className="text-sm font-medium text-[var(--text-secondary)] mb-2">
+              Event Image (Optional)
+            </Form.ControlLabel>
+            
+            {!imagePreview ? (
+              <label className="block cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                <div className="border-2 border-dashed border-[var(--border)] rounded-lg p-6 hover:border-[var(--accent)] transition-colors bg-[var(--surface-soft)]">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <div className="w-12 h-12 rounded-lg bg-[var(--accent-soft)] border border-[var(--border-purple)] flex items-center justify-center">
+                      <Icons.Upload className="w-6 h-6 text-[var(--accent)]" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-[var(--text-primary)]">
+                        Click to upload image
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)] mt-1">
+                        PNG, JPG, GIF up to 5MB
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </label>
+            ) : (
+              <div className="relative rounded-lg overflow-hidden border border-[var(--border)]">
+                <img
+                  src={imagePreview}
+                  alt="Event preview"
+                  className="w-full h-48 object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-[var(--danger)] hover:bg-red-600 flex items-center justify-center transition-colors shadow-lg"
+                >
+                  <Icons.X className="w-4 h-4 text-white" />
+                </button>
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+                  <p className="text-xs text-white font-medium truncate">
+                    {image?.name}
+                  </p>
+                </div>
+              </div>
+            )}
+          </Form.Group>
+
           {/* Preview Toggle */}
           <div className="flex items-center justify-between p-3 bg-[var(--surface-soft)] rounded-lg border border-[var(--border)]">
             <div className="flex items-center gap-2">
@@ -249,6 +373,13 @@ export default function CustomEvents({ open, onClose }: CustomEventsProps) {
                   <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
                     {title || "Event Title"}
                   </h4>
+                  {imagePreview && (
+                    <img
+                      src={imagePreview}
+                      alt="Event"
+                      className="w-full h-32 object-cover rounded-lg my-2"
+                    />
+                  )}
                   <p className="text-xs text-[var(--text-secondary)] break-words whitespace-pre-wrap">
                     {description || "Event description will appear here"}
                   </p>

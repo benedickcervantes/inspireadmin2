@@ -11,6 +11,7 @@ import TransactionTable, { Transaction, TransactionStatus } from "./_components/
 import { MonthlySalesChart, OutflowChart, OutflowItem } from "./_components/Charts";
 import { getDashboardSummary } from "@/lib/api/dashboard";
 import { getUsers, User } from "@/lib/api/users";
+import { getFirebaseUsers } from "@/lib/api/firebaseUsers";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { staggerContainer, MotionDiv, MotionSection } from "./_components/motion";
 
@@ -427,6 +428,17 @@ export default function Dashboard() {
     queryFn: () => getUsers({ page: 1, limit: 50, sortBy: "lastLogin", sortOrder: "desc" })
   });
 
+  // Fetch demo and test account counts
+  const { data: demoCountData } = useQuery({
+    queryKey: ["dashboard-demo-count"],
+    queryFn: () => getFirebaseUsers({ page: 1, limit: 1, isDummyAccount: true })
+  });
+
+  const { data: testCountData } = useQuery({
+    queryKey: ["dashboard-test-count"],
+    queryFn: () => getFirebaseUsers({ page: 1, limit: 1, accountType: 'test' })
+  });
+
   const users = (usersData?.data?.users ?? []) as User[];
   const summary = summaryData?.data;
 
@@ -448,17 +460,22 @@ export default function Dashboard() {
 
   const statsLoading = isSummaryLoading;
 
+  // Get actual counts from API
+  const demoCount = demoCountData?.data?.pagination.total ?? 0;
+  const testCount = testCountData?.data?.pagination.total ?? 0;
+  const totalExcludingDemoTest = totalUsers - demoCount - testCount;
+
   // Calculate user type breakdown
   const userBreakdown = useMemo(() => {
     const agents = users.filter(u => u.agent === true).length;
     const investors = users.filter(u => u.agent !== true).length;
     const demoAccounts = users.filter(u => {
       const email = (u.emailAddress || '').toLowerCase();
-      return email.includes('demo') || email.includes('test+demo');
+      return u.isDummyAccount === true || email.includes('demo') || email.includes('test+demo');
     }).length;
     const testAccounts = users.filter(u => {
       const email = (u.emailAddress || '').toLowerCase();
-      return email.includes('test') && !email.includes('demo');
+      return (u as any).isTestAccount === true || (email.includes('test') && !email.includes('demo'));
     }).length;
 
     return {
@@ -466,9 +483,9 @@ export default function Dashboard() {
       investors,
       demoAccounts,
       testAccounts,
-      total: totalUsers
+      total: totalExcludingDemoTest
     };
-  }, [users, totalUsers]);
+  }, [users, totalExcludingDemoTest]);
 
   // Calculate time deposits breakdown
   const depositsBreakdown = useMemo(() => {
@@ -584,7 +601,7 @@ export default function Dashboard() {
         />
         <StatsCard
           title="Total Users"
-          amount={totalUsers.toLocaleString()}
+          amount={totalExcludingDemoTest.toLocaleString()}
           percentage={formatPercent(userTrend?.percent)}
           trendAmount={formatSigned(userTrend?.diff || 0, (value) => value.toLocaleString())}
           trendText={statsLoading ? "updating" : "from last month"}

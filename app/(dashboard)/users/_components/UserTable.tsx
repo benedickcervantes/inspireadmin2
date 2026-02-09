@@ -1461,6 +1461,25 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
     }),
   });
 
+  const { data: demoData } = useQuery({
+    queryKey: ['firebase-users-demo-count'],
+    queryFn: () => getFirebaseUsers({
+      page: 1,
+      limit: 1,
+      isDummyAccount: true,
+    }),
+  });
+
+  const { data: testData } = useQuery({
+    queryKey: ['firebase-users-test-count'],
+    queryFn: () => getFirebaseUsers({
+      page: 1,
+      limit: 1,
+      accountType: 'test',
+    }),
+  });
+  
+
   const rawUsers = (data?.data?.users ?? []) as User[];
   // API now handles filtering, so we use the data directly
   const users = rawUsers;
@@ -1469,14 +1488,17 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
   // Get counts from pagination totals
   const agentCount = agentData?.data?.pagination.total ?? 0;
   const investorCount = nonAgentData?.data?.pagination.total ?? 0;
+  const demoCount = demoData?.data?.pagination.total ?? 0;
+  const testCount = testData?.data?.pagination.total ?? 0;
+  const totalExcludingDemoTest = total - demoCount - testCount;
 
   useEffect(() => {
     setPage(1);
   }, [userType]);
 
   useEffect(() => {
-    onTotalChange?.(total);
-  }, [total, onTotalChange]);
+    onTotalChange?.(totalExcludingDemoTest);
+  }, [totalExcludingDemoTest, onTotalChange]);
 
   useEffect(() => {
     onCountsChange?.(agentCount, investorCount);

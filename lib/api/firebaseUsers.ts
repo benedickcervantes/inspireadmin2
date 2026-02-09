@@ -30,6 +30,8 @@ const buildQueryString = (params: GetUsersParams): string => {
   if (params.accountType) queryParams.append("accountType", params.accountType);
   if (params.isDummyAccount === true) queryParams.append("isDummyAccount", "true");
   if (params.isDummyAccount === false) queryParams.append("isDummyAccount", "false");
+  // Add timestamp to prevent caching
+  queryParams.append("_t", Date.now().toString());
   return queryParams.toString();
 };
 

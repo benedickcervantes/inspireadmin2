@@ -1387,24 +1387,17 @@ const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit }: { user: 
 function userTypeToParams(userType: UserTypeTab): { agent?: boolean; accountType?: string; isDummyAccount?: boolean } {
   if (userType === 'all') return {};
   if (userType === 'agent') return { agent: true };
-  // For demo/test, don't send filter params - we'll filter client-side
-  // because backend might not support isDummyAccount/accountType filtering yet
-  if (userType === 'demo') return {};
-  if (userType === 'test') return {};
+  if (userType === 'demo') return { isDummyAccount: true };
+  if (userType === 'test') return { accountType: 'test' };
   return { agent: false }; // investor: non-agents only
 }
 
 function filterUsersByType(users: User[], userType: UserTypeTab): User[] {
   if (userType === 'all') return users;
   if (userType === 'agent') return users.filter((u) => u.agent === true);
-  if (userType === 'demo') return users.filter((u) => u.isDummyAccount === true || u.accountType === 'demo');
-  if (userType === 'test') return users.filter((u) => u.accountType === 'test');
-  return users.filter((u) => 
-    u.agent !== true && 
-    u.isDummyAccount !== true && 
-    u.accountType !== 'demo' &&
-    u.accountType !== 'test'
-  ); // investor
+  if (userType === 'demo') return users.filter((u) => u.isDummyAccount === true);
+  if (userType === 'test') return users.filter((u) => (u as any).isTestAccount === true);
+  return users.filter((u) => u.agent !== true && u.isDummyAccount !== true && !(u as any).isTestAccount); // investor
 }
 
 interface UserTableProps {
@@ -1424,19 +1417,28 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
 
   const filterParams = userTypeToParams(userType);
   
-  // For demo/test tabs, fetch more records since we're filtering client-side
-  const effectiveLimit = (userType === 'demo' || userType === 'test') ? 50 : limit;
+  console.log('🔍 [FRONTEND] UserTable filterParams:', { userType, filterParams });
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['firebase-users', { page, limit: effectiveLimit, searchQuery, userType, ...filterParams }],
-    queryFn: () => getFirebaseUsers({
-      page,
-      limit: effectiveLimit,
-      search: searchQuery || undefined,
-      ...filterParams,
-      sortBy: 'createdAt',
-      sortOrder: 'desc'
-    }),
+    queryKey: ['firebase-users', { page, limit, searchQuery, userType, ...filterParams }],
+    queryFn: () => {
+      console.log('🚀 [FRONTEND] Calling getFirebaseUsers with:', {
+        page,
+        limit,
+        search: searchQuery || undefined,
+        ...filterParams,
+        sortBy: 'createdAt',
+        sortOrder: 'desc'
+      });
+      return getFirebaseUsers({
+        page,
+        limit,
+        search: searchQuery || undefined,
+        ...filterParams,
+        sortBy: 'createdAt',
+        sortOrder: 'desc'
+      });
+    },
     placeholderData: keepPreviousData,
   });
 
@@ -1460,8 +1462,8 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
   });
 
   const rawUsers = (data?.data?.users ?? []) as User[];
-  // Apply client-side filtering as backup in case API doesn't support isDummyAccount/accountType params
-  const users = filterUsersByType(rawUsers, userType);
+  // API now handles filtering, so we use the data directly
+  const users = rawUsers;
   const total = data?.data?.pagination.total ?? 0;
 
   // Get counts from pagination totals
@@ -1560,8 +1562,8 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">User</HeaderCell>
               <Cell className="!border-b !border-[var(--border-subtle)]">
                 {(rowData: User) => {
-                  const isDemo = rowData.isDummyAccount === true || rowData.accountType === 'demo';
-                  const isTest = rowData.accountType === 'test';
+                  const isDemo = rowData.isDummyAccount === true;
+                  const isTest = (rowData as any).isTestAccount === true;
                   return (
                     <div className="flex items-center gap-3">
                       <img src={getAvatarUrl(rowData)} alt={getFullName(rowData)} className="w-8 h-8 rounded-full object-cover border border-[var(--border)] flex-shrink-0" />

@@ -35,6 +35,8 @@ export interface AuditLogsFilters {
   limit?: number;
   action?: string;
   adminId?: string;
+  adminEmail?: string;
+  search?: string;
   startDate?: string;
   endDate?: string;
   resourceType?: string;
@@ -52,12 +54,14 @@ export async function getAuditLogs(filters: AuditLogsFilters = {}): Promise<Audi
   if (filters.limit) params.append("limit", filters.limit.toString());
   if (filters.action) params.append("action", filters.action);
   if (filters.adminId) params.append("adminId", filters.adminId);
+  if (filters.adminEmail) params.append("adminEmail", filters.adminEmail);
+  if (filters.search) params.append("search", filters.search);
   if (filters.startDate) params.append("startDate", filters.startDate);
   if (filters.endDate) params.append("endDate", filters.endDate);
   if (filters.resourceType) params.append("resourceType", filters.resourceType);
 
   const queryString = params.toString();
-  const url = `${API_BASE_URL}/api/admin/audit-logs${queryString ? `?${queryString}` : ""}`;
+  const url = `${API_BASE_URL}/api/admin-logs${queryString ? `?${queryString}` : ""}`;
 
   const response = await fetch(url, {
     method: "GET",
@@ -72,7 +76,19 @@ export async function getAuditLogs(filters: AuditLogsFilters = {}): Promise<Audi
     throw new Error(error.message || "Failed to fetch audit logs");
   }
 
-  return await response.json();
+  const result = await response.json();
+  
+  // Transform backend response to match frontend expectations
+  return {
+    success: result.success,
+    data: result.data?.logs || [],
+    pagination: result.data?.pagination || {
+      page: 1,
+      limit: 20,
+      total: 0,
+      totalPages: 0
+    }
+  };
 }
 
 export interface AuditStats {
@@ -89,7 +105,7 @@ export interface AuditStats {
 export async function getAuditStats(period: string = "month"): Promise<AuditStats> {
   const token = localStorage.getItem("authToken");
 
-  const response = await fetch(`${API_BASE_URL}/api/admin/audit-logs/stats?period=${period}`, {
+  const response = await fetch(`${API_BASE_URL}/api/admin-logs/stats?period=${period}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",

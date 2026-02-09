@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Table, Pagination, SelectPicker, DateRangePicker, Input, InputGroup, Badge, Message, toaster } from "rsuite";
+import { Table, Pagination, Input, InputGroup, Badge, Message, toaster, Modal, Button } from "rsuite";
 import { getAuditLogs, type AuditLog, type AuditLogsFilters } from "@/lib/api/auditLogs";
 
 const { Column, HeaderCell, Cell } = Table;
@@ -32,38 +32,15 @@ const Icons = {
   ),
 };
 
-const ACTION_TYPES = [
-  { label: "All Actions", value: "" },
-  { label: "Update Username", value: "UPDATE_USERNAME" },
-  { label: "Update Email", value: "UPDATE_EMAIL" },
-  { label: "Update Password", value: "UPDATE_PASSWORD" },
-  { label: "Update Investment Rates", value: "UPDATE_INVESTMENT_RATES" },
-  { label: "Send Notification", value: "SEND_NOTIFICATION" },
-  { label: "Send Password Reset", value: "SEND_PASSWORD_RESET" },
-  { label: "Update Maintenance Mode", value: "UPDATE_MAINTENANCE_MODE" },
-  { label: "Post Event", value: "POST_EVENT" },
-  { label: "Create User", value: "CREATE_USER" },
-  { label: "Update User", value: "UPDATE_USER" },
-  { label: "Delete User", value: "DELETE_USER" },
-  { label: "Login", value: "LOGIN" },
-  { label: "Logout", value: "LOGOUT" },
-];
-
-const RESOURCE_TYPES = [
-  { label: "All Resources", value: "" },
-  { label: "Profile", value: "PROFILE" },
-  { label: "Settings", value: "SETTINGS" },
-  { label: "Notification", value: "NOTIFICATION" },
-  { label: "User", value: "USER" },
-  { label: "Event", value: "EVENT" },
-];
-
 export default function AdminHistoryPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [total, setTotal] = useState(0);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [showModal, setShowModal] = useState(false);
   
   const [filters, setFilters] = useState<AuditLogsFilters>({
     action: "",
@@ -75,6 +52,7 @@ export default function AdminHistoryPage() {
     try {
       const response = await getAuditLogs({
         ...filters,
+        search: searchQuery,
         page,
         limit,
       });
@@ -95,7 +73,7 @@ export default function AdminHistoryPage() {
 
   useEffect(() => {
     fetchLogs();
-  }, [page, filters]);
+  }, [page, filters, searchQuery]);
 
   const handleFilterChange = (key: keyof AuditLogsFilters, value: any) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -103,17 +81,52 @@ export default function AdminHistoryPage() {
   };
 
   const getActionColor = (action: string) => {
-    if (action.includes("DELETE")) return "red";
-    if (action.includes("CREATE")) return "green";
-    if (action.includes("UPDATE")) return "blue";
-    if (action.includes("SEND")) return "cyan";
-    if (action.includes("LOGIN")) return "violet";
+    const actionLower = action.toLowerCase();
+    if (actionLower.includes("delete") || actionLower.includes("remove")) return "red";
+    if (actionLower.includes("create") || actionLower.includes("add")) return "green";
+    if (actionLower.includes("update") || actionLower.includes("edit") || actionLower.includes("modify")) return "blue";
+    if (actionLower.includes("send") || actionLower.includes("email") || actionLower.includes("notify")) return "cyan";
+    if (actionLower.includes("login") || actionLower.includes("logout") || actionLower.includes("auth")) return "violet";
+    if (actionLower.includes("verify") || actionLower.includes("confirm")) return "orange";
+    if (actionLower.includes("cancel") || actionLower.includes("reject")) return "yellow";
     return "gray";
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString();
+  };
+
+  const handleRowClick = (rowData: AuditLog) => {
+    setSelectedLog(rowData);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedLog(null);
+  };
+
+  const getSummary = (log: AuditLog) => {
+    const admin = log.adminEmail || log.adminName;
+    const action = log.actionLabel || log.action;
+    const target = log.metadata?.targetUserName || 'unknown user';
+    const targetId = log.metadata?.targetUserId || log.resourceId || '';
+    
+    let summary = `Admin ${admin} performed action: ${action}`;
+    
+    if (target && target !== 'unknown user') {
+      summary += ` on user ${target}`;
+      if (targetId) {
+        summary += ` (ID: ${targetId})`;
+      }
+    }
+    
+    if (log.metadata?.details) {
+      summary += `. ${log.metadata.details}`;
+    }
+    
+    return summary;
   };
 
   return (
@@ -152,28 +165,22 @@ export default function AdminHistoryPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
-        <div className="flex flex-col md:flex-row gap-3">
-          <div className="flex-1">
-            <SelectPicker
-              data={ACTION_TYPES}
-              value={filters.action}
-              onChange={(value) => handleFilterChange("action", value)}
-              placeholder="Filter by Action"
-              cleanable={false}
-              searchable={false}
-              className="!w-full"
-            />
-          </div>
-          <div className="flex-1">
-            <SelectPicker
-              data={RESOURCE_TYPES}
-              value={filters.resourceType}
-              onChange={(value) => handleFilterChange("resourceType", value)}
-              placeholder="Filter by Resource"
-              cleanable={false}
-              searchable={false}
-              className="!w-full"
-            />
+        <div className="flex flex-col gap-3">
+          {/* Search Box */}
+          <div className="w-full">
+            <InputGroup inside>
+              <InputGroup.Addon>
+                <Icons.Search className="w-4 h-4" />
+              </InputGroup.Addon>
+              <Input
+                placeholder="Search logs..."
+                value={searchQuery}
+                onChange={(value) => {
+                  setSearchQuery(value);
+                  setPage(1);
+                }}
+              />
+            </InputGroup>
           </div>
         </div>
       </motion.div>
@@ -191,6 +198,8 @@ export default function AdminHistoryPage() {
           height={600}
           hover
           className="!bg-[var(--surface)]"
+          onRowClick={handleRowClick}
+          rowClassName="cursor-pointer hover:!bg-[var(--surface-elevated)]"
         >
           <Column width={180} align="left">
             <HeaderCell className="!bg-[var(--surface-elevated)] !text-[var(--text-primary)] !font-semibold">
@@ -267,8 +276,10 @@ export default function AdminHistoryPage() {
             <Cell>
               {(rowData: AuditLog) => (
                 <div className="text-xs text-[var(--text-muted)] truncate">
-                  {rowData.metadata && JSON.stringify(rowData.metadata)}
-                  {rowData.newValue && `New: ${JSON.stringify(rowData.newValue)}`}
+                  {rowData.metadata?.details || 
+                   (rowData.metadata?.targetUserName && `Target: ${rowData.metadata.targetUserName}`) ||
+                   (rowData.newValue && `Updated to: ${typeof rowData.newValue === 'string' ? rowData.newValue : JSON.stringify(rowData.newValue)}`) ||
+                   'No details available'}
                 </div>
               )}
             </Cell>
@@ -297,6 +308,66 @@ export default function AdminHistoryPage() {
           />
         </div>
       </motion.div>
+
+      {/* Log Details Modal */}
+      <Modal open={showModal} onClose={handleCloseModal} size="md">
+        <Modal.Header>
+          <Modal.Title className="text-2xl font-bold text-[var(--text-primary)]">
+            Log Details
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedLog && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-semibold text-[var(--text-secondary)] mb-1">Timestamp:</p>
+                <p className="text-base text-[var(--text-primary)]">{formatDate(selectedLog.createdAt)}</p>
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-[var(--text-secondary)] mb-1">Admin:</p>
+                <p className="text-base text-[var(--text-primary)]">{selectedLog.adminEmail}</p>
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-[var(--text-secondary)] mb-1">Action:</p>
+                <p className="text-base text-[var(--text-primary)]">{selectedLog.actionLabel || selectedLog.action}</p>
+              </div>
+
+              {selectedLog.metadata?.targetUserName && (
+                <div>
+                  <p className="text-sm font-semibold text-[var(--text-secondary)] mb-1">Target User:</p>
+                  <p className="text-base text-[var(--text-primary)]">{selectedLog.metadata.targetUserName}</p>
+                </div>
+              )}
+
+              <div>
+                <p className="text-sm font-semibold text-[var(--text-secondary)] mb-1">Log ID:</p>
+                <p className="text-base font-mono text-[var(--text-primary)]">{selectedLog.id}</p>
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-[var(--text-secondary)] mb-1">Summary:</p>
+                <div className="bg-[var(--surface-elevated)] p-3 rounded-lg">
+                  <p className="text-sm text-[var(--text-primary)]">{getSummary(selectedLog)}</p>
+                </div>
+              </div>
+
+              {selectedLog.adminId && (
+                <div>
+                  <p className="text-sm font-semibold text-[var(--text-secondary)] mb-1">Admin Uid:</p>
+                  <p className="text-base font-mono text-[var(--text-primary)]">{selectedLog.adminId}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button onClick={handleCloseModal} appearance="primary" className="!bg-blue-600 hover:!bg-blue-700 !m-4">
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }

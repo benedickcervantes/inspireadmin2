@@ -207,15 +207,15 @@ const normalizeMethod = (record: SubcollectionWithdrawalRecord): WithdrawalMetho
 };
 
 const normalizeWithdrawal = (record: SubcollectionWithdrawalRecord): WithdrawalRequest => {
-  const userFirst = record.user?.firstName || "";
-  const userLast = record.user?.lastName || "";
-  const userName = record.userName || `${userFirst} ${userLast}`.trim() || "Unknown User";
-  const userEmail = record.user?.emailAddress || record.userEmail || record.emailAddress || "No email";
+  const userFirst = String(record.user?.firstName ?? "");
+  const userLast = String(record.user?.lastName ?? "");
+  const userName = String(record.userName ?? ((`${userFirst} ${userLast}`.trim() || "Unknown User")));
+  const userEmail = String(record.user?.emailAddress ?? record.userEmail ?? record.emailAddress ?? "No email");
   const method = normalizeMethod(record);
   const amount = typeof record.amount === "number" ? record.amount : 0;
   const fee = typeof record.processingFee === "number" ? record.processingFee : 0;
   const netAmount = typeof record.netAmount === "number" ? record.netAmount : amount - fee;
-  const statusLower = (record.status || "pending").toLowerCase();
+  const statusLower = String(record.status ?? "pending").toLowerCase();
   const normalizedStatus: WithdrawalStatus =
     statusLower === "processing" ||
     statusLower === "approved" ||
@@ -234,8 +234,8 @@ const normalizeWithdrawal = (record: SubcollectionWithdrawalRecord): WithdrawalR
   const details = {
     bankDetails: method === "bank_transfer" && (bankAccountNumber || record.bankName || record.bankAccountName)
       ? {
-          bankName: bankLabel || record.paymentMethod || "Bank Transfer",
-          accountName: record.bankAccountName || userName,
+          bankName: String(bankLabel ?? record.paymentMethod ?? "Bank Transfer"),
+          accountName: String(record.bankAccountName ?? userName),
           accountNumber: bankAccountNumber || "N/A",
         }
       : undefined,
@@ -243,20 +243,20 @@ const normalizeWithdrawal = (record: SubcollectionWithdrawalRecord): WithdrawalR
       ? {
           walletType: method === "gcash" ? "GCash" : "Maya",
           walletNumber: mobile || bankAccountNumber,
-          walletName: record.bankAccountName || userName,
+          walletName: String(record.bankAccountName ?? userName),
         }
       : undefined,
     cryptoDetails: method === "crypto" && (record.walletAddress || mobile)
       ? {
-          network: record.paymentMethod || "Crypto",
-          walletAddress: record.walletAddress || mobile,
+          network: String(record.paymentMethod ?? "Crypto"),
+          walletAddress: String(record.walletAddress ?? mobile),
         }
       : undefined,
   };
 
   return {
-    id: record._firebaseDocId,
-    referenceNo: record.transactionId || record._firebaseDocId,
+    id: String(record._firebaseDocId ?? ""),
+    referenceNo: String(record.transactionId ?? record._firebaseDocId ?? ""),
     user: {
       name: userName,
       email: userEmail,
@@ -273,7 +273,7 @@ const normalizeWithdrawal = (record: SubcollectionWithdrawalRecord): WithdrawalR
     createdAt: formatDateTime(record.submittedAt || record.createdAt || record.updatedAt || record.processedAt || record.approvedAt),
     processedAt: record.processedAt ? formatDateTime(record.processedAt) : record.approvedAt ? formatDateTime(record.approvedAt) : undefined,
     completedAt: record.completedAt ? formatDateTime(record.completedAt) : undefined,
-    remarks: record.notes || record.rejectionReason,
+    remarks: record.notes != null ? String(record.notes) : record.rejectionReason != null ? String(record.rejectionReason) : undefined,
   };
 };
 

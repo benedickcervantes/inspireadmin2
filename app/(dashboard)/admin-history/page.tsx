@@ -196,6 +196,7 @@ export default function AdminHistoryPage() {
           data={logs}
           loading={loading}
           height={600}
+          
           hover
           className="!bg-[var(--surface)]"
           onRowClick={handleRowClick}

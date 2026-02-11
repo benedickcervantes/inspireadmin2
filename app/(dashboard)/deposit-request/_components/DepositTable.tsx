@@ -1,3 +1,4 @@
+//app\(dashboard)\deposit-request\_components\DepositTable.tsx
 "use client";
 
 import React, { useState } from "react";

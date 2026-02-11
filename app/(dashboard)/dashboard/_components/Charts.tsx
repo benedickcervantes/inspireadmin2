@@ -74,16 +74,43 @@ const formatPercent = (value?: number) => {
   return `${sign}${Math.abs(rounded)}%`;
 };
 
+// NEW: Interface for time-series data point
+export interface TimeSeriesDataPoint {
+  period: string; // e.g., "2025-01", "2025-W1", "2025-01-01"
+  timeDeposits: number;
+  availBalance: number;
+  wallet: number;
+  agentWallet: number;
+  stock: number;
+}
+
 interface MonthlySalesChartProps {
   total?: number;
   isLoading?: boolean;
+  timeSeriesData?: TimeSeriesDataPoint[]; // NEW: Accept time series data
+  // Individual metric values for when timeSeriesData is not available
+  timeDepositsValue?: number;
+  availBalanceValue?: number;
+  walletValue?: number;
+  agentWalletValue?: number;
+  stockValue?: number;
 }
 
-export function MonthlySalesChart({ total, isLoading = false }: MonthlySalesChartProps) {
+export function MonthlySalesChart({ 
+  total, 
+  isLoading = false, 
+  timeSeriesData = [],
+  timeDepositsValue,
+  availBalanceValue,
+  walletValue,
+  agentWalletValue,
+  stockValue
+}: MonthlySalesChartProps) {
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [visibleLines, setVisibleLines] = React.useState<Set<string>>(new Set(['timeDeposits', 'availBalance', 'wallet', 'agentWallet', 'stock']));
   const [timeScale, setTimeScale] = React.useState<'year' | 'month' | 'week' | 'day'>('year');
   const [showTimeMenu, setShowTimeMenu] = React.useState(false);
+  const [selectedMetric, setSelectedMetric] = React.useState<string | null>(null);
   const displayTotal = typeof total === "number" ? total : 12876;
   const ref = React.useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-50px" });
@@ -101,19 +128,54 @@ export function MonthlySalesChart({ total, isLoading = false }: MonthlySalesChar
 
   const toggleLine = (lineId: string) => {
     setVisibleLines(prev => {
-      // If this line is the only one visible, show all lines
       if (prev.size === 1 && prev.has(lineId)) {
         return new Set(['timeDeposits', 'availBalance', 'wallet', 'agentWallet', 'stock']);
       }
-      // Otherwise, show only this line
       return new Set([lineId]);
     });
+    // Set the selected metric to show its value
+    setSelectedMetric(lineId);
   };
+
+  // Calculate the value for the selected metric
+  const getSelectedMetricValue = () => {
+    if (!selectedMetric) {
+      return null;
+    }
+    
+    // First try to get from timeSeriesData if available
+    if (timeSeriesData && timeSeriesData.length > 0) {
+      const latestData = timeSeriesData[timeSeriesData.length - 1];
+      const metricKey = selectedMetric as keyof TimeSeriesDataPoint;
+      
+      if (typeof latestData[metricKey] === 'number') {
+        return latestData[metricKey] as number;
+      }
+    }
+    
+    // Fallback to individual prop values
+    switch (selectedMetric) {
+      case 'timeDeposits':
+        return timeDepositsValue ?? null;
+      case 'availBalance':
+        return availBalanceValue ?? null;
+      case 'wallet':
+        return walletValue ?? null;
+      case 'agentWallet':
+        return agentWalletValue ?? null;
+      case 'stock':
+        return stockValue ?? null;
+      default:
+        return null;
+    }
+  };
+
+  const selectedValue = getSelectedMetricValue();
 
   const getTimeLabels = () => {
     switch (timeScale) {
       case 'year':
-        return ["2019", "2020", "2021", "2022", "2023", "2024", "2025"];
+        return ["2025", "2026"];
       case 'month':
         return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       case 'week':
@@ -121,23 +183,109 @@ export function MonthlySalesChart({ total, isLoading = false }: MonthlySalesChar
       case 'day':
         return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
       default:
-        return ["2019", "2020", "2021", "2022", "2023", "2024", "2025"];
+        return ["2025", "2026"];
     }
   };
 
   const timeLabels = getTimeLabels();
 
-  const lines = [
-    { id: 'timeDeposits', color: '#22d3ee', label: 'Time Deposits', path: 'M0 250 C 150 200, 300 280, 450 150 S 700 50, 850 100 S 1100 200, 1200 150', endY: 150 },
-    { id: 'availBalance', color: '#a855f7', label: 'Avail Balance', path: 'M0 220 C 150 180, 300 250, 450 130 S 700 70, 850 120 S 1100 180, 1200 130', endY: 130 },
-    { id: 'wallet', color: '#22c55e', label: 'Total Wallet', path: 'M0 270 C 150 240, 300 260, 450 180 S 700 90, 850 140 S 1100 220, 1200 170', endY: 170 },
-    { id: 'agentWallet', color: '#f59e0b', label: 'Agent Wallet', path: 'M0 240 C 150 210, 300 270, 450 160 S 700 80, 850 130 S 1100 190, 1200 140', endY: 140 },
-    { id: 'stock', color: '#3b82f6', label: 'Stock Amount', path: 'M0 260 C 150 230, 300 240, 450 170 S 700 100, 850 150 S 1100 210, 1200 160', endY: 160 }
-  ];
+  // NEW: Generate SVG paths from actual data
+  const generatePathsFromData = () => {
+    if (!timeSeriesData || timeSeriesData.length === 0) {
+      // Return default static paths if no data
+      return [
+        { id: 'timeDeposits', color: '#22d3ee', label: 'Time Deposits', path: 'M0 250 C 150 200, 300 280, 450 150 S 700 50, 850 100 S 1100 200, 1200 150', endY: 150 },
+        { id: 'availBalance', color: '#a855f7', label: 'Avail Balance', path: 'M0 220 C 150 180, 300 250, 450 130 S 700 70, 850 120 S 1100 180, 1200 130', endY: 130 },
+        { id: 'wallet', color: '#22c55e', label: 'Total Wallet', path: 'M0 270 C 150 240, 300 260, 450 180 S 700 90, 850 140 S 1100 220, 1200 170', endY: 170 },
+        { id: 'agentWallet', color: '#f59e0b', label: 'Agent Wallet', path: 'M0 240 C 150 210, 300 270, 450 160 S 700 80, 850 130 S 1100 190, 1200 140', endY: 140 },
+        { id: 'stock', color: '#3b82f6', label: 'Stock Amount', path: 'M0 260 C 150 230, 300 240, 450 170 S 700 100, 850 150 S 1100 210, 1200 160', endY: 160 }
+      ];
+    }
+
+    // Find max values for scaling
+    const maxValues = {
+      timeDeposits: Math.max(...timeSeriesData.map(d => d.timeDeposits), 1),
+      availBalance: Math.max(...timeSeriesData.map(d => d.availBalance), 1),
+      wallet: Math.max(...timeSeriesData.map(d => d.wallet), 1),
+      agentWallet: Math.max(...timeSeriesData.map(d => d.agentWallet), 1),
+      stock: Math.max(...timeSeriesData.map(d => d.stock), 1),
+    };
+
+    const chartHeight = 300;
+    const chartWidth = 1200;
+    const padding = 50;
+
+    // Helper to convert value to Y coordinate (inverted for SVG)
+    const valueToY = (value: number, maxValue: number) => {
+      const normalized = maxValue > 0 ? value / maxValue : 0;
+      return chartHeight - padding - (normalized * (chartHeight - 2 * padding));
+    };
+
+    // Helper to generate smooth curve path
+    const generateSmoothPath = (dataKey: keyof TimeSeriesDataPoint) => {
+      if (timeSeriesData.length < 2) return 'M0 150';
+
+      const points = timeSeriesData.map((d, i) => {
+        const x = (i / (timeSeriesData.length - 1)) * chartWidth;
+        const y = valueToY(d[dataKey] as number, maxValues[dataKey as keyof typeof maxValues]);
+        return { x, y };
+      });
+
+      let path = `M${points[0].x} ${points[0].y}`;
+      
+      for (let i = 1; i < points.length; i++) {
+        const prev = points[i - 1];
+        const curr = points[i];
+        const controlX = (prev.x + curr.x) / 2;
+        path += ` C ${controlX} ${prev.y}, ${controlX} ${curr.y}, ${curr.x} ${curr.y}`;
+      }
+
+      return path;
+    };
+
+    return [
+      { 
+        id: 'timeDeposits', 
+        color: '#22d3ee', 
+        label: 'Time Deposits', 
+        path: generateSmoothPath('timeDeposits'),
+        endY: timeSeriesData.length > 0 ? valueToY(timeSeriesData[timeSeriesData.length - 1].timeDeposits, maxValues.timeDeposits) : 150
+      },
+      { 
+        id: 'availBalance', 
+        color: '#a855f7', 
+        label: 'Avail Balance', 
+        path: generateSmoothPath('availBalance'),
+        endY: timeSeriesData.length > 0 ? valueToY(timeSeriesData[timeSeriesData.length - 1].availBalance, maxValues.availBalance) : 130
+      },
+      { 
+        id: 'wallet', 
+        color: '#22c55e', 
+        label: 'Total Wallet', 
+        path: generateSmoothPath('wallet'),
+        endY: timeSeriesData.length > 0 ? valueToY(timeSeriesData[timeSeriesData.length - 1].wallet, maxValues.wallet) : 170
+      },
+      { 
+        id: 'agentWallet', 
+        color: '#f59e0b', 
+        label: 'Agent Wallet', 
+        path: generateSmoothPath('agentWallet'),
+        endY: timeSeriesData.length > 0 ? valueToY(timeSeriesData[timeSeriesData.length - 1].agentWallet, maxValues.agentWallet) : 140
+      },
+      { 
+        id: 'stock', 
+        color: '#3b82f6', 
+        label: 'Stock Amount', 
+        path: generateSmoothPath('stock'),
+        endY: timeSeriesData.length > 0 ? valueToY(timeSeriesData[timeSeriesData.length - 1].stock, maxValues.stock) : 160
+      }
+    ];
+  };
+
+  const lines = generatePathsFromData();
 
   return (
     <>
-      {/* Backdrop overlay when expanded - render first */}
       {isExpanded && (
         <motion.div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998]"
@@ -191,15 +339,19 @@ export function MonthlySalesChart({ total, isLoading = false }: MonthlySalesChar
             IWALLET GRAPHS {isExpanded && '(Click to minimize)'}
           </motion.div>
           <motion.div
-            className={`font-semibold text-[var(--text-primary)] font-display transition-all duration-300 ${isExpanded ? 'text-3xl' : 'text-lg'}`}
+            className={`font-semibold font-display transition-all duration-300 ${isExpanded ? 'text-3xl' : 'text-lg'}`}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={isInView ? { opacity: 1, scale: 1 } : {}}
             transition={{ delay: 0.3, duration: 0.4 }}
           >
             {isLoading ? (
               <span className="text-[var(--text-muted)]">Loading...</span>
+            ) : selectedValue !== null ? (
+              <span className="text-[var(--text-primary)]">{formatCurrency(selectedValue)}</span>
             ) : (
-              formatCurrency(displayTotal)
+              <span className="text-[var(--text-muted)] font-normal" style={{ fontSize: isExpanded ? '1.125rem' : '0.875rem' }}>
+                Click a metric to view
+              </span>
             )}
           </motion.div>
         </div>
@@ -216,7 +368,6 @@ export function MonthlySalesChart({ total, isLoading = false }: MonthlySalesChar
             <Icons.More className="w-3.5 h-3.5" />
           </motion.button>
 
-          {/* Dropdown Menu */}
           {showTimeMenu && (
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: -10 }}
@@ -293,7 +444,6 @@ export function MonthlySalesChart({ total, isLoading = false }: MonthlySalesChar
             const isVisible = visibleLines.has(line.id);
             return (
               <React.Fragment key={line.id}>
-                {/* Area fill */}
                 <motion.path
                   d={`${line.path} V 300 H 0 Z`}
                   fill={`url(#${line.id}Gradient)`}
@@ -309,7 +459,6 @@ export function MonthlySalesChart({ total, isLoading = false }: MonthlySalesChar
                   }}
                   style={{ transformOrigin: "bottom" }}
                 />
-                {/* Line path */}
                 <motion.path
                   d={line.path}
                   fill="none"
@@ -328,7 +477,6 @@ export function MonthlySalesChart({ total, isLoading = false }: MonthlySalesChar
                     ease: [0.22, 1, 0.36, 1]
                   }}
                 />
-                {/* End dot */}
                 <motion.circle 
                   cx="1200" 
                   cy={line.endY} 
@@ -348,7 +496,6 @@ export function MonthlySalesChart({ total, isLoading = false }: MonthlySalesChar
         </svg>
       </div>
 
-      {/* Legend */}
       <motion.div
         className={`flex flex-wrap gap-3 mt-3 ${isExpanded ? 'justify-center' : 'justify-start'}`}
         initial={{ opacity: 0, y: 10 }}
@@ -357,6 +504,7 @@ export function MonthlySalesChart({ total, isLoading = false }: MonthlySalesChar
       >
         {lines.map((line, index) => {
           const isVisible = visibleLines.has(line.id);
+          const isSelected = selectedMetric === line.id;
           return (
             <motion.button
               key={line.id}
@@ -365,7 +513,9 @@ export function MonthlySalesChart({ total, isLoading = false }: MonthlySalesChar
                 toggleLine(line.id);
               }}
               className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-all duration-200 ${
-                isVisible 
+                isSelected
+                  ? 'bg-[var(--primary-soft)] hover:bg-[var(--primary-soft)] border border-[var(--primary)] ring-2 ring-[var(--primary)] ring-opacity-30'
+                  : isVisible 
                   ? 'bg-[var(--surface-soft)] hover:bg-[var(--surface-hover)] border border-[var(--border)]' 
                   : 'bg-transparent hover:bg-[var(--surface-soft)] border border-transparent opacity-40'
               }`}
@@ -389,7 +539,11 @@ export function MonthlySalesChart({ total, isLoading = false }: MonthlySalesChar
               />
               <span 
                 className={`transition-all duration-300 ${isExpanded ? 'text-xs' : 'text-[9px]'} ${
-                  isVisible ? 'text-[var(--text-secondary)]' : 'text-[var(--text-muted)]'
+                  isSelected
+                    ? 'text-[var(--primary)] font-semibold'
+                    : isVisible 
+                    ? 'text-[var(--text-secondary)]' 
+                    : 'text-[var(--text-muted)]'
                 }`}
               >
                 {line.label}
@@ -422,13 +576,12 @@ export function OutflowChart({
   const ref = React.useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-50px" });
 
-  // Bar chart colors using theme colors
   const barColors = [
-    "#22d3ee", // Primary cyan
-    "#a855f7", // Accent purple
-    "#3b82f6", // Info blue
-    "#22c55e", // Success green
-    "#f59e0b"  // Warning amber
+    "#22d3ee",
+    "#a855f7",
+    "#3b82f6",
+    "#22c55e",
+    "#f59e0b"
   ];
 
   const chartItems = items && items.length > 0 ? items : outflowData;
@@ -438,7 +591,6 @@ export function OutflowChart({
 
   return (
     <>
-      {/* Backdrop overlay when expanded - render first */}
       {isExpanded && (
         <motion.div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998]"
@@ -500,7 +652,6 @@ export function OutflowChart({
         </motion.button>
       </div>
 
-      {/* Total Amount Display */}
       <motion.div
         className="flex items-center justify-between"
         initial={{ opacity: 0, y: -10 }}
@@ -527,7 +678,6 @@ export function OutflowChart({
         </motion.div>
       </motion.div>
 
-      {/* Horizontal Stacked Bar Chart */}
       <motion.div
         className={`relative w-full flex rounded-lg overflow-hidden transition-all duration-300 ${isExpanded ? 'h-4' : 'h-2'}`}
         initial={{ opacity: 0, scaleX: 0 }}
@@ -557,7 +707,6 @@ export function OutflowChart({
                 transition: { duration: 0.2 }
               }}
             >
-              {/* Tooltip on hover */}
               <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-[var(--surface-elevated)] border border-[var(--border)] rounded-lg px-2 py-1 opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 shadow-lg">
                 <div className="text-[10px] font-semibold text-[var(--text-primary)]">{item.label}</div>
                 <div className="text-[9px] text-[var(--text-muted)]">{percentage.toFixed(1)}%</div>
@@ -567,7 +716,6 @@ export function OutflowChart({
         })}
       </motion.div>
 
-      {/* Legend Items */}
       <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
         {chartItems.map((item, index) => {
           const percentage = totalAmount > 0 ? (item.amount / totalAmount) * 100 : 0;

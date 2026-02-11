@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Button, Drawer, Dropdown, Loader, Pagination, Table } from "rsuite";
+import { Button, Drawer, Dropdown, Loader, Modal, Pagination, Table } from "rsuite";
 import { getFirebaseCollection } from "@/lib/api/firebaseCollections";
 
 const { Column, HeaderCell, Cell } = Table;
@@ -79,6 +79,7 @@ type DocumentStatus = "submitted" | "needs_review" | "rejected";
 interface KycDocument {
   name: string;
   status: DocumentStatus;
+  url?: string;
 }
 
 interface KycRequest {
@@ -177,6 +178,7 @@ const buildDocuments = (record: FirebaseKycRequest): KycDocument[] => {
         : documents[item.key]
           ? status
           : "needs_review",
+    url: documents[item.key] as string | undefined,
   }));
 };
 
@@ -303,11 +305,13 @@ const KycDetailPanel = ({
   onClose,
   onApprove,
   onReject,
+  onPreview,
 }: {
   kyc: KycRequest;
   onClose: () => void;
   onApprove: () => void;
   onReject: () => void;
+  onPreview: (url: string, title: string) => void;
 }) => {
   const riskBar = {
     low: "bg-[var(--success)]",
@@ -389,8 +393,19 @@ const KycDetailPanel = ({
           <div className="space-y-1.5">
             {kyc.documents.map((doc) => (
               <div key={doc.name} className="flex items-center justify-between rounded-md bg-[var(--surface)] border border-[var(--border)] px-2.5 py-1.5">
-                <div className="text-[11px] text-[var(--text-secondary)]">{doc.name}</div>
-                <DocumentBadge status={doc.status} />
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className="text-[11px] text-[var(--text-secondary)]">{doc.name}</div>
+                  <DocumentBadge status={doc.status} />
+                </div>
+                {doc.url && (
+                  <button
+                    onClick={() => onPreview(doc.url!, doc.name)}
+                    className="ml-2 w-6 h-6 rounded hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors flex-shrink-0"
+                    title="Preview image"
+                  >
+                    <Icons.Eye className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -439,14 +454,34 @@ const KycDetailPanel = ({
   );
 };
 
-export default function KycTable() {
+interface KycTableProps {
+  searchQuery: string;
+  statusFilter: string;
+  dateRange: [Date, Date] | null;
+}
+
+export default function KycTable({ searchQuery, statusFilter, dateRange }: KycTableProps) {
   const [selectedKyc, setSelectedKyc] = useState<KycRequest | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [imagePreview, setImagePreview] = useState<{ url: string; title: string } | null>(null);
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
 
+  // Format date range for API
+  const startDate = dateRange?.[0] ? dateRange[0].toISOString() : undefined;
+  const endDate = dateRange?.[1] ? dateRange[1].toISOString() : undefined;
+
+  // Fetch data with server-side filtering for status and search (backend supports these)
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["kyc-requests", { page, limit }],
+    queryKey: [
+      "kyc-requests",
+      {
+        page,
+        limit,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+        search: searchQuery || undefined,
+      },
+    ],
     queryFn: () =>
       getFirebaseCollection<FirebaseKycRequest>("kycRequest", {
         page,
@@ -454,14 +489,31 @@ export default function KycTable() {
         sortBy: "submittedAt",
         sortOrder: "desc",
         includeUser: true,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+        search: searchQuery || undefined,
       }),
     placeholderData: keepPreviousData,
   });
 
-  const kycRequests = useMemo(
-    () => (data?.data?.items ?? []).map(normalizeKycRequest),
-    [data]
-  );
+  // Apply client-side filters for date range (until backend supports it)
+  const kycRequests = useMemo(() => {
+    let requests = (data?.data?.items ?? []).map(normalizeKycRequest);
+
+    // Apply date range filter (client-side)
+    if (dateRange && dateRange[0] && dateRange[1]) {
+      const start = new Date(dateRange[0]);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(dateRange[1]);
+      end.setHours(23, 59, 59, 999);
+
+      requests = requests.filter((request) => {
+        const submittedDate = new Date(request.submittedAt);
+        return submittedDate >= start && submittedDate <= end;
+      });
+    }
+
+    return requests;
+  }, [data, dateRange]);
   const total = data?.data?.pagination.total ?? 0;
   const errorMessage =
     error instanceof Error ? error.message : "Failed to fetch KYC requests";
@@ -484,6 +536,14 @@ export default function KycTable() {
   const handleReject = () => {
     console.log("Reject KYC:", selectedKyc?.id);
     handleCloseDrawer();
+  };
+
+  const handlePreviewImage = (url: string, title: string) => {
+    setImagePreview({ url, title });
+  };
+
+  const handleClosePreview = () => {
+    setImagePreview(null);
   };
 
   if (isLoading) {
@@ -623,42 +683,15 @@ export default function KycTable() {
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Actions</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: KycRequest) => (
-                  <Dropdown
-                    renderToggle={(props, ref) => (
-                      <button
-                        {...props}
-                        ref={ref}
-                        className="w-7 h-7 rounded-lg hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-muted)]"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Icons.MoreHorizontal className="w-4 h-4" />
-                      </button>
-                    )}
-                    placement="bottomEnd"
+                  <button
+                    className="w-7 h-7 rounded-lg hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-muted)]"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRowClick(rowData);
+                    }}
                   >
-                    <Dropdown.Item className="!text-xs !text-[var(--text-secondary)] hover:!bg-[var(--surface-hover)]" onClick={() => handleRowClick(rowData)}>
-                      <span className="flex items-center gap-2">
-                        <Icons.Eye className="w-3.5 h-3.5" />
-                        View Details
-                      </span>
-                    </Dropdown.Item>
-                    {(rowData.status === "pending" || rowData.status === "in_review") && (
-                      <>
-                        <Dropdown.Item className="!text-xs !text-[var(--success)] hover:!bg-[var(--success-soft)]">
-                          <span className="flex items-center gap-2">
-                            <Icons.Check className="w-3.5 h-3.5" />
-                            Approve
-                          </span>
-                        </Dropdown.Item>
-                        <Dropdown.Item className="!text-xs !text-[var(--danger)] hover:!bg-[var(--danger-soft)]">
-                          <span className="flex items-center gap-2">
-                            <Icons.X className="w-3.5 h-3.5" />
-                            Reject
-                          </span>
-                        </Dropdown.Item>
-                      </>
-                    )}
-                  </Dropdown>
+                    <Icons.MoreHorizontal className="w-4 h-4" />
+                  </button>
                 )}
               </Cell>
             </Column>
@@ -719,12 +752,55 @@ export default function KycTable() {
                   onClose={handleCloseDrawer}
                   onApprove={handleApprove}
                   onReject={handleReject}
+                  onPreview={handlePreviewImage}
                 />
               </motion.div>
             )}
           </AnimatePresence>
         </Drawer.Body>
       </Drawer>
+
+      <Modal
+        open={!!imagePreview}
+        onClose={handleClosePreview}
+        size="md"
+        className="kyc-image-preview"
+      >
+        <Modal.Header>
+          <Modal.Title className="text-[var(--text-primary)]">
+            {imagePreview?.title}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="!p-0">
+          {imagePreview && (
+            <div className="relative w-full bg-[var(--surface-soft)] flex items-center justify-center p-4">
+              <img
+                src={imagePreview.url}
+                alt={imagePreview.title}
+                className="max-w-full max-h-[70vh] object-contain rounded-lg"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%23999">Image not available</text></svg>';
+                }}
+              />
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button onClick={handleClosePreview} appearance="subtle">
+            Close
+          </Button>
+          {imagePreview && (
+            <Button
+              appearance="primary"
+              onClick={() => window.open(imagePreview.url, '_blank')}
+              className="!bg-[var(--primary)]"
+            >
+              Open in New Tab
+            </Button>
+          )}
+        </Modal.Footer>
+      </Modal>
     </>
   );
 }

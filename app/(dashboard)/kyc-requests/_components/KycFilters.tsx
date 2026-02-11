@@ -25,7 +25,6 @@ const Icons = {
 const statusOptions = [
   { label: "All Status", value: "all" },
   { label: "Pending", value: "pending" },
-  { label: "In Review", value: "in_review" },
   { label: "Approved", value: "approved" },
   { label: "Rejected", value: "rejected" },
 ];
@@ -44,7 +43,25 @@ const riskOptions = [
   { label: "High", value: "high" },
 ];
 
-export default function KycFilters() {
+interface KycFiltersProps {
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  statusFilter: string;
+  onStatusChange: (value: string) => void;
+  dateRange: [Date, Date] | null;
+  onDateRangeChange: (value: [Date, Date] | null) => void;
+  onReset: () => void;
+}
+
+export default function KycFilters({
+  searchQuery,
+  onSearchChange,
+  statusFilter,
+  onStatusChange,
+  dateRange,
+  onDateRangeChange,
+  onReset,
+}: KycFiltersProps) {
   return (
     <motion.div
       className="bg-[var(--surface)] rounded-xl px-4 py-3 shadow-sm border border-[var(--border)]"
@@ -65,6 +82,8 @@ export default function KycFilters() {
             </InputGroup.Addon>
             <Input
               placeholder="Search by name, email, or request id..."
+              value={searchQuery}
+              onChange={(value) => onSearchChange(value)}
               className="!bg-transparent !text-sm !text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
             />
           </InputGroup>
@@ -79,43 +98,14 @@ export default function KycFilters() {
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <SelectPicker
               data={statusOptions}
-              defaultValue="all"
+              value={statusFilter}
+              onChange={(value) => onStatusChange(value || "all")}
               searchable={false}
               cleanable={false}
               size="sm"
               className="!w-[130px] kyc-filter-select"
               placeholder="Status"
-              renderValue={(value, item) => (
-                <span className="text-xs text-[var(--text-secondary)]">{item?.label}</span>
-              )}
-            />
-          </motion.div>
-
-          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <SelectPicker
-              data={levelOptions}
-              defaultValue="all"
-              searchable={false}
-              cleanable={false}
-              size="sm"
-              className="!w-[130px] kyc-filter-select"
-              placeholder="Level"
-              renderValue={(value, item) => (
-                <span className="text-xs text-[var(--text-secondary)]">{item?.label}</span>
-              )}
-            />
-          </motion.div>
-
-          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <SelectPicker
-              data={riskOptions}
-              defaultValue="all"
-              searchable={false}
-              cleanable={false}
-              size="sm"
-              className="!w-[120px] kyc-filter-select"
-              placeholder="Risk"
-              renderValue={(value, item) => (
+              renderValue={(_value, item) => (
                 <span className="text-xs text-[var(--text-secondary)]">{item?.label}</span>
               )}
             />
@@ -125,6 +115,8 @@ export default function KycFilters() {
             <DateRangePicker
               size="sm"
               placeholder="Date Range"
+              value={dateRange}
+              onChange={(value) => onDateRangeChange(value)}
               className="!w-[200px] kyc-filter-date"
               character=" - "
               showOneCalendar
@@ -139,6 +131,7 @@ export default function KycFilters() {
             <Button
               size="sm"
               appearance="subtle"
+              onClick={onReset}
               className="!h-8 !px-3 !rounded-lg !text-xs !text-[var(--text-muted)] hover:!text-[var(--text-primary)] hover:!bg-[var(--surface-hover)]"
             >
               <span className="flex items-center gap-1.5">

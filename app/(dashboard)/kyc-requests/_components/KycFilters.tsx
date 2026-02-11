@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "motion/react";
-import { Button, DateRangePicker, Input, InputGroup, SelectPicker } from "rsuite";
+import { Button, DateRangePicker, Input, InputGroup } from "rsuite";
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
@@ -20,28 +20,18 @@ const Icons = {
       <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
     </svg>
   ),
+  Check: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  ),
+  X: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  ),
 };
-
-const statusOptions = [
-  { label: "All Status", value: "all" },
-  { label: "Pending", value: "pending" },
-  { label: "Approved", value: "approved" },
-  { label: "Rejected", value: "rejected" },
-];
-
-const levelOptions = [
-  { label: "All Levels", value: "all" },
-  { label: "Basic", value: "basic" },
-  { label: "Advanced", value: "advanced" },
-  { label: "Enhanced", value: "enhanced" },
-];
-
-const riskOptions = [
-  { label: "All Risk", value: "all" },
-  { label: "Low", value: "low" },
-  { label: "Medium", value: "medium" },
-  { label: "High", value: "high" },
-];
 
 interface KycFiltersProps {
   searchQuery: string;
@@ -81,7 +71,7 @@ export default function KycFilters({
               <Icons.Search className="h-4 w-4" />
             </InputGroup.Addon>
             <Input
-              placeholder="Search by name, email, or request id..."
+              placeholder="Search applicant"
               value={searchQuery}
               onChange={(value) => onSearchChange(value)}
               className="!bg-transparent !text-sm !text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
@@ -96,19 +86,56 @@ export default function KycFilters({
           transition={{ duration: 0.3, delay: 0.45 }}
         >
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <SelectPicker
-              data={statusOptions}
-              value={statusFilter}
-              onChange={(value) => onStatusChange(value || "all")}
-              searchable={false}
-              cleanable={false}
+            <Button
               size="sm"
-              className="!w-[130px] kyc-filter-select"
-              placeholder="Status"
-              renderValue={(_value, item) => (
-                <span className="text-xs text-[var(--text-secondary)]">{item?.label}</span>
-              )}
-            />
+              appearance={statusFilter === "all" ? "primary" : "default"}
+              onClick={() => onStatusChange("all")}
+              className={`!h-8 !px-3 !rounded-lg !text-xs ${
+                statusFilter === "all"
+                  ? "!bg-[var(--primary)] !text-white"
+                  : "!bg-[var(--surface-soft)] !text-[var(--text-secondary)] hover:!bg-[var(--surface-hover)]"
+              }`}
+            >
+              <span className="flex items-center gap-1.5">
+                All
+              </span>
+            </Button>
+          </motion.div>
+
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button
+              size="sm"
+              appearance={statusFilter === "approved" ? "primary" : "default"}
+              onClick={() => onStatusChange(statusFilter === "approved" ? "all" : "approved")}
+              className={`!h-8 !px-3 !rounded-lg !text-xs ${
+                statusFilter === "approved"
+                  ? "!bg-[var(--success)] !text-white"
+                  : "!bg-[var(--surface-soft)] !text-[var(--text-secondary)] hover:!bg-[var(--surface-hover)]"
+              }`}
+            >
+              <span className="flex items-center gap-1.5">
+                <Icons.Check className="w-3.5 h-3.5" />
+                Approved
+              </span>
+            </Button>
+          </motion.div>
+
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button
+              size="sm"
+              appearance={statusFilter === "rejected" ? "primary" : "default"}
+              onClick={() => onStatusChange(statusFilter === "rejected" ? "all" : "rejected")}
+              className={`!h-8 !px-3 !rounded-lg !text-xs ${
+                statusFilter === "rejected"
+                  ? "!bg-[var(--danger)] !text-white"
+                  : "!bg-[var(--surface-soft)] !text-[var(--text-secondary)] hover:!bg-[var(--surface-hover)]"
+              }`}
+            >
+              <span className="flex items-center gap-1.5">
+                <Icons.X className="w-3.5 h-3.5" />
+                Rejected
+              </span>
+            </Button>
           </motion.div>
 
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>

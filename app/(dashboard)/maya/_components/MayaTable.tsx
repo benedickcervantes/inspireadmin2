@@ -291,7 +291,7 @@ export default function MayaTable() {
             rowHeight={60}
             headerHeight={40}
             hover
-            className="app-table maya-table !bg-transparent min-w-[900px] cursor-pointer"
+            className="app-table maya-table !bg-transparent min-w-[900px] cursor-pointer [&_.rs-table-row:hover_.rs-table-cell]:!bg-[var(--surface-hover)] [&_.rs-table-row:hover_.rs-table-cell]:!transition-colors [&_.rs-table-row:hover_.rs-table-cell]:!duration-200"
             rowKey="_firebaseDocId"
             onRowClick={(rowData) => handleRowClick(rowData as MayaApplication)}
           >

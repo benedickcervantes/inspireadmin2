@@ -877,7 +877,8 @@ export default function Dashboard() {
 
             {/* User Type Distribution Pie Chart - Only Investors and Agents */}
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4 mt-4">
-              <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">User Type Distribution</h4>
+<h4 className="text-xs font-semibold text-[var(--text-muted)] tracking-wide mb-3">
+User Type Distribution</h4>
               <div className="flex flex-col items-center">
                 {/* SVG Pie Chart */}
                 <svg className="w-40 h-40" viewBox="0 0 200 200">
@@ -1110,7 +1111,8 @@ export default function Dashboard() {
 
             {/* Deposit Status Distribution Pie Chart */}
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4 mt-4">
-              <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">Status Distribution</h4>
+<h4 className="text-xs font-semibold text-[var(--text-muted)] tracking-wide mb-3">
+Status Distribution</h4>
               <div className="flex flex-col items-center">
                 {/* SVG Pie Chart */}
                 <svg className="w-40 h-40" viewBox="0 0 200 200">
@@ -1386,7 +1388,9 @@ export default function Dashboard() {
 
             {/* Balance Distribution Bar Chart */}
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4 mt-4">
-              <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">Balance Distribution</h4>
+<h4 className="text-xs font-semibold text-[var(--text-muted)] tracking-wide mb-3">
+  Balance Distribution
+</h4>
               <div className="space-y-4">
                 {/* Total Wallet Bar */}
                 <div>

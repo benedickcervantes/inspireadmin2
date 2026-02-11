@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { motion } from "motion/react";
-import { Button, Stack } from "rsuite";
+import { Button } from "rsuite";
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
@@ -40,214 +40,160 @@ const Icons = {
   ),
 };
 
-interface KycStats {
-  total: number;
-  pending: number;
-  inReview: number;
-  approved: number;
-  rejected: number;
+interface FirebaseKycRequest {
+  _firebaseDocId: string;
+  status?: string;
+  [key: string]: unknown;
 }
 
 interface KycHeaderProps {
-  stats?: KycStats;
+  kycRequests: FirebaseKycRequest[];
 }
 
-// Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.2,
+      staggerChildren: 0.1,
+      delayChildren: 0.1,
     },
   },
 };
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  hidden: { opacity: 0, y: 20 },
   visible: {
     opacity: 1,
     y: 0,
-    scale: 1,
     transition: {
-      type: "spring" as const,
-      stiffness: 300,
-      damping: 24,
+      duration: 0.4,
+      ease: [0.25, 0.46, 0.45, 0.94] as any,
     },
   },
 };
 
-export default function KycHeader({ stats }: KycHeaderProps) {
-  const defaultStats: KycStats = {
-    total: 1824,
-    pending: 63,
-    inReview: 28,
-    approved: 1691,
-    rejected: 42,
-  };
-
-  const displayStats = stats || defaultStats;
+export default function KycHeader({ kycRequests }: KycHeaderProps) {
+  // Calculate stats directly from kycRequests array (old code approach)
+  const stats = useMemo(() => {
+    const total = kycRequests.length;
+    const pending = kycRequests.filter(r => r.status === 'pending').length;
+    const inReview = kycRequests.filter(r => r.status === 'in_review').length;
+    const approved = kycRequests.filter(r => r.status === 'approved').length;
+    const rejected = kycRequests.filter(r => r.status === 'rejected').length;
+    
+    return { total, pending, inReview, approved, rejected };
+  }, [kycRequests]);
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-3">
-          <motion.div
-            className="w-11 h-11 rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center shadow-lg shadow-cyan-500/20"
-            initial={{ scale: 0, rotate: -180 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.1 }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Icons.ShieldCheck className="w-5 h-5 text-white" />
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, x: -15 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
-          >
-            <motion.div
-              className="text-base font-semibold text-[var(--text-primary)]"
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.3 }}
-            >
-              KYC Requests
-            </motion.div>
-            <motion.div
-              className="text-xs text-[var(--text-muted)]"
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25, duration: 0.3 }}
-            >
-              Review identity verification and compliance checks
-            </motion.div>
-          </motion.div>
+      <motion.div
+        className="flex items-center justify-between"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+      >
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-1">
+            KYC Requests
+          </h1>
+          <p className="text-sm text-[var(--text-muted)]">
+            Manage and review user verification requests
+          </p>
         </div>
-
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.35, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+        <Button
+          appearance="primary"
+          className="!bg-gradient-to-r !from-[var(--primary)] !to-blue-500 hover:!opacity-90 !rounded-lg !px-4 !h-9"
         >
-          <Stack direction="row" spacing={8} className="flex-wrap">
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button size="sm" appearance="default" className="!h-8 !px-3 !rounded-lg !text-xs !text-[var(--text-secondary)] !border-[var(--border)] !bg-[var(--surface)] !shadow-none hover:!bg-[var(--surface-hover)]">
-                <span className="flex items-center gap-2">
-                  <Icons.Download className="w-3.5 h-3.5" />
-                  Export
-                </span>
-              </Button>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.02, boxShadow: "var(--shadow-glow-cyan)" }} whileTap={{ scale: 0.98 }}>
-              <Button size="sm" appearance="primary" className="!h-8 !px-4 !rounded-lg !bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] hover:!opacity-90 !border-0 !shadow-md !shadow-cyan-500/20">
-                <span className="flex items-center gap-2">
-                  <Icons.Inbox className="w-3.5 h-3.5" />
-                  Review Queue
-                </span>
-              </Button>
-            </motion.div>
-          </Stack>
-        </motion.div>
-      </div>
+          <span className="flex items-center gap-2">
+            <Icons.Download className="w-4 h-4" />
+            Export
+          </span>
+        </Button>
+      </motion.div>
 
       <motion.div
-        className="grid grid-cols-2 lg:grid-cols-5 gap-3"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
         <motion.div
-          className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-3 shadow-sm"
           variants={cardVariants}
-          whileHover={{ scale: 1.02, borderColor: "var(--border-strong)" }}
+          className="bg-gradient-to-br from-[var(--primary)] to-blue-500 rounded-xl p-4 shadow-lg border border-[var(--primary)]/20"
         >
-          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Total Requests</div>
-          <motion.div
-            className="text-xl font-bold text-[var(--text-primary)] mt-1"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
-          >
-            {displayStats.total.toLocaleString()}
-          </motion.div>
-          <div className="flex items-center gap-1 mt-1">
-            <Icons.TrendingUp className="w-3 h-3 text-[var(--success)]" />
-            <span className="text-[10px] text-[var(--success)]">+8%</span>
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              <Icons.ShieldCheck className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xs font-medium text-white/80 bg-white/20 px-2 py-1 rounded-full">
+              Live
+            </span>
           </div>
-        </motion.div>
-
-        <motion.div
-          className="bg-[var(--warning-soft)] rounded-xl border border-[var(--warning)]/20 p-3"
-          variants={cardVariants}
-          whileHover={{ scale: 1.02 }}
-        >
-          <div className="text-[11px] text-[var(--warning)] uppercase tracking-wide font-medium">Pending</div>
-          <motion.div
-            className="text-xl font-bold text-[var(--warning)] mt-1"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5, type: "spring", stiffness: 300 }}
-          >
-            {displayStats.pending}
-          </motion.div>
-          <div className="flex items-center gap-1 mt-1">
-            <Icons.Clock className="w-3 h-3 text-[var(--text-muted)]" />
-            <span className="text-[10px] text-[var(--text-muted)]">Awaiting</span>
+          <div className="text-3xl font-bold text-white mb-1">
+            {stats.total}
           </div>
+          <div className="text-sm text-white/80">Total Requests</div>
         </motion.div>
 
         <motion.div
-          className="bg-[var(--primary-soft)] rounded-xl border border-[var(--primary)]/20 p-3"
           variants={cardVariants}
-          whileHover={{ scale: 1.02 }}
+          className="bg-[var(--surface)] rounded-xl p-4 shadow-sm border border-[var(--border)] hover:shadow-md transition-shadow"
         >
-          <div className="text-[11px] text-[var(--primary)] uppercase tracking-wide font-medium">In Review</div>
-          <motion.div
-            className="text-xl font-bold text-[var(--primary)] mt-1"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.6, type: "spring", stiffness: 300 }}
-          >
-            {displayStats.inReview}
-          </motion.div>
-          <div className="text-[10px] text-[var(--text-muted)] mt-1">Processing</div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-lg bg-[var(--warning-soft)] flex items-center justify-center">
+              <Icons.Clock className="w-5 h-5 text-[var(--warning)]" />
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-[var(--text-primary)] mb-1">
+            {stats.pending}
+          </div>
+          <div className="text-sm text-[var(--text-muted)]">Pending</div>
         </motion.div>
 
         <motion.div
-          className="bg-[var(--success-soft)] rounded-xl border border-[var(--success)]/20 p-3"
           variants={cardVariants}
-          whileHover={{ scale: 1.02 }}
+          className="bg-[var(--surface)] rounded-xl p-4 shadow-sm border border-[var(--border)] hover:shadow-md transition-shadow"
         >
-          <div className="text-[11px] text-[var(--success)] uppercase tracking-wide font-medium">Approved</div>
-          <motion.div
-            className="text-xl font-bold text-[var(--success)] mt-1"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.7, type: "spring", stiffness: 300 }}
-          >
-            {displayStats.approved.toLocaleString()}
-          </motion.div>
-          <div className="text-[10px] text-[var(--text-muted)] mt-1">Verified</div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-lg bg-[var(--primary-soft)] flex items-center justify-center">
+              <Icons.TrendingUp className="w-5 h-5 text-[var(--primary)]" />
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-[var(--text-primary)] mb-1">
+            {stats.inReview}
+          </div>
+          <div className="text-sm text-[var(--text-muted)]">In Review</div>
         </motion.div>
 
         <motion.div
-          className="bg-gradient-to-br from-[var(--danger)]/20 to-rose-600/20 rounded-xl border border-[var(--danger)]/30 p-3"
           variants={cardVariants}
-          whileHover={{ scale: 1.02 }}
+          className="bg-[var(--surface)] rounded-xl p-4 shadow-sm border border-[var(--border)] hover:shadow-md transition-shadow"
         >
-          <div className="text-[11px] text-[var(--danger)] uppercase tracking-wide font-medium">Rejected</div>
-          <motion.div
-            className="text-xl font-bold text-[var(--danger)] mt-1"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.8, type: "spring", stiffness: 300 }}
-          >
-            {displayStats.rejected}
-          </motion.div>
-          <div className="text-[10px] text-[var(--text-muted)] mt-1">Failed checks</div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-lg bg-[var(--success-soft)] flex items-center justify-center">
+              <Icons.ShieldCheck className="w-5 h-5 text-[var(--success)]" />
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-[var(--text-primary)] mb-1">
+            {stats.approved}
+          </div>
+          <div className="text-sm text-[var(--text-muted)]">Approved</div>
+        </motion.div>
+
+        <motion.div
+          variants={cardVariants}
+          className="bg-[var(--surface)] rounded-xl p-4 shadow-sm border border-[var(--border)] hover:shadow-md transition-shadow"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-lg bg-[var(--danger-soft)] flex items-center justify-center">
+              <Icons.Inbox className="w-5 h-5 text-[var(--danger)]" />
+            </div>
+          </div>
+          <div className="text-3xl font-bold text-[var(--text-primary)] mb-1">
+            {stats.rejected}
+          </div>
+          <div className="text-sm text-[var(--text-muted)]">Rejected</div>
         </motion.div>
       </motion.div>
     </div>

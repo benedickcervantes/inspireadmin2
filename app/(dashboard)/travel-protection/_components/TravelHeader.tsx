@@ -1,8 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { motion } from "motion/react";
 import { Button, Stack } from "rsuite";
+import { useQuery } from "@tanstack/react-query";
+import { getFirebaseCollection } from "@/lib/api/firebaseCollections";
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
@@ -27,18 +29,23 @@ const Icons = {
       <line x1="16" y1="17" x2="8" y2="17" />
     </svg>
   ),
-  Users: (props: IconProps) => (
+  Clock: (props: IconProps) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
     </svg>
   ),
   CheckCircle: (props: IconProps) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
       <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  ),
+  XCircle: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="15" y1="9" x2="9" y2="15" />
+      <line x1="9" y1="9" x2="15" y2="15" />
     </svg>
   ),
   Plus: (props: IconProps) => (
@@ -48,6 +55,12 @@ const Icons = {
     </svg>
   ),
 };
+
+interface FirebaseTravelApplication {
+  _firebaseDocId: string;
+  status?: string;
+  [key: string]: unknown;
+}
 
 // Animation variants
 const containerVariants = {
@@ -76,6 +89,66 @@ const cardVariants = {
 };
 
 export default function TravelHeader() {
+  // Fetch all travel protection applications
+  const { data: allApplicationsData } = useQuery({
+    queryKey: ["all-travel-applications"],
+    queryFn: async () => {
+      const firstPage = await getFirebaseCollection<FirebaseTravelApplication>("travelApplications", {
+        page: 1,
+        limit: 20,
+        sortBy: "createdAt",
+        sortOrder: "desc",
+      });
+
+      if (!firstPage.data) return [];
+
+      const totalPages = firstPage.data.pagination.totalPages;
+      const allItems = [...firstPage.data.items];
+
+      if (totalPages > 1) {
+        const pagePromises = [];
+        for (let page = 2; page <= totalPages; page++) {
+          pagePromises.push(
+            getFirebaseCollection<FirebaseTravelApplication>("travelApplications", {
+              page,
+              limit: 20,
+              sortBy: "createdAt",
+              sortOrder: "desc",
+            })
+          );
+        }
+
+        const remainingPages = await Promise.all(pagePromises);
+        remainingPages.forEach(pageData => {
+          if (pageData.data?.items) {
+            allItems.push(...pageData.data.items);
+          }
+        });
+      }
+
+      return allItems;
+    },
+    staleTime: 60000,
+  });
+
+  const applications = allApplicationsData || [];
+
+  // Calculate statistics
+  const stats = useMemo(() => {
+    const total = applications.length;
+    const pending = applications.filter(app => 
+      (app.status || "").toLowerCase() === "pending"
+    ).length;
+    const approved = applications.filter(app => 
+      (app.status || "").toLowerCase() === "approved"
+    ).length;
+    const rejected = applications.filter(app => 
+      (app.status || "").toLowerCase() === "rejected"
+    ).length;
+
+    return { total, pending, approved, rejected };
+  }, [applications]);
+
   return (
     <div className="flex flex-col gap-4">
       {/* Title Row */}
@@ -157,16 +230,15 @@ export default function TravelHeader() {
             <div className="w-8 h-8 rounded-lg bg-[var(--accent-soft)] flex items-center justify-center">
               <Icons.FileText className="w-4 h-4 text-[var(--accent)]" />
             </div>
-            <span className="text-[10px] text-[var(--success)] font-medium bg-[var(--success-soft)] px-1.5 py-0.5 rounded">+8.3%</span>
           </div>
-          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Total Policies</div>
+          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Total Applications</div>
           <motion.div
             className="text-xl font-bold text-[var(--text-primary)] mt-1"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
           >
-            1,248
+            {stats.total.toLocaleString()}
           </motion.div>
         </motion.div>
 
@@ -176,19 +248,18 @@ export default function TravelHeader() {
           whileHover={{ scale: 1.02 }}
         >
           <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-lg bg-[var(--info-soft)] flex items-center justify-center">
-              <Icons.Users className="w-4 h-4 text-[var(--info)]" />
+            <div className="w-8 h-8 rounded-lg bg-[var(--warning-soft)] flex items-center justify-center">
+              <Icons.Clock className="w-4 h-4 text-[var(--warning)]" />
             </div>
-            <span className="text-[10px] text-[var(--success)] font-medium bg-[var(--success-soft)] px-1.5 py-0.5 rounded">+12.1%</span>
           </div>
-          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Active Travelers</div>
+          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Pending Applications</div>
           <motion.div
             className="text-xl font-bold text-[var(--text-primary)] mt-1"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.5, type: "spring", stiffness: 300 }}
           >
-            892
+            {stats.pending.toLocaleString()}
           </motion.div>
         </motion.div>
 
@@ -199,17 +270,17 @@ export default function TravelHeader() {
         >
           <div className="flex items-center justify-between mb-2">
             <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
-              <Icons.Shield className="w-4 h-4 text-white" />
+              <Icons.CheckCircle className="w-4 h-4 text-white" />
             </div>
           </div>
-          <div className="text-[11px] text-purple-100 uppercase tracking-wide font-medium">Total Coverage</div>
+          <div className="text-[11px] text-purple-100 uppercase tracking-wide font-medium">Approved Applications</div>
           <motion.div
             className="text-xl font-bold mt-1"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.6, type: "spring", stiffness: 300 }}
           >
-            ₱45.2M
+            {stats.approved.toLocaleString()}
           </motion.div>
         </motion.div>
 
@@ -219,18 +290,18 @@ export default function TravelHeader() {
           whileHover={{ scale: 1.02 }}
         >
           <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-lg bg-[var(--success-soft)] flex items-center justify-center">
-              <Icons.CheckCircle className="w-4 h-4 text-[var(--success)]" />
+            <div className="w-8 h-8 rounded-lg bg-[var(--danger-soft)] flex items-center justify-center">
+              <Icons.XCircle className="w-4 h-4 text-[var(--danger)]" />
             </div>
           </div>
-          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Claims Approved</div>
+          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Rejected Applications</div>
           <motion.div
             className="text-xl font-bold text-[var(--text-primary)] mt-1"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.7, type: "spring", stiffness: 300 }}
           >
-            94.7%
+            {stats.rejected.toLocaleString()}
           </motion.div>
         </motion.div>
       </motion.div>

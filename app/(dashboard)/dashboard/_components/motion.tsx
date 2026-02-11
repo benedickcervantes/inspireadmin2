@@ -1,3 +1,4 @@
+//app\(dashboard)\dashboard\_components\motion.tsx
 "use client";
 
 import { motion, type Variants, type Transition } from "motion/react";

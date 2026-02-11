@@ -1,3 +1,4 @@
+//lib\api\dashboard.ts
 import { API_BASE_URL } from "./client";
 
 export interface Trend {

@@ -25,9 +25,7 @@ const Icons = {
 const statusOptions = [
   { label: "All Status", value: "all" },
   { label: "Pending", value: "pending" },
-  { label: "Processing", value: "processing" },
   { label: "Approved", value: "approved" },
-  { label: "Completed", value: "completed" },
   { label: "Rejected", value: "rejected" },
 ];
 
@@ -39,7 +37,34 @@ const withdrawalMethodOptions = [
   { label: "Crypto Wallet", value: "crypto" },
 ];
 
-export default function WithdrawalFilters() {
+interface WithdrawalFiltersProps {
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  statusFilter: string;
+  onStatusChange: (value: string) => void;
+  methodFilter: string;
+  onMethodChange: (value: string) => void;
+  dateRange: [Date, Date] | null;
+  onDateRangeChange: (value: [Date, Date] | null) => void;
+}
+
+export default function WithdrawalFilters({
+  searchQuery,
+  onSearchChange,
+  statusFilter,
+  onStatusChange,
+  methodFilter,
+  onMethodChange,
+  dateRange,
+  onDateRangeChange,
+}: WithdrawalFiltersProps) {
+  const handleReset = () => {
+    onSearchChange("");
+    onStatusChange("all");
+    onMethodChange("all");
+    onDateRangeChange(null);
+  };
+
   return (
     <motion.div
       className="bg-[var(--surface)] rounded-xl px-4 py-3 shadow-sm border border-[var(--border-subtle)]"
@@ -61,6 +86,8 @@ export default function WithdrawalFilters() {
             </InputGroup.Addon>
             <Input
               placeholder="Search by ID, user, or account..."
+              value={searchQuery}
+              onChange={onSearchChange}
               className="!bg-transparent !text-sm !text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
             />
           </InputGroup>
@@ -76,7 +103,8 @@ export default function WithdrawalFilters() {
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <SelectPicker
               data={statusOptions}
-              defaultValue="all"
+              value={statusFilter}
+              onChange={(value) => onStatusChange(value || "all")}
               searchable={false}
               cleanable={false}
               size="sm"
@@ -91,7 +119,8 @@ export default function WithdrawalFilters() {
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <SelectPicker
               data={withdrawalMethodOptions}
-              defaultValue="all"
+              value={methodFilter}
+              onChange={(value) => onMethodChange(value || "all")}
               searchable={false}
               cleanable={false}
               size="sm"
@@ -107,6 +136,8 @@ export default function WithdrawalFilters() {
             <DateRangePicker
               size="sm"
               placeholder="Date Range"
+              value={dateRange}
+              onChange={onDateRangeChange}
               className="withdrawal-filter-date !w-[200px]"
               character=" - "
               showOneCalendar
@@ -121,6 +152,7 @@ export default function WithdrawalFilters() {
             <Button
               size="sm"
               appearance="subtle"
+              onClick={handleReset}
               className="!h-8 !px-3 !rounded-lg !text-xs !text-[var(--text-muted)] hover:!text-[var(--text-primary)] hover:!bg-[var(--surface-hover)]"
             >
               <span className="flex items-center gap-1.5">

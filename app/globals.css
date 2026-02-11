@@ -121,8 +121,8 @@
   color-scheme: light;
 
   /* Background layers - Dimmer neutral foundation */
-  --background: #e8e8e8;
-  --background-subtle: #e0e0e0;
+  --background: #FFFFF8;
+  --background-subtle: #E5E5E5;
   --background-elevated: #efefef;
 
   /* Surface layers - Dimmer variations for depth */
@@ -4766,4 +4766,60 @@ body > div[class*="rs-picker"] {
 
 .rs-modal-footer {
   border-radius: 0 0 16px 16px !important;
+}
+
+/* ==========================================================================
+   STAT CARD BORDERS - Theme-specific
+   ========================================================================== */
+
+.stat-card-border {
+  border-color: #E5E5E5;
+}
+
+[data-theme="light"] .stat-card-border {
+  border-color: #13213C;
+}
+
+.stat-card-number {
+  color: #FFFFFF;
+}
+
+[data-theme="light"] .stat-card-number {
+  color: #13213C;
+}
+
+
+/* ==========================================================================
+   TABLE BADGE FIX - Prevent badges from stretching in tall rows
+   ========================================================================== */
+
+.rs-table-cell .rs-badge,
+.rs-table-cell-content .rs-badge,
+.rs-table .rs-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  max-height: 22px !important;
+  padding: 4px 12px !important;
+  font-size: 12px !important;
+  line-height: 1 !important;
+  vertical-align: middle !important;
+  width: auto !important;
+  flex-shrink: 0 !important;
+}
+
+.rs-table-cell .rs-badge-content,
+.rs-table-cell-content .rs-badge-content,
+.rs-table .rs-badge-content {
+  line-height: 1 !important;
+  display: inline-block !important;
+  height: auto !important;
+}
+
+/* Ensure the cell wrapper doesn't stretch the badge */
+.rs-table-cell-wrap {
+  display: flex !important;
+  align-items: center !important;
 }

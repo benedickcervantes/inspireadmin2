@@ -404,7 +404,7 @@ export default function CryptoDepositsTable() {
             rowHeight={70}
             headerHeight={40}
             hover
-            className="app-table crypto-deposits-table !bg-transparent min-w-[850px] lg:min-w-[1050px] cursor-pointer"
+            className="app-table crypto-deposits-table !bg-transparent min-w-[850px] lg:min-w-[1050px] cursor-pointer [&_.rs-table-row:hover_.rs-table-cell]:!bg-[var(--surface-hover)] [&_.rs-table-row:hover_.rs-table-cell]:!transition-colors [&_.rs-table-row:hover_.rs-table-cell]:!duration-200"
             rowKey="id"
             onRowClick={(rowData) => handleRowClick(rowData as CryptoDeposit)}
           >

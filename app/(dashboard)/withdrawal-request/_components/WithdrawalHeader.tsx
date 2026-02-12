@@ -186,13 +186,13 @@ export default function WithdrawalHeader({ stats }: WithdrawalHeaderProps) {
         </motion.div>
 
         <motion.div
-          className="bg-[var(--info-soft)] rounded-xl border border-[var(--info)]/20 p-3"
+          className="bg-[var(--danger-soft)] rounded-xl border border-[var(--danger)]/30 p-3"
           variants={cardVariants}
           whileHover={{ scale: 1.02 }}
         >
-          <div className="text-[11px] text-[var(--info)] uppercase tracking-wide font-medium">Processing</div>
+          <div className="text-[11px] text-[var(--danger)] uppercase tracking-wide font-medium">REJECTED</div>
           <motion.div
-            className="text-xl font-bold text-[var(--info)] mt-1"
+            className="text-xl font-bold text-[var(--danger)] mt-1"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.6, type: "spring", stiffness: 300 }}
@@ -207,7 +207,7 @@ export default function WithdrawalHeader({ stats }: WithdrawalHeaderProps) {
           variants={cardVariants}
           whileHover={{ scale: 1.02 }}
         >
-          <div className="text-[11px] text-[var(--success)] uppercase tracking-wide font-medium">Completed</div>
+          <div className="text-[11px] text-[var(--success)] uppercase tracking-wide font-medium">APPROVED</div>
           <motion.div
             className="text-xl font-bold text-[var(--success)] mt-1"
             initial={{ opacity: 0, scale: 0.5 }}
@@ -220,11 +220,12 @@ export default function WithdrawalHeader({ stats }: WithdrawalHeaderProps) {
         </motion.div>
 
         <motion.div
-          className="col-span-2 lg:col-span-1 bg-gradient-to-br from-rose-600 to-pink-700 rounded-xl p-3"
+          className="bg-gradient-to-br from-[var(--primary)]/20 to-[var(--accent)]/20 rounded-xl border border-[var(--primary)]/30 p-3"
           variants={cardVariants}
-          whileHover={{ scale: 1.02, boxShadow: "0 20px 40px rgba(244, 63, 94, 0.3)" }}
+          whileHover={{ scale: 1.02 }}
+          transition={{ type: "spring", stiffness: 400, damping: 25 }}
         >
-          <div className="text-[11px] text-rose-200 uppercase tracking-wide font-medium">Total Withdrawn</div>
+          <div className="text-[11px] text-[var(--primary)] uppercase tracking-wide font-medium">Total Withdrawn</div>
           <motion.div
             className="text-xl font-bold text-white mt-1"
             initial={{ opacity: 0, scale: 0.5 }}

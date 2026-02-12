@@ -11,7 +11,6 @@ import TransactionTable, { Transaction, TransactionStatus } from "./_components/
 import { MonthlySalesChart, OutflowChart, OutflowItem } from "./_components/Charts";
 import { getDashboardSummary } from "@/lib/api/dashboard";
 import { getUsers, User } from "@/lib/api/users";
-import { getFirebaseUsers } from "@/lib/api/firebaseUsers";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { staggerContainer, MotionDiv, MotionSection } from "./_components/motion";
 
@@ -428,15 +427,24 @@ export default function Dashboard() {
     queryFn: () => getUsers({ page: 1, limit: 50, sortBy: "lastLogin", sortOrder: "desc" })
   });
 
-  // Fetch demo and test account counts
-  const { data: demoCountData } = useQuery({
-    queryKey: ["dashboard-demo-count"],
-    queryFn: () => getFirebaseUsers({ page: 1, limit: 1, isDummyAccount: true })
+  // CRITICAL FIX: Fetch accurate agent and investor counts from the API
+  const { data: agentCountData } = useQuery({
+    queryKey: ['dashboard-agent-count'],
+    queryFn: () => getUsers({ 
+      page: 1, 
+      limit: 1, 
+      agent: true 
+    })
   });
 
-  const { data: testCountData } = useQuery({
-    queryKey: ["dashboard-test-count"],
-    queryFn: () => getFirebaseUsers({ page: 1, limit: 1, accountType: 'test' })
+  const { data: investorCountData } = useQuery({
+    queryKey: ['dashboard-investor-count'],
+    queryFn: () => getUsers({ 
+      page: 1, 
+      limit: 1, 
+      agent: false,
+      isDummyAccount: false
+    })
   });
 
   const users = (usersData?.data?.users ?? []) as User[];
@@ -460,32 +468,43 @@ export default function Dashboard() {
 
   const statsLoading = isSummaryLoading;
 
-  // Get actual counts from API
-  const demoCount = demoCountData?.data?.pagination.total ?? 0;
-  const testCount = testCountData?.data?.pagination.total ?? 0;
-  const totalExcludingDemoTest = totalUsers - demoCount - testCount;
-
-  // Calculate user type breakdown
+  // CRITICAL FIX: Calculate user type breakdown with accurate counting from API AND stock total
   const userBreakdown = useMemo(() => {
-    const agents = users.filter(u => u.agent === true).length;
-    const investors = users.filter(u => u.agent !== true).length;
-    const demoAccounts = users.filter(u => {
-      const email = (u.emailAddress || '').toLowerCase();
-      return u.isDummyAccount === true || email.includes('demo') || email.includes('test+demo');
-    }).length;
-    const testAccounts = users.filter(u => {
-      const email = (u.emailAddress || '').toLowerCase();
-      return (u as any).isTestAccount === true || (email.includes('test') && !email.includes('demo'));
-    }).length;
+    // Get accurate counts from API pagination totals
+    const agents = agentCountData?.data?.pagination.total ?? 0;
+    const investors = investorCountData?.data?.pagination.total ?? 0;
+    
+    // Demo and test accounts - we don't display counts for these (show "-")
+    const demoAccounts = 0; // Not displayed, shown as "-"
+    const testAccounts = 0; // Not displayed, shown as "-"
+
+    // Total is sum of agents and investors (active users only)
+    const actualTotal = agents + investors;
+
+    // Calculate percentages based on active users (agents + investors)
+    const investorPercentage = actualTotal > 0 ? (investors / actualTotal) * 100 : 0;
+    const agentPercentage = actualTotal > 0 ? (agents / actualTotal) * 100 : 0;
+
+    // ✅ STOCK FIX: Calculate total stock amount from all users (matching old dashboard logic)
+    let totalStock = 0;
+    users.forEach(user => {
+      totalStock += user.stockAmount || 0;
+    });
 
     return {
       agents,
       investors,
       demoAccounts,
       testAccounts,
-      total: totalExcludingDemoTest
+      total: actualTotal, // This is the TOTAL of active users (agents + investors)
+      activeUsersBase: actualTotal, // Base for pie chart (agents + investors)
+      investorPercentage,
+      agentPercentage,
+      demoPercentage: 0,
+      testPercentage: 0,
+      totalStock, // ✅ ADD stock total here
     };
-  }, [users, totalExcludingDemoTest]);
+  }, [agentCountData, investorCountData, users]); // ✅ ADD users to dependency array
 
   // Calculate time deposits breakdown
   const depositsBreakdown = useMemo(() => {
@@ -558,6 +577,16 @@ export default function Dashboard() {
     };
   }, [users]);
 
+  // FIXED: Calculate agent wallet total
+  const agentWalletTotal = useMemo(() => {
+    return users
+      .filter(u => u.agent === true)
+      .reduce((sum, u) => sum + (u.walletAmount || 0), 0);
+  }, [users]);
+
+  // ✅ STOCK FIX: Use the calculated stock amount from userBreakdown
+  const stockAmount = userBreakdown.totalStock;
+
   return (
     <MotionDiv
       className="flex w-full flex-col gap-4"
@@ -601,7 +630,7 @@ export default function Dashboard() {
         />
         <StatsCard
           title="Total Users"
-          amount={totalExcludingDemoTest.toLocaleString()}
+          amount={totalUsers.toLocaleString()}
           percentage={formatPercent(userTrend?.percent)}
           trendAmount={formatSigned(userTrend?.diff || 0, (value) => value.toLocaleString())}
           trendText={statsLoading ? "updating" : "from last month"}
@@ -625,7 +654,15 @@ export default function Dashboard() {
           transition={{ delay: 0.4, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="h-[260px] lg:h-[300px]">
-            <MonthlySalesChart total={monthlyTotal} isLoading={isUsersLoading} />
+            <MonthlySalesChart 
+              total={monthlyTotal} 
+              isLoading={isUsersLoading}
+              timeDepositsValue={totalTimeDeposits}
+              availBalanceValue={totalAvailBalance}
+              walletValue={balanceBreakdown.totalWallet}
+              agentWalletValue={agentWalletTotal}
+              stockValue={stockAmount}
+            />
           </div>
           <div>
             <TransactionTable transactions={recentTransactions} isLoading={isUsersLoading} />
@@ -686,7 +723,7 @@ export default function Dashboard() {
         </Drawer.Header>
         <Drawer.Body className="!p-4 !bg-[var(--surface)]">
           <div className="space-y-3">
-            {/* Total Users Card */}
+            {/* Total Users Card with breakdown */}
             <div className="rounded-xl border border-[var(--border-subtle)] bg-gradient-to-br from-[var(--primary-soft)] to-[var(--surface)] p-4 shadow-[var(--shadow-md)]">
               <div className="flex items-center justify-between">
                 <div>
@@ -696,6 +733,19 @@ export default function Dashboard() {
                   </div>
                   <div className="text-xs text-[var(--text-muted)] mt-1">
                     <span className="font-semibold text-[var(--primary)]">{formatSigned(userTrend?.diff || 0, (value) => value.toLocaleString())}</span> from last month
+                  </div>
+                  {/* Additional breakdown info */}
+                  <div className="mt-2 pt-2 border-t border-[var(--border-subtle)]">
+                    <div className="text-[10px] text-[var(--text-muted)] space-y-0.5">
+                      <div className="flex justify-between">
+                        <span>Active Users:</span>
+                        <span className="font-medium text-[var(--text-primary)]">{userBreakdown.activeUsersBase.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Demo/Test:</span>
+                        <span className="font-medium text-[var(--text-primary)]">-</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="w-14 h-14 rounded-xl bg-[var(--primary-soft)] border border-[var(--border-accent)] flex items-center justify-center">
@@ -713,7 +763,11 @@ export default function Dashboard() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 }}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200 cursor-pointer"
+                onClick={() => {
+                  router.push('/users?filter=investor');
+                  setUsersDrawerOpen(false);
+                }}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -729,9 +783,6 @@ export default function Dashboard() {
                     <div className="text-xl font-bold text-[var(--text-primary)]">
                       {userBreakdown.investors.toLocaleString()}
                     </div>
-                    <div className="text-xs text-[var(--text-muted)]">
-                      {userBreakdown.total > 0 ? Math.round((userBreakdown.investors / userBreakdown.total) * 100) : 0}%
-                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -741,7 +792,11 @@ export default function Dashboard() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2 }}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200 cursor-pointer"
+                onClick={() => {
+                  router.push('/users?filter=agent');
+                  setUsersDrawerOpen(false);
+                }}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -757,19 +812,20 @@ export default function Dashboard() {
                     <div className="text-xl font-bold text-[var(--text-primary)]">
                       {userBreakdown.agents.toLocaleString()}
                     </div>
-                    <div className="text-xs text-[var(--text-muted)]">
-                      {userBreakdown.total > 0 ? Math.round((userBreakdown.agents / userBreakdown.total) * 100) : 0}%
-                    </div>
                   </div>
                 </div>
               </motion.div>
 
-              {/* Demo Accounts */}
+              {/* Demo Accounts - Shows "-" instead of count */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200 cursor-pointer"
+                onClick={() => {
+                  router.push('/users?filter=demo');
+                  setUsersDrawerOpen(false);
+                }}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -782,22 +838,23 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-[var(--text-primary)]">
-                      {userBreakdown.demoAccounts.toLocaleString()}
-                    </div>
-                    <div className="text-xs text-[var(--text-muted)]">
-                      {userBreakdown.total > 0 ? Math.round((userBreakdown.demoAccounts / userBreakdown.total) * 100) : 0}%
+                    <div className="text-xl font-bold text-[var(--text-muted)]">
+                      -
                     </div>
                   </div>
                 </div>
               </motion.div>
 
-              {/* Test Accounts */}
+              {/* Test Accounts - Shows "-" instead of count */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 }}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200 cursor-pointer"
+                onClick={() => {
+                  router.push('/users?filter=test');
+                  setUsersDrawerOpen(false);
+                }}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -810,42 +867,113 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-[var(--text-primary)]">
-                      {userBreakdown.testAccounts.toLocaleString()}
-                    </div>
-                    <div className="text-xs text-[var(--text-muted)]">
-                      {userBreakdown.total > 0 ? Math.round((userBreakdown.testAccounts / userBreakdown.total) * 100) : 0}%
+                    <div className="text-xl font-bold text-[var(--text-muted)]">
+                      -
                     </div>
                   </div>
                 </div>
               </motion.div>
             </div>
 
-            {/* Summary Stats */}
+            {/* User Type Distribution Pie Chart - Only Investors and Agents */}
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4 mt-4">
-              <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">Quick Stats</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-secondary)]">Active Users</span>
-                  <span className="font-semibold text-[var(--text-primary)]">
-                    {(userBreakdown.investors + userBreakdown.agents).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-secondary)]">Test/Demo</span>
-                  <span className="font-semibold text-[var(--text-primary)]">
-                    {(userBreakdown.demoAccounts + userBreakdown.testAccounts).toLocaleString()}
-                  </span>
-                </div>
-                <div className="h-px bg-[var(--border-subtle)] my-2" />
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-secondary)]">Agent Ratio</span>
-                  <span className="font-semibold text-[var(--primary)]">
-                    {userBreakdown.total > 0 
-                      ? `1:${Math.round(userBreakdown.investors / Math.max(userBreakdown.agents, 1))}`
-                      : '0:0'
-                    }
-                  </span>
+<h4 className="text-xs font-semibold text-[var(--text-muted)] tracking-wide mb-3">
+User Type Distribution</h4>
+              <div className="flex flex-col items-center">
+                {/* SVG Pie Chart */}
+                <svg className="w-40 h-40" viewBox="0 0 200 200">
+                  <defs>
+                    <filter id="shadowGlow">
+                      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                      <feOffset dx="0" dy="2" result="offsetblur"/>
+                      <feComponentTransfer>
+                        <feFuncA type="linear" slope="0.3"/>
+                      </feComponentTransfer>
+                      <feMerge>
+                        <feMergeNode/>
+                        <feMergeNode in="SourceGraphic"/>
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  {userBreakdown.activeUsersBase > 0 ? (
+                    <>
+                      {/* Background circle */}
+                      <circle cx="100" cy="100" r="80" fill="var(--surface)" stroke="var(--border)" strokeWidth="2"/>
+                      
+                      {/* Investor segment - percentage based on active users (investors + agents) */}
+                      <circle
+                        cx="100"
+                        cy="100"
+                        r="70"
+                        fill="transparent"
+                        stroke="var(--accent)"
+                        strokeWidth="30"
+                        strokeDasharray={`${(userBreakdown.investors / userBreakdown.activeUsersBase * 100 / 100) * 440} 440`}
+                        strokeDashoffset="0"
+                        transform="rotate(-90 100 100)"
+                        filter="url(#shadowGlow)"
+                        className="transition-all duration-500"
+                      />
+                      
+                      {/* Agent segment - percentage based on active users (investors + agents) */}
+                      <circle
+                        cx="100"
+                        cy="100"
+                        r="70"
+                        fill="transparent"
+                        stroke="var(--primary)"
+                        strokeWidth="30"
+                        strokeDasharray={`${(userBreakdown.agents / userBreakdown.activeUsersBase * 100 / 100) * 440} 440`}
+                        strokeDashoffset={`-${(userBreakdown.investors / userBreakdown.activeUsersBase * 100 / 100) * 440}`}
+                        transform="rotate(-90 100 100)"
+                        filter="url(#shadowGlow)"
+                        className="transition-all duration-500"
+                      />
+                      
+                      {/* Center circle */}
+                      <circle cx="100" cy="100" r="45" fill="var(--surface-elevated)" stroke="var(--border)" strokeWidth="2"/>
+                      
+                      {/* Center text - showing active users (investors + agents) */}
+                      <text x="100" y="95" textAnchor="middle" className="text-xs font-semibold fill-[var(--text-muted)]">Active</text>
+                      <text x="100" y="110" textAnchor="middle" className="text-lg font-bold fill-[var(--text-primary)]">
+                        {userBreakdown.activeUsersBase}
+                      </text>
+                    </>
+                  ) : (
+                    <>
+                      <circle cx="100" cy="100" r="70" fill="transparent" stroke="var(--border-subtle)" strokeWidth="40"/>
+                      <circle cx="100" cy="100" r="45" fill="var(--surface-elevated)" stroke="var(--border)" strokeWidth="2"/>
+                      <text x="100" y="105" textAnchor="middle" className="text-sm font-medium fill-[var(--text-muted)]">No Data</text>
+                    </>
+                  )}
+                </svg>
+
+                {/* Legend - Only Investors and Agents */}
+                <div className="mt-4 space-y-2 w-full">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-[var(--accent)]"></div>
+                      <span className="text-xs text-[var(--text-secondary)]">Investors</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">{userBreakdown.investors}</span>
+                      <span className="text-xs font-medium text-[var(--accent)]">
+                        {userBreakdown.activeUsersBase > 0 ? Math.round((userBreakdown.investors / userBreakdown.activeUsersBase) * 100) : 0}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-[var(--primary)]"></div>
+                      <span className="text-xs text-[var(--text-secondary)]">Agents</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">{userBreakdown.agents}</span>
+                      <span className="text-xs font-medium text-[var(--primary)]">
+                        {userBreakdown.activeUsersBase > 0 ? Math.round((userBreakdown.agents / userBreakdown.activeUsersBase) * 100) : 0}%
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -981,31 +1109,132 @@ export default function Dashboard() {
               </motion.div>
             </div>
 
-            {/* Summary Stats */}
+            {/* Deposit Status Distribution Pie Chart */}
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4 mt-4">
-              <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">Quick Stats</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-secondary)]">Total Contracts</span>
-                  <span className="font-semibold text-[var(--text-primary)]">
-                    {depositsBreakdown.total.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-secondary)]">Total Amount</span>
-                  <span className="font-semibold text-[var(--text-primary)]">
-                    {formatCurrency(depositsBreakdown.totalAmount)}
-                  </span>
-                </div>
-                <div className="h-px bg-[var(--border-subtle)] my-2" />
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-secondary)]">Avg per Contract</span>
-                  <span className="font-semibold text-[var(--primary)]">
-                    {depositsBreakdown.total > 0 
-                      ? formatCurrency(depositsBreakdown.totalAmount / depositsBreakdown.total)
-                      : formatCurrency(0)
-                    }
-                  </span>
+<h4 className="text-xs font-semibold text-[var(--text-muted)] tracking-wide mb-3">
+Status Distribution</h4>
+              <div className="flex flex-col items-center">
+                {/* SVG Pie Chart */}
+                <svg className="w-40 h-40" viewBox="0 0 200 200">
+                  <defs>
+                    <filter id="shadowGlowDeposits">
+                      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                      <feOffset dx="0" dy="2" result="offsetblur"/>
+                      <feComponentTransfer>
+                        <feFuncA type="linear" slope="0.3"/>
+                      </feComponentTransfer>
+                      <feMerge>
+                        <feMergeNode/>
+                        <feMergeNode in="SourceGraphic"/>
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  {depositsBreakdown.total > 0 ? (
+                    <>
+                      {/* Background circle */}
+                      <circle cx="100" cy="100" r="80" fill="var(--surface)" stroke="var(--border)" strokeWidth="2"/>
+                      
+                      {/* Active segment */}
+                      <circle
+                        cx="100"
+                        cy="100"
+                        r="70"
+                        fill="transparent"
+                        stroke="var(--success)"
+                        strokeWidth="30"
+                        strokeDasharray={`${(depositsBreakdown.active / depositsBreakdown.total * 100 / 100) * 440} 440`}
+                        strokeDashoffset="0"
+                        transform="rotate(-90 100 100)"
+                        filter="url(#shadowGlowDeposits)"
+                        className="transition-all duration-500"
+                      />
+                      
+                      {/* Completed segment */}
+                      <circle
+                        cx="100"
+                        cy="100"
+                        r="70"
+                        fill="transparent"
+                        stroke="var(--primary)"
+                        strokeWidth="30"
+                        strokeDasharray={`${(depositsBreakdown.completed / depositsBreakdown.total * 100 / 100) * 440} 440`}
+                        strokeDashoffset={`-${(depositsBreakdown.active / depositsBreakdown.total * 100 / 100) * 440}`}
+                        transform="rotate(-90 100 100)"
+                        filter="url(#shadowGlowDeposits)"
+                        className="transition-all duration-500"
+                      />
+                      
+                      {/* Pending segment */}
+                      <circle
+                        cx="100"
+                        cy="100"
+                        r="70"
+                        fill="transparent"
+                        stroke="var(--warning)"
+                        strokeWidth="30"
+                        strokeDasharray={`${(depositsBreakdown.pending / depositsBreakdown.total * 100 / 100) * 440} 440`}
+                        strokeDashoffset={`-${((depositsBreakdown.active + depositsBreakdown.completed) / depositsBreakdown.total * 100 / 100) * 440}`}
+                        transform="rotate(-90 100 100)"
+                        filter="url(#shadowGlowDeposits)"
+                        className="transition-all duration-500"
+                      />
+                      
+                      {/* Center circle */}
+                      <circle cx="100" cy="100" r="45" fill="var(--surface-elevated)" stroke="var(--border)" strokeWidth="2"/>
+                      
+                      {/* Center text */}
+                      <text x="100" y="95" textAnchor="middle" className="text-xs font-semibold fill-[var(--text-muted)]">Total</text>
+                      <text x="100" y="110" textAnchor="middle" className="text-lg font-bold fill-[var(--text-primary)]">
+                        {depositsBreakdown.total}
+                      </text>
+                    </>
+                  ) : (
+                    <>
+                      <circle cx="100" cy="100" r="70" fill="transparent" stroke="var(--border-subtle)" strokeWidth="40"/>
+                      <circle cx="100" cy="100" r="45" fill="var(--surface-elevated)" stroke="var(--border)" strokeWidth="2"/>
+                      <text x="100" y="105" textAnchor="middle" className="text-sm font-medium fill-[var(--text-muted)]">No Data</text>
+                    </>
+                  )}
+                </svg>
+
+                {/* Legend */}
+                <div className="mt-4 space-y-2 w-full">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-[var(--success)]"></div>
+                      <span className="text-xs text-[var(--text-secondary)]">Active</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">{depositsBreakdown.active}</span>
+                      <span className="text-xs font-medium text-[var(--success)]">
+                        {depositsBreakdown.total > 0 ? Math.round((depositsBreakdown.active / depositsBreakdown.total) * 100) : 0}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-[var(--primary)]"></div>
+                      <span className="text-xs text-[var(--text-secondary)]">Completed</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">{depositsBreakdown.completed}</span>
+                      <span className="text-xs font-medium text-[var(--primary)]">
+                        {depositsBreakdown.total > 0 ? Math.round((depositsBreakdown.completed / depositsBreakdown.total) * 100) : 0}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-[var(--warning)]"></div>
+                      <span className="text-xs text-[var(--text-secondary)]">Pending</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">{depositsBreakdown.pending}</span>
+                      <span className="text-xs font-medium text-[var(--warning)]">
+                        {depositsBreakdown.total > 0 ? Math.round((depositsBreakdown.pending / depositsBreakdown.total) * 100) : 0}%
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1026,7 +1255,7 @@ export default function Dashboard() {
             <h3 className="text-base font-semibold text-[var(--text-primary)]">Balance Breakdown</h3>
             <button
               onClick={() => setBalanceDrawerOpen(false)}
-              className="w-8 h-8 rounded-lg hover:bg-[var(--surface-hover)] hover:scale-110 hover:rotate-90 flex items-center justify-center text-[var(--text-muted)] transition-all duration-200"
+              className="w-8 h-8 rounded-lg hover:bg-[var(--surface-hover)} hover:scale-110 hover:rotate-90 flex items-center justify-center text-[var(--text-muted)] transition-all duration-200"
             >
               <Icons.X className="w-4 h-4" />
             </button>
@@ -1157,31 +1386,83 @@ export default function Dashboard() {
               </motion.div>
             </div>
 
-            {/* Summary Stats */}
+            {/* Balance Distribution Bar Chart */}
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4 mt-4">
-              <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">Quick Stats</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-secondary)]">Users with Balance</span>
-                  <span className="font-semibold text-[var(--text-primary)]">
-                    {balanceBreakdown.usersWithBalance.toLocaleString()}
-                  </span>
+<h4 className="text-xs font-semibold text-[var(--text-muted)] tracking-wide mb-3">
+  Balance Distribution
+</h4>
+              <div className="space-y-4">
+                {/* Total Wallet Bar */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs text-[var(--text-secondary)]">Total Wallet</span>
+                    <span className="text-xs font-semibold text-[var(--text-primary)]">
+                      {formatCurrency(balanceBreakdown.totalWallet)}
+                    </span>
+                  </div>
+                  <div className="h-3 bg-[var(--surface-elevated)] rounded-full overflow-hidden border border-[var(--border-subtle)]">
+                    <div 
+                      className="h-full bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] transition-all duration-500 rounded-full"
+                      style={{ 
+                        width: `${balanceBreakdown.totalWallet > 0 ? 100 : 0}%`
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-secondary)]">Available Balance</span>
-                  <span className="font-semibold text-[var(--text-primary)]">
-                    {formatCurrency(balanceBreakdown.totalAvailable)}
-                  </span>
+
+                {/* Available Balance Bar */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs text-[var(--text-secondary)]">Available Balance</span>
+                    <span className="text-xs font-semibold text-[var(--text-primary)]">
+                      {formatCurrency(balanceBreakdown.totalAvailable)}
+                    </span>
+                  </div>
+                  <div className="h-3 bg-[var(--surface-elevated)] rounded-full overflow-hidden border border-[var(--border-subtle)]">
+                    <div 
+                      className="h-full bg-gradient-to-r from-[var(--success)] to-[var(--primary)] transition-all duration-500 rounded-full"
+                      style={{ 
+                        width: `${balanceBreakdown.totalWallet > 0 ? (balanceBreakdown.totalAvailable / balanceBreakdown.totalWallet * 100) : 0}%`
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="h-px bg-[var(--border-subtle)] my-2" />
-                <div className="flex items-center justify-between">
-                  <span className="text-[var(--text-secondary)]">Balance Coverage</span>
-                  <span className="font-semibold text-[var(--success)]">
-                    {totalUsers > 0 
-                      ? `${Math.round((balanceBreakdown.usersWithBalance / totalUsers) * 100)}%`
-                      : '0%'
-                    }
-                  </span>
+
+                {/* Average Balance Bar */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs text-[var(--text-secondary)]">Average Balance</span>
+                    <span className="text-xs font-semibold text-[var(--text-primary)]">
+                      {formatCurrency(balanceBreakdown.averageBalance)}
+                    </span>
+                  </div>
+                  <div className="h-3 bg-[var(--surface-elevated)] rounded-full overflow-hidden border border-[var(--border-subtle)]">
+                    <div 
+                      className="h-full bg-gradient-to-r from-[var(--accent)] to-[var(--warning)] transition-all duration-500 rounded-full"
+                      style={{ 
+                        width: `${balanceBreakdown.totalWallet > 0 ? (balanceBreakdown.averageBalance / balanceBreakdown.totalWallet * 100) : 0}%`
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Stats Summary */}
+                <div className="pt-3 border-t border-[var(--border-subtle)] space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[var(--text-secondary)]">Users with Balance</span>
+                    <span className="font-semibold text-[var(--text-primary)]">
+                      {balanceBreakdown.usersWithBalance.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[var(--text-secondary)]">Balance Coverage</span>
+                    <span className="font-semibold text-[var(--success)]">
+                      {totalUsers > 0 
+                        ? `${Math.round((balanceBreakdown.usersWithBalance / totalUsers) * 100)}%`
+                        : '0%'
+                      }
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

@@ -603,7 +603,7 @@ export default function KycTable({ searchQuery, statusFilter, dateRange }: KycTa
             rowHeight={60}
             headerHeight={40}
             hover
-            className="app-table kyc-table !bg-transparent min-w-[980px] cursor-pointer"
+            className="app-table kyc-table !bg-transparent min-w-[980px] cursor-pointer [&_.rs-table-row:hover_.rs-table-cell]:!bg-[var(--surface-hover)] [&_.rs-table-row:hover_.rs-table-cell]:!transition-colors [&_.rs-table-row:hover_.rs-table-cell]:!duration-200"
             rowKey="id"
             onRowClick={(rowData) => handleRowClick(rowData as KycRequest)}
           >

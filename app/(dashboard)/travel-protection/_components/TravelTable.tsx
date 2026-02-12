@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Table, Button, Drawer, Dropdown, Loader, Pagination } from "rsuite";
-import { getTravelApplications } from "@/lib/api/subcollections";
+import { Table, Button, Drawer, Dropdown, Loader, Pagination, Modal } from "rsuite";
+import { getFirebaseCollection } from "@/lib/api/firebaseCollections";
+import { getUserById } from "@/lib/api/users";
 
 const { Column, HeaderCell, Cell } = Table;
 
@@ -69,53 +70,166 @@ const Icons = {
       <line x1="16" y1="3" x2="14" y2="21" />
     </svg>
   ),
+  Check: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  ),
 };
 
 interface TravelApplication {
   _firebaseDocId: string;
   userId?: string;
+  userName?: string;
+  userEmail?: string;
   destination?: string;
+  destinationAddress?: string;
   travelDate?: string;
+  departureTime?: string | number | { _seconds: number };
+  arrivalTime?: string | number | { _seconds: number };
   status?: string;
   coverage?: string;
   premium?: number;
-  createdAt?: string;
+  fee?: number;
+  protectionFee?: number;
+  amount?: number;
+  createdAt?: string | number | { _seconds: number };
+  submittedAt?: string | number | { _seconds: number };
   policyType?: string;
   startDate?: string;
   endDate?: string;
-  user: {
+  homeAddress?: string;
+  citizenship?: string;
+  passportPhotoUrl?: string;
+  passportNumber?: string;
+  governmentIdUrl?: string;
+  stayDuration?: number;
+  airline?: string;
+  purposeOfTravel?: string;
+  purpose?: string;
+  sourceOfFund?: string;
+  user?: {
     odId?: string;
     firstName?: string;
     lastName?: string;
     emailAddress?: string;
+    email?: string;
     accountNumber?: string;
   };
+  // Fallback fields if user is not nested
+  firstName?: string;
+  lastName?: string;
+  emailAddress?: string;
+  email?: string;
+  accountNumber?: string;
   [key: string]: unknown;
 }
 
 // Helper functions
-const formatDate = (dateString?: string): string => {
-  if (!dateString) return 'N/A';
+const formatDate = (value?: string | number | { _seconds: number }): string => {
+  if (!value) return 'N/A';
+  
   try {
-    const date = new Date(dateString);
+    let date: Date;
+    
+    if (typeof value === 'number') {
+      // Handle both seconds and milliseconds timestamps
+      date = new Date(value < 1e12 ? value * 1000 : value);
+    } else if (typeof value === 'string') {
+      date = new Date(value);
+    } else if (typeof value === 'object' && '_seconds' in value) {
+      date = new Date(value._seconds * 1000);
+    } else {
+      return 'N/A';
+    }
+    
+    if (isNaN(date.getTime())) return 'N/A';
+    
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
     });
   } catch {
-    return dateString;
+    return 'N/A';
   }
 };
 
-const getFullName = (user: TravelApplication['user']): string => {
-  const first = user.firstName || '';
-  const last = user.lastName || '';
+const formatDateTime = (value?: string | number | { _seconds: number }): string => {
+  if (!value) return 'N/A';
+  
+  try {
+    let date: Date;
+    
+    if (typeof value === 'number') {
+      // Handle both seconds and milliseconds timestamps
+      date = new Date(value < 1e12 ? value * 1000 : value);
+    } else if (typeof value === 'string') {
+      date = new Date(value);
+    } else if (typeof value === 'object' && '_seconds' in value) {
+      date = new Date(value._seconds * 1000);
+    } else {
+      return 'N/A';
+    }
+    
+    if (isNaN(date.getTime())) return 'N/A';
+    
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch {
+    return 'N/A';
+  }
+};
+
+const getFullName = (application: TravelApplication): string => {
+  // Check for userName field first
+  if (application.userName) return application.userName;
+  
+  // Try nested user object
+  if (application.user) {
+    const first = application.user.firstName || '';
+    const last = application.user.lastName || '';
+    const name = `${first} ${last}`.trim();
+    if (name) return name;
+  }
+  
+  // Fallback to root level fields
+  const first = application.firstName || '';
+  const last = application.lastName || '';
   return `${first} ${last}`.trim() || 'Unknown User';
 };
 
-const getAvatarUrl = (user: TravelApplication['user']): string => {
-  const name = getFullName(user);
+const getEmail = (application: TravelApplication): string => {
+  return application.emailAddress || 
+         application.userEmail || 
+         application.user?.emailAddress || 
+         application.user?.email || 
+         application.email || 
+         'No email';
+};
+
+const getAccountNumber = (application: TravelApplication): string => {
+  return application.user?.accountNumber || 
+         application.accountNumber || 
+         'N/A';
+};
+
+const getFee = (application: TravelApplication): number | undefined => {
+  return application.protectionFee || application.fee || application.premium || application.amount;
+};
+
+const getDestination = (application: TravelApplication): string => {
+  return application.destinationAddress || application.destination || 'N/A';
+};
+
+const getAvatarUrl = (application: TravelApplication): string => {
+  const name = getFullName(application);
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=150`;
 };
 
@@ -155,8 +269,33 @@ const CoverageBadge = ({ coverage }: { coverage?: string }) => {
 };
 
 const ApplicationDetailPanel = ({ application, onClose }: { application: TravelApplication; onClose: () => void }) => {
-  const userName = getFullName(application.user);
-  const userAvatar = getAvatarUrl(application.user);
+  const userName = getFullName(application);
+  const userAvatar = getAvatarUrl(application);
+  const userEmail = getEmail(application);
+  const accountNumber = getAccountNumber(application);
+  const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
+  const [userBalance, setUserBalance] = useState<number | null>(null);
+  const [loadingBalance, setLoadingBalance] = useState(false);
+
+  useEffect(() => {
+    const fetchUserBalance = async () => {
+      if (application.userId) {
+        setLoadingBalance(true);
+        try {
+          const response = await getUserById(application.userId);
+          if (response.success && response.data) {
+            setUserBalance(response.data.availBalanceAmount ?? null);
+          }
+        } catch (error) {
+          console.error('Error fetching user balance:', error);
+        } finally {
+          setLoadingBalance(false);
+        }
+      }
+    };
+
+    fetchUserBalance();
+  }, [application.userId]);
 
   return (
     <div className="h-full flex flex-col bg-[var(--surface)]">
@@ -175,7 +314,7 @@ const ApplicationDetailPanel = ({ application, onClose }: { application: TravelA
           <img src={userAvatar} alt={userName} className="w-10 h-10 rounded-full object-cover border-2 border-[var(--border)]" />
           <div>
             <div className="text-[13px] font-semibold text-[var(--text-primary)]">{userName}</div>
-            <div className="text-[11px] text-[var(--text-muted)]">{application.user.emailAddress || 'No email'}</div>
+            <div className="text-[11px] text-[var(--text-muted)]">{userEmail}</div>
           </div>
         </div>
 
@@ -184,69 +323,232 @@ const ApplicationDetailPanel = ({ application, onClose }: { application: TravelA
             <CoverageBadge coverage={application.coverage} />
             <StatusBadge status={application.status || 'pending'} />
           </div>
-          {application.premium && (
-            <div className="text-xl font-bold mt-2">₱{application.premium.toLocaleString()}</div>
-          )}
-          <div className="text-[11px] text-purple-100 mt-1">Premium Amount</div>
+          <div className="grid grid-cols-2 gap-3 mt-2">
+            <div>
+              <div className="text-xl font-bold">{getFee(application) ? `₱${getFee(application)!.toLocaleString()}` : 'N/A'}</div>
+              <div className="text-[11px] text-purple-100 mt-1">Protection Fee</div>
+            </div>
+            <div>
+              <div className="text-xl font-bold">
+                {loadingBalance ? (
+                  <span className="text-sm">Loading...</span>
+                ) : userBalance !== null ? (
+                  `₱${userBalance.toLocaleString()}`
+                ) : (
+                  'N/A'
+                )}
+              </div>
+              <div className="text-[11px] text-purple-100 mt-1">Available Balance</div>
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface-soft)] rounded-md border border-[var(--border-subtle)]">
-            <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center">
-              <Icons.Hash className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-            </div>
-            <div>
-              <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Application ID</div>
-              <div className="text-[13px] font-medium text-[var(--text-primary)] font-mono">{application._firebaseDocId}</div>
+        {/* Approve/Reject Actions - Only show for pending applications */}
+        {((application.status || 'pending').toLowerCase() === 'pending') && (
+          <div className="flex items-center gap-2 mb-3">
+            <button
+              onClick={() => {
+                // TODO: Add approve functionality
+                console.log('Approve:', application._firebaseDocId);
+              }}
+              className="group flex-1 relative px-4 py-2.5 rounded-xl bg-gradient-to-r from-[var(--success-soft)] to-[var(--success-soft)] text-[var(--success)] hover:from-[var(--success)] hover:to-[var(--success)] hover:text-white text-sm font-semibold transition-all duration-300 border border-[var(--success)]/30 hover:border-[var(--success)] hover:shadow-lg hover:shadow-[var(--success)]/30 hover:scale-105 active:scale-95"
+            >
+              <span className="flex items-center justify-center gap-2">
+                <Icons.Check className="w-4 h-4 transition-transform group-hover:rotate-12" />
+                <span className="tracking-wide">Approve Application</span>
+              </span>
+            </button>
+            <button
+              onClick={() => {
+                // TODO: Add reject functionality
+                console.log('Reject:', application._firebaseDocId);
+              }}
+              className="group flex-1 relative px-4 py-2.5 rounded-xl bg-gradient-to-r from-[var(--danger-soft)] to-[var(--danger-soft)] text-[var(--danger)] hover:from-[var(--danger)] hover:to-[var(--danger)] hover:text-white text-sm font-semibold transition-all duration-300 border border-[var(--danger)]/30 hover:border-[var(--danger)] hover:shadow-lg hover:shadow-[var(--danger)]/30 hover:scale-105 active:scale-95"
+            >
+              <span className="flex items-center justify-center gap-2">
+                <Icons.X className="w-4 h-4 transition-transform group-hover:rotate-90" />
+                <span className="tracking-wide">Reject Application</span>
+              </span>
+            </button>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <div className="border border-[var(--border-subtle)] rounded-lg p-3 bg-[var(--surface-soft)]">
+            <div className="text-xs font-semibold text-[var(--text-primary)] uppercase tracking-wide mb-3 px-1">Travel Details</div>
+            
+            <div className="space-y-2">
+              <div className="flex items-start gap-2.5 p-2.5 bg-[var(--accent-soft)] rounded-md border border-[var(--accent)]/20">
+                <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--accent)]/30 flex items-center justify-center">
+                  <Icons.MapPin className="w-3.5 h-3.5 text-[var(--accent)]" />
+                </div>
+                <div>
+                  <div className="text-[11px] text-[var(--accent)] uppercase tracking-wide">Destination</div>
+                  <div className="text-[13px] font-medium text-[var(--text-primary)]">{getDestination(application)}</div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface)] rounded-md border border-[var(--border-subtle)]">
+                <div className="w-7 h-7 rounded-md bg-[var(--surface-soft)] border border-[var(--border)] flex items-center justify-center">
+                  <Icons.Calendar className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                </div>
+                <div>
+                  <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Departure Time</div>
+                  <div className="text-[13px] font-medium text-[var(--text-primary)]">{formatDateTime(application.departureTime || application.travelDate || application.startDate)}</div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface)] rounded-md border border-[var(--border-subtle)]">
+                <div className="w-7 h-7 rounded-md bg-[var(--surface-soft)] border border-[var(--border)] flex items-center justify-center">
+                  <Icons.Calendar className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                </div>
+                <div>
+                  <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Arrival Time</div>
+                  <div className="text-[13px] font-medium text-[var(--text-primary)]">{formatDateTime(application.arrivalTime || application.endDate)}</div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface)] rounded-md border border-[var(--border-subtle)]">
+                <div className="w-7 h-7 rounded-md bg-[var(--surface-soft)] border border-[var(--border)] flex items-center justify-center">
+                  <Icons.User className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                </div>
+                <div>
+                  <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Passport Number</div>
+                  <div className="text-[13px] font-medium text-[var(--text-primary)]">{application.passportNumber || 'N/A'}</div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface)] rounded-md border border-[var(--border-subtle)]">
+                <div className="w-7 h-7 rounded-md bg-[var(--surface-soft)] border border-[var(--border)] flex items-center justify-center">
+                  <Icons.Calendar className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                </div>
+                <div>
+                  <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Stay Duration</div>
+                  <div className="text-[13px] font-medium text-[var(--text-primary)]">
+                    {application.stayDuration ? `${application.stayDuration} days` : 'N/A'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface)] rounded-md border border-[var(--border-subtle)]">
+                <div className="w-7 h-7 rounded-md bg-[var(--surface-soft)] border border-[var(--border)] flex items-center justify-center">
+                  <Icons.Shield className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                </div>
+                <div>
+                  <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Airline</div>
+                  <div className="text-[13px] font-medium text-[var(--text-primary)]">{application.airline || 'N/A'}</div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface)] rounded-md border border-[var(--border-subtle)]">
+                <div className="w-7 h-7 rounded-md bg-[var(--surface-soft)] border border-[var(--border)] flex items-center justify-center">
+                  <Icons.MapPin className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                </div>
+                <div>
+                  <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Purpose of Travel</div>
+                  <div className="text-[13px] font-medium text-[var(--text-primary)]">{application.purposeOfTravel || application.purpose || 'N/A'}</div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-start gap-2.5 p-2.5 bg-[var(--accent-soft)] rounded-md border border-[var(--accent)]/20">
-            <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--accent)]/30 flex items-center justify-center">
-              <Icons.MapPin className="w-3.5 h-3.5 text-[var(--accent)]" />
-            </div>
-            <div>
-              <div className="text-[11px] text-[var(--accent)] uppercase tracking-wide">Destination</div>
-              <div className="text-[13px] font-medium text-[var(--text-primary)]">{application.destination || 'N/A'}</div>
-            </div>
-          </div>
+          <div className="border border-[var(--border-subtle)] rounded-lg p-3 bg-[var(--surface-soft)]">
+            <div className="text-xs font-semibold text-[var(--text-primary)] uppercase tracking-wide mb-3 px-1">Travel Documents</div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-2.5 bg-[var(--surface)] rounded-md border border-[var(--border-subtle)]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-md bg-[var(--surface-soft)] border border-[var(--border)] flex items-center justify-center">
+                    <Icons.User className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Passport Photo</div>
+                    <div className="text-[13px] font-medium text-[var(--text-primary)]">
+                      {application.passportPhotoUrl ? 'Available' : 'Not Available'}
+                    </div>
+                  </div>
+                </div>
+                {application.passportPhotoUrl && (
+                  <button
+                    onClick={() => setPreviewImage({ url: application.passportPhotoUrl!, title: 'Passport Photo' })}
+                    className="w-8 h-8 rounded-lg hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--accent)]"
+                  >
+                    <Icons.Eye className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
 
-          <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface-soft)] rounded-md border border-[var(--border-subtle)]">
-            <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center">
-              <Icons.Calendar className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-            </div>
-            <div>
-              <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Travel Date</div>
-              <div className="text-[13px] font-medium text-[var(--text-primary)]">{formatDate(application.travelDate || application.startDate)}</div>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface-soft)] rounded-md border border-[var(--border-subtle)]">
-            <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center">
-              <Icons.User className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-            </div>
-            <div>
-              <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Account Number</div>
-              <div className="text-[13px] font-medium text-[var(--text-primary)]">{application.user.accountNumber || 'N/A'}</div>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface-soft)] rounded-md border border-[var(--border-subtle)]">
-            <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center">
-              <Icons.Calendar className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-            </div>
-            <div>
-              <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Application Date</div>
-              <div className="text-[13px] font-medium text-[var(--text-primary)]">{formatDate(application.createdAt)}</div>
+              <div className="flex items-center justify-between p-2.5 bg-[var(--surface)] rounded-md border border-[var(--border-subtle)]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-md bg-[var(--surface-soft)] border border-[var(--border)] flex items-center justify-center">
+                    <Icons.Shield className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Government ID</div>
+                    <div className="text-[13px] font-medium text-[var(--text-primary)]">
+                      {application.governmentIdUrl ? 'Available' : 'Not Available'}
+                    </div>
+                  </div>
+                </div>
+                {application.governmentIdUrl && (
+                  <button
+                    onClick={() => setPreviewImage({ url: application.governmentIdUrl!, title: 'Government ID' })}
+                    className="w-8 h-8 rounded-lg hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--accent)]"
+                  >
+                    <Icons.Eye className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Image Preview Modal */}
+      <Modal open={!!previewImage} onClose={() => setPreviewImage(null)} size="lg" className="dark-modal">
+        <Modal.Header>
+          <Modal.Title>{previewImage?.title}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="!p-0">
+          {previewImage && (
+            <div className="flex items-center justify-center bg-[var(--surface-soft)] p-4">
+              <img 
+                src={previewImage.url} 
+                alt={previewImage.title}
+                className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
+              />
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button 
+            appearance="primary" 
+            className="!bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)]"
+            onClick={() => previewImage && window.open(previewImage.url, '_blank')}
+          >
+            <div className="flex items-center gap-2">
+              <Icons.Eye className="w-4 h-4" />
+              Open in New Tab
+            </div>
+          </Button>
+          <Button onClick={() => setPreviewImage(null)} appearance="subtle">
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };
 
-export default function TravelTable() {
+export default function TravelTable({
+  searchQuery = "",
+  statusFilter = "all",
+  dateRange = null,
+}: {
+  searchQuery?: string;
+  statusFilter?: string;
+  dateRange?: [Date, Date] | null;
+}) {
   const [selectedApplication, setSelectedApplication] = useState<TravelApplication | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [page, setPage] = useState(1);
@@ -254,13 +556,91 @@ export default function TravelTable() {
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["travel-applications", { page, limit }],
-    queryFn: () => getTravelApplications({ page, limit }),
+    queryFn: () =>
+      getFirebaseCollection<TravelApplication>("travelApplications", {
+        page,
+        limit,
+        sortBy: "createdAt",
+        sortOrder: "desc",
+        includeUser: true,
+      }),
     placeholderData: keepPreviousData,
   });
 
   const applications = (data?.data?.items ?? []) as TravelApplication[];
   const total = data?.data?.pagination.total ?? 0;
   const errorMessage = error instanceof Error ? error.message : "Failed to fetch travel applications";
+
+  console.log("Travel applications data:", { applications, total, data });
+
+  // Filter applications based on search query, status, and date range
+  const filteredApplications = applications.filter((app) => {
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const userName = getFullName(app).toLowerCase();
+      const userEmail = getEmail(app).toLowerCase();
+      const destination = getDestination(app).toLowerCase();
+      const appId = app._firebaseDocId.toLowerCase();
+      
+      if (
+        !userName.includes(query) &&
+        !userEmail.includes(query) &&
+        !destination.includes(query) &&
+        !appId.includes(query)
+      ) {
+        return false;
+      }
+    }
+
+    // Status filter
+    if (statusFilter !== "all") {
+      const appStatus = (app.status || "pending").toLowerCase();
+      if (appStatus !== statusFilter.toLowerCase()) {
+        return false;
+      }
+    }
+
+    // Date range filter
+    if (dateRange && dateRange[0] && dateRange[1]) {
+      const appDate = app.submittedAt || app.createdAt;
+      if (appDate) {
+        let date: Date;
+        if (typeof appDate === 'number') {
+          date = new Date(appDate < 1e12 ? appDate * 1000 : appDate);
+        } else if (typeof appDate === 'string') {
+          date = new Date(appDate);
+        } else if (typeof appDate === 'object' && '_seconds' in appDate) {
+          date = new Date(appDate._seconds * 1000);
+        } else {
+          return true; // If we can't parse the date, include it
+        }
+        
+        if (date < dateRange[0] || date > dateRange[1]) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }).sort((a, b) => {
+    // Sort by most recent date (newest first)
+    const getTimestamp = (app: TravelApplication): number => {
+      const date = app.submittedAt || app.createdAt;
+      if (!date) return 0;
+      
+      if (typeof date === 'number') {
+        return date < 1e12 ? date * 1000 : date;
+      } else if (typeof date === 'string') {
+        return new Date(date).getTime();
+      } else if (typeof date === 'object' && '_seconds' in date) {
+        return date._seconds * 1000;
+      }
+      return 0;
+    };
+    
+    return getTimestamp(b) - getTimestamp(a); // Descending order (newest first)
+  });
 
   const handleRowClick = (application: TravelApplication) => {
     setSelectedApplication(application);
@@ -295,6 +675,24 @@ export default function TravelTable() {
     );
   }
 
+  if (!isLoading && filteredApplications.length === 0) {
+    return (
+      <motion.div
+        className="bg-[var(--surface)] rounded-xl shadow-[var(--shadow-card)] border border-[var(--border-subtle)] p-12 text-center"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.4 }}
+      >
+        <div className="text-[var(--text-muted)] mb-2">No travel applications found</div>
+        <div className="text-sm text-[var(--text-muted)]">
+          {searchQuery || statusFilter !== "all" || dateRange
+            ? "Try adjusting your filters to see more results."
+            : "There are no travel protection applications in the database yet."}
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <>
       <motion.div
@@ -305,8 +703,8 @@ export default function TravelTable() {
       >
         <div className="overflow-x-auto">
           <Table
-            data={applications}
-            height={Math.max(applications.length * 60 + 40, 200)}
+            data={filteredApplications}
+            height={600}
             rowHeight={60}
             headerHeight={40}
             hover
@@ -314,27 +712,19 @@ export default function TravelTable() {
             rowKey="_firebaseDocId"
             onRowClick={(rowData) => handleRowClick(rowData as TravelApplication)}
           >
-            <Column width={120} align="left">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">ID</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
-                {(rowData: TravelApplication) => (
-                  <span className="text-xs font-mono font-medium text-[var(--text-primary)]">{rowData._firebaseDocId.substring(0, 10)}...</span>
-                )}
-              </Cell>
-            </Column>
-
-            <Column flexGrow={2} minWidth={200} align="left">
+            <Column flexGrow={1} minWidth={200} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Applicant</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
                 {(rowData: TravelApplication) => {
-                  const userName = getFullName(rowData.user);
-                  const userAvatar = getAvatarUrl(rowData.user);
+                  const userName = getFullName(rowData);
+                  const userAvatar = getAvatarUrl(rowData);
+                  const userEmail = getEmail(rowData);
                   return (
                     <div className="flex items-center gap-2.5">
                       <img src={userAvatar} alt={userName} className="w-8 h-8 rounded-full object-cover border border-[var(--border)]" />
                       <div>
                         <div className="text-[13px] font-medium text-[var(--text-primary)]">{userName}</div>
-                        <div className="text-[11px] text-[var(--text-muted)]">{rowData.user.emailAddress || 'No email'}</div>
+                        <div className="text-[11px] text-[var(--text-muted)]">{userEmail}</div>
                       </div>
                     </div>
                   );
@@ -342,68 +732,60 @@ export default function TravelTable() {
               </Cell>
             </Column>
 
-            <Column width={120} align="left">
+            <Column flexGrow={1} minWidth={120} align="center">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Destination</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
                 {(rowData: TravelApplication) => (
-                  <span className="text-xs font-medium text-[var(--text-secondary)]">{rowData.destination || 'N/A'}</span>
+                  <span className="text-xs font-medium text-[var(--text-secondary)]">{getDestination(rowData)}</span>
                 )}
               </Cell>
             </Column>
 
-            <Column width={120} align="left">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Coverage</HeaderCell>
+            <Column flexGrow={1} minWidth={120} align="center">
+              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Fee</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
-                {(rowData: TravelApplication) => (
-                  <CoverageBadge coverage={rowData.coverage} />
-                )}
+                {(rowData: TravelApplication) => {
+                  const fee = getFee(rowData);
+                  return (
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">
+                      {fee ? `₱${fee.toLocaleString()}` : 'N/A'}
+                    </span>
+                  );
+                }}
               </Cell>
             </Column>
 
-            <Column width={100} align="right">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Premium</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
-                {(rowData: TravelApplication) => (
-                  <span className="text-sm font-semibold text-[var(--text-primary)]">{rowData.premium ? `₱${rowData.premium.toLocaleString()}` : 'N/A'}</span>
-                )}
-              </Cell>
-            </Column>
-
-            <Column width={100} align="left">
+            <Column flexGrow={1} minWidth={120} align="center">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Status</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
                 {(rowData: TravelApplication) => <StatusBadge status={rowData.status || 'pending'} />}
               </Cell>
             </Column>
 
-            <Column flexGrow={1} minWidth={120} align="left">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Travel Date</HeaderCell>
+            <Column flexGrow={1} minWidth={130} align="center">
+              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Submitted</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
                 {(rowData: TravelApplication) => (
-                  <span className="text-xs text-[var(--text-muted)]">{formatDate(rowData.travelDate || rowData.startDate)}</span>
+                  <span className="text-xs text-[var(--text-muted)]">
+                    {formatDate(rowData.submittedAt || rowData.createdAt)}
+                  </span>
                 )}
               </Cell>
             </Column>
 
-            <Column width={60} align="center">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">...</HeaderCell>
+            <Column width={70} align="center">
+              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Actions</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
                 {(rowData: TravelApplication) => (
-                  <Dropdown
-                    renderToggle={(props, ref) => (
-                      <button {...props} ref={ref} className="w-7 h-7 rounded-lg hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-muted)]" onClick={(e) => e.stopPropagation()}>
-                        <Icons.MoreHorizontal className="w-4 h-4" />
-                      </button>
-                    )}
-                    placement="bottomEnd"
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRowClick(rowData);
+                    }}
+                    className="w-8 h-8 rounded-lg hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all duration-200 hover:scale-110 active:scale-95 mx-auto"
                   >
-                    <Dropdown.Item className="!text-xs" onClick={() => handleRowClick(rowData)}>
-                      <span className="flex items-center gap-2"><Icons.Eye className="w-3.5 h-3.5" />View</span>
-                    </Dropdown.Item>
-                    <Dropdown.Item className="!text-xs">
-                      <span className="flex items-center gap-2"><Icons.Copy className="w-3.5 h-3.5" />Copy ID</span>
-                    </Dropdown.Item>
-                  </Dropdown>
+                    <Icons.MoreHorizontal className="w-4 h-4" />
+                  </button>
                 )}
               </Cell>
             </Column>
@@ -412,13 +794,16 @@ export default function TravelTable() {
 
         <div className="px-4 py-3 border-t border-[var(--border-subtle)] flex items-center justify-between bg-[var(--surface-soft)]">
           <div className="text-xs text-[var(--text-muted)]">
-            Showing <span className="font-medium text-[var(--text-primary)]">{applications.length > 0 ? ((page - 1) * limit) + 1 : 0}-{Math.min(page * limit, total)}</span> of <span className="font-medium text-[var(--text-primary)]">{total}</span>
+            Showing <span className="font-medium text-[var(--text-primary)]">{filteredApplications.length > 0 ? ((page - 1) * limit) + 1 : 0}-{Math.min(page * limit, filteredApplications.length)}</span> of <span className="font-medium text-[var(--text-primary)]">{filteredApplications.length}</span>
+            {(searchQuery || statusFilter !== "all" || dateRange) && (
+              <span className="text-[var(--text-muted)]"> (filtered from {total} total)</span>
+            )}
           </div>
           <Pagination
             prev
             next
             size="xs"
-            total={total}
+            total={filteredApplications.length}
             limit={limit}
             activePage={page}
             onChangePage={setPage}

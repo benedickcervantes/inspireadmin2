@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "motion/react";
-import { Button, Input, InputGroup, SelectPicker, DateRangePicker } from "rsuite";
+import { Button, Input, InputGroup, DateRangePicker } from "rsuite";
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
@@ -20,35 +20,38 @@ const Icons = {
       <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
     </svg>
   ),
+  Check: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  ),
+  X: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  ),
 };
 
-const policyTypeOptions = [
-  { label: "All Types", value: "all" },
-  { label: "Travel Insurance", value: "travel" },
-  { label: "Flight Protection", value: "flight" },
-  { label: "Trip Cancellation", value: "cancellation" },
-  { label: "Medical Coverage", value: "medical" },
-  { label: "Baggage Protection", value: "baggage" },
-];
+interface TravelFiltersProps {
+  searchQuery?: string;
+  onSearchChange?: (value: string) => void;
+  statusFilter?: string;
+  onStatusChange?: (value: string) => void;
+  dateRange?: [Date, Date] | null;
+  onDateRangeChange?: (value: [Date, Date] | null) => void;
+  onReset?: () => void;
+}
 
-const statusOptions = [
-  { label: "All Status", value: "all" },
-  { label: "Active", value: "active" },
-  { label: "Pending", value: "pending" },
-  { label: "Expired", value: "expired" },
-  { label: "Claimed", value: "claimed" },
-];
-
-const destinationOptions = [
-  { label: "All Destinations", value: "all" },
-  { label: "Domestic", value: "domestic" },
-  { label: "Asia", value: "asia" },
-  { label: "Europe", value: "europe" },
-  { label: "North America", value: "north_america" },
-  { label: "Worldwide", value: "worldwide" },
-];
-
-export default function TravelFilters() {
+export default function TravelFilters({
+  searchQuery = "",
+  onSearchChange = () => {},
+  statusFilter = "all",
+  onStatusChange = () => {},
+  dateRange = null,
+  onDateRangeChange = () => {},
+  onReset = () => {},
+}: TravelFiltersProps) {
   return (
     <motion.div
       className="bg-[var(--surface)] rounded-xl px-4 py-3 shadow-sm border border-[var(--border-subtle)]"
@@ -69,7 +72,9 @@ export default function TravelFilters() {
               <Icons.Search className="h-4 w-4" />
             </InputGroup.Addon>
             <Input
-              placeholder="Search policies..."
+              placeholder="Search applicant"
+              value={searchQuery}
+              onChange={(value) => onSearchChange(value)}
               className="!bg-transparent !text-sm !text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
             />
           </InputGroup>
@@ -83,54 +88,64 @@ export default function TravelFilters() {
           transition={{ duration: 0.3, delay: 0.45 }}
         >
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <SelectPicker
-              data={policyTypeOptions}
-              defaultValue="all"
-              searchable={false}
-              cleanable={false}
+            <Button
               size="sm"
-              className="travel-filter-select !w-[150px]"
-              placeholder="Policy Type"
-              renderValue={(value, item) => (
-                <span className="text-xs text-[var(--text-secondary)]">{item?.label}</span>
-              )}
-            />
+              appearance={statusFilter === "all" ? "primary" : "default"}
+              onClick={() => onStatusChange("all")}
+              className={`!h-8 !px-3 !rounded-lg !text-xs ${
+                statusFilter === "all"
+                  ? "!bg-[var(--primary)] !text-white"
+                  : "!bg-[var(--surface-soft)] !text-[var(--text-secondary)] hover:!bg-[var(--surface-hover)]"
+              }`}
+            >
+              <span className="flex items-center gap-1.5">
+                All
+              </span>
+            </Button>
           </motion.div>
 
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <SelectPicker
-              data={statusOptions}
-              defaultValue="all"
-              searchable={false}
-              cleanable={false}
+            <Button
               size="sm"
-              className="travel-filter-select !w-[120px]"
-              placeholder="Status"
-              renderValue={(value, item) => (
-                <span className="text-xs text-[var(--text-secondary)]">{item?.label}</span>
-              )}
-            />
+              appearance={statusFilter === "approved" ? "primary" : "default"}
+              onClick={() => onStatusChange(statusFilter === "approved" ? "all" : "approved")}
+              className={`!h-8 !px-3 !rounded-lg !text-xs ${
+                statusFilter === "approved"
+                  ? "!bg-[var(--success)] !text-white"
+                  : "!bg-[var(--surface-soft)] !text-[var(--text-secondary)] hover:!bg-[var(--surface-hover)]"
+              }`}
+            >
+              <span className="flex items-center gap-1.5">
+                <Icons.Check className="w-3.5 h-3.5" />
+                Approved
+              </span>
+            </Button>
           </motion.div>
 
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <SelectPicker
-              data={destinationOptions}
-              defaultValue="all"
-              searchable={false}
-              cleanable={false}
+            <Button
               size="sm"
-              className="travel-filter-select !w-[140px]"
-              placeholder="Destination"
-              renderValue={(value, item) => (
-                <span className="text-xs text-[var(--text-secondary)]">{item?.label}</span>
-              )}
-            />
+              appearance={statusFilter === "rejected" ? "primary" : "default"}
+              onClick={() => onStatusChange(statusFilter === "rejected" ? "all" : "rejected")}
+              className={`!h-8 !px-3 !rounded-lg !text-xs ${
+                statusFilter === "rejected"
+                  ? "!bg-[var(--danger)] !text-white"
+                  : "!bg-[var(--surface-soft)] !text-[var(--text-secondary)] hover:!bg-[var(--surface-hover)]"
+              }`}
+            >
+              <span className="flex items-center gap-1.5">
+                <Icons.X className="w-3.5 h-3.5" />
+                Rejected
+              </span>
+            </Button>
           </motion.div>
 
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <DateRangePicker
               size="sm"
               placeholder="Travel Dates"
+              value={dateRange}
+              onChange={(value) => onDateRangeChange(value)}
               className="travel-filter-date !w-[200px]"
               character=" - "
               showOneCalendar
@@ -145,6 +160,7 @@ export default function TravelFilters() {
             <Button
               size="sm"
               appearance="subtle"
+              onClick={onReset}
               className="!h-8 !px-3 !rounded-lg !text-xs !text-[var(--text-muted)] hover:!text-[var(--text-primary)] hover:!bg-[var(--surface-hover)]"
             >
               <span className="flex items-center gap-1.5">

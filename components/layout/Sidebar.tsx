@@ -90,7 +90,6 @@ const Icons = {
 const menuKeyByPath: Record<string, string> = {
   "/crypto-deposits": "deposits",
   "/deposit-request": "deposits",
-  "/withdrawal-request": "withdrawals",
   "/maya": "services",
   "/bank-services": "services",
   "/agent-hierarchy": "agents",
@@ -305,11 +304,11 @@ export default function Sidebar({ expanded, onToggle, user, onLogout, onNavigate
                 <Nav.Item eventKey="/crypto-deposits" as={Link} href="/crypto-deposits" onClick={onNavigate}>Crypto Deposits</Nav.Item>
                 <Nav.Item eventKey="/deposit-request" as={Link} href="/deposit-request" onClick={onNavigate}>Deposit Request</Nav.Item>
               </Nav.Menu>
-              <Nav.Menu eventKey="withdrawals" title="Withdrawals" icon={<SendIcon />}>
-                <Nav.Item eventKey="/withdrawal-request" as={Link} href="/withdrawal-request" onClick={onNavigate}>Withdrawal Request</Nav.Item>
-              </Nav.Menu>
+              <Nav.Item eventKey="/withdrawal-request" as={Link} href="/withdrawal-request" icon={<SendIcon />} title="Withdrawals" onClick={onNavigate}>
+                Withdrawal Request
+              </Nav.Item>
               <Nav.Menu eventKey="services" title="Services" icon={<GlobalIcon />}>
-                <Nav.Item eventKey="/maya" as={Link} href="/maya" onClick={onNavigate}>Maya</Nav.Item>
+                <Nav.Item eventKey="/maya" as={Link} href="/maya" onClick={onNavigate}>Ewallet Service</Nav.Item>
                 <Nav.Item eventKey="/bank-services" as={Link} href="/bank-services" onClick={onNavigate}>Bank Services</Nav.Item>
               </Nav.Menu>
               <Nav.Item eventKey="/kyc-requests" as={Link} href="/kyc-requests" icon={<DetailIcon />} title="KYC Requests" onClick={onNavigate}>

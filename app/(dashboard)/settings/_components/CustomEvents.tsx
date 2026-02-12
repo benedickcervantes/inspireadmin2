@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Modal, Button, Input, Form, Message, toaster } from "rsuite";
 import { motion } from "motion/react";
+import { postEvent } from "@/lib/api/settings";
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
@@ -133,33 +134,12 @@ export default function CustomEvents({ open, onClose }: CustomEventsProps) {
 
     try {
       // Call API to post event
-      const API_BASE_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL || "http://localhost:4000";
-      const token = localStorage.getItem("authToken");
-
-      // Create FormData for multipart/form-data
-      const formData = new FormData();
-      formData.append("title", title.trim());
-      formData.append("description", description.trim());
-      formData.append("postedAt", new Date().toISOString());
-      
-      if (image) {
-        formData.append("image", image);
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/admin/events`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
+      const result = await postEvent({
+        title: title.trim(),
+        description: description.trim(),
+        date: new Date().toISOString(),
+        imageUrl: imagePreview || '',
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to post event");
-      }
-
-      const result = await response.json();
 
       // Save to local event history for reference
       const event = {

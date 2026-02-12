@@ -61,21 +61,21 @@ export default function MaintenanceMode({ open, onClose }: MaintenanceModeProps)
       const API_BASE_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL || "http://localhost:4000";
       const token = localStorage.getItem("authToken");
 
-      const response = await fetch(`${API_BASE_URL}/api/admin/settings/maintenance`, {
+      const response = await fetch(`${API_BASE_URL}/api/settings/maintenance`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          enabled: isEnabled,
+          isEnabled: isEnabled,
           message: message.trim(),
         }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to update maintenance mode");
+        throw new Error(error.error || "Failed to update maintenance mode");
       }
 
       // Save to localStorage as cache

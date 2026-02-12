@@ -14,6 +14,7 @@ import EmailPasswordReset from "./_components/EmailPasswordReset";
 import MaintenanceMode from "./_components/MaintenanceMode";
 import CustomEvents from "./_components/CustomEvents";
 import { 
+  getAdminProfile,
   updateAdminUsername, 
   updateAdminEmail, 
   updateAdminPassword, 
@@ -31,49 +32,60 @@ export default function SettingsPage() {
   const [isMaintenanceModeOpen, setIsMaintenanceModeOpen] = useState(false);
   const [isCustomEventsOpen, setIsCustomEventsOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Initialize username from localStorage
-  const [username, setUsername] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("adminUsername") || "Admin User";
-    }
-    return "Admin User";
-  });
-  
-  // Initialize email from localStorage
-  const [email, setEmail] = useState(() => {
-    if (typeof window !== "undefined") {
-      const savedEmail = localStorage.getItem("adminEmail");
-      if (savedEmail) return savedEmail;
-      
-      const authUser = localStorage.getItem("authUser");
-      if (authUser) {
-        try {
-          const user = JSON.parse(authUser);
-          return user.emailAddress || "admin@example.com";
-        } catch (error) {
-          console.error("Failed to parse auth user:", error);
-        }
-      }
-    }
-    return "admin@example.com";
-  });
+  const [username, setUsername] = useState("Admin User");
+  const [email, setEmail] = useState("admin@example.com");
 
   useEffect(() => {
-    // Update email if authUser changes
-    if (typeof window !== "undefined") {
-      const authUser = localStorage.getItem("authUser");
-      if (authUser) {
-        try {
-          const user = JSON.parse(authUser);
-          if (user.emailAddress && !localStorage.getItem("adminEmail")) {
-            setEmail(user.emailAddress);
+    // Fetch admin profile from backend
+    const fetchProfile = async () => {
+      try {
+        const profile = await getAdminProfile();
+        
+        if (profile.data) {
+          const name = profile.data.name || "Admin User";
+          const emailAddress = profile.data.emailAddress || profile.data.email || "admin@example.com";
+          
+          setUsername(name);
+          setEmail(emailAddress);
+          
+          // Update localStorage cache
+          if (typeof window !== "undefined") {
+            localStorage.setItem("adminUsername", name);
+            localStorage.setItem("adminEmail", emailAddress);
           }
-        } catch (error) {
-          console.error("Failed to parse auth user:", error);
         }
+      } catch (error) {
+        console.error("Failed to fetch admin profile:", error);
+        
+        // Fallback to localStorage if API fails
+        if (typeof window !== "undefined") {
+          const savedUsername = localStorage.getItem("adminUsername");
+          const savedEmail = localStorage.getItem("adminEmail");
+          
+          if (savedUsername) setUsername(savedUsername);
+          if (savedEmail) setEmail(savedEmail);
+          
+          // Try to get email from authUser
+          const authUser = localStorage.getItem("authUser");
+          if (authUser && !savedEmail) {
+            try {
+              const user = JSON.parse(authUser);
+              if (user.emailAddress) {
+                setEmail(user.emailAddress);
+              }
+            } catch (e) {
+              console.error("Failed to parse auth user:", e);
+            }
+          }
+        }
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
+
+    fetchProfile();
   }, []);
 
   const handleCardClick = (settingId: string) => {
@@ -262,7 +274,16 @@ export default function SettingsPage() {
   return (
     <div className="flex w-full flex-col gap-6">
       <SettingsHeader />
-      <SettingsGrid onCardClick={handleCardClick} currentEmail={email} />
+      {isLoading ? (
+        <div className="flex items-center justify-center p-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary)] mx-auto mb-4"></div>
+            <p className="text-sm text-[var(--text-muted)]">Loading settings...</p>
+          </div>
+        </div>
+      ) : (
+        <SettingsGrid onCardClick={handleCardClick} currentEmail={email} currentUsername={username} />
+      )}
       <ChangeUsernameModal
         open={isUsernameModalOpen}
         onClose={() => setIsUsernameModalOpen(false)}

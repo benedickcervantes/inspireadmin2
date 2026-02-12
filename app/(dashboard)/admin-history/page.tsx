@@ -235,7 +235,7 @@ export default function AdminHistoryPage() {
             </Cell>
           </Column>
 
-          <Column width={200} align="left">
+          <Column width={300} align="left">
             <HeaderCell className="!bg-[var(--surface-elevated)] !text-[var(--text-primary)] !font-semibold">
               Action
             </HeaderCell>

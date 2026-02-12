@@ -100,7 +100,7 @@ const formatDate = (dateString: string | null) => {
 };
 
 const getAvatarUrl = (name: string) =>
-  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=150`;
+  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=fee2e2&color=dc2626&size=150`;
 
 const StatusBadge = ({ status }: { status: string }) => {
   const config: Record<string, { bg: string; text: string; border: string; dot: string; label: string }> = {
@@ -263,7 +263,7 @@ const WithdrawalDetailPanel = ({
             >
               <span className="flex items-center justify-center gap-1.5">
                 <Icons.XCircle className="w-3.5 h-3.5" />
-                Reject
+                Reject  
               </span>
             </Button>
             <Button
@@ -414,16 +414,8 @@ export default function TaskWithdrawalTable({
               </Cell>
             </Column>
 
-            <Column width={200} align="left">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Date</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
-                {(rowData: TaskWithdrawal) => (
-                  <span className="text-xs text-[var(--text-muted)]">{formatDate(rowData.createdAt)}</span>
-                )}
-              </Cell>
-            </Column>
 
-            <Column width={200} align="left" fixed="right">
+            <Column flexGrow={1} width={200} align="left" >
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Actions</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
                 {(rowData: TaskWithdrawal) => (

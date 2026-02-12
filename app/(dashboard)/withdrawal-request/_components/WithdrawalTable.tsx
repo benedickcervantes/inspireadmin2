@@ -200,7 +200,7 @@ const formatDateTime = (value?: DateValue) => {
 };
 
 const getAvatarUrl = (name: string) =>
-  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=150`;
+  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=fee2e2&color=dc2626&size=150`;
 
 const normalizeMethod = (record: SubcollectionWithdrawalRecord): WithdrawalMethod => {
   // V1 uses withdrawalMethod and ewalletType fields
@@ -937,7 +937,7 @@ export default function WithdrawalTable({
               </Cell>
             </Column>
 
-            <Column width={300} align="left">
+            <Column width={400} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Account</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
                 {(rowData: WithdrawalRequest) => {
@@ -952,7 +952,7 @@ export default function WithdrawalTable({
               </Cell>
             </Column>
 
-            <Column width={200} align="left">
+            <Column flexGrow={1} width={200} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Status</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
                 {(rowData: WithdrawalRequest) => (
@@ -961,14 +961,7 @@ export default function WithdrawalTable({
               </Cell>
             </Column>
 
-            <Column width={200} align="left">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Date</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
-                {(rowData: WithdrawalRequest) => (
-                  <span className="text-xs text-[var(--text-muted)]">{rowData.createdAt}</span>
-                )}
-              </Cell>
-            </Column>
+            
 
           
           </Table>

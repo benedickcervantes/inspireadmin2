@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Table, Button, Drawer, Dropdown, Loader, Pagination } from "rsuite";
 import { getMayaApplications } from "@/lib/api/subcollections";
 
@@ -76,13 +76,21 @@ const Icons = {
 interface MayaApplication {
   _firebaseDocId: string;
   userId?: string;
+  userName?: string;
+  userEmail?: string;
+  emailAddress?: string;
+  mobileNumber?: string;
+  grossMonthlyIncome?: number;
+  sourceOfFund?: string;
   status?: string;
   applicationDate?: string;
+  submittedAt?: string;
   createdAt?: string;
   mayaNumber?: string;
+  ewalletType?: string;
   applicationType?: string;
   user: {
-    odId?: string;
+    userId?: string;
     firstName?: string;
     lastName?: string;
     emailAddress?: string;
@@ -116,20 +124,19 @@ const getFullName = (user: MayaApplication['user']): string => {
 
 const getAvatarUrl = (user: MayaApplication['user']): string => {
   const name = getFullName(user);
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=22c55e&color=0a0e14&size=150`;
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=d4f4dd&color=047857&size=150`;
 };
 
 const StatusBadge = ({ status }: { status: string }) => {
   const config: Record<string, { bg: string; text: string; border: string; dot: string; label: string }> = {
-    completed: { bg: "bg-[var(--success-soft)]", text: "text-[var(--success)]", border: "border-[var(--success)]/30", dot: "bg-[var(--success)]", label: "Completed" },
+    
     approved: { bg: "bg-[var(--success-soft)]", text: "text-[var(--success)]", border: "border-[var(--success)]/30", dot: "bg-[var(--success)]", label: "Approved" },
-    active: { bg: "bg-[var(--success-soft)]", text: "text-[var(--success)]", border: "border-[var(--success)]/30", dot: "bg-[var(--success)]", label: "Active" },
+    
     pending: { bg: "bg-[var(--warning-soft)]", text: "text-[var(--warning)]", border: "border-[var(--warning)]/30", dot: "bg-[var(--warning)]", label: "Pending" },
-    processing: { bg: "bg-[var(--primary-soft)]", text: "text-[var(--primary)]", border: "border-[var(--primary)]/30", dot: "bg-[var(--primary)]", label: "Processing" },
-    failed: { bg: "bg-[var(--danger-soft)]", text: "text-[var(--danger)]", border: "border-[var(--danger)]/30", dot: "bg-[var(--danger)]", label: "Failed" },
+   
+    
     rejected: { bg: "bg-[var(--danger-soft)]", text: "text-[var(--danger)]", border: "border-[var(--danger)]/30", dot: "bg-[var(--danger)]", label: "Rejected" },
-    refunded: { bg: "bg-[var(--accent-soft)]", text: "text-[var(--accent)]", border: "border-[var(--accent)]/30", dot: "bg-[var(--accent)]", label: "Refunded" },
-    cancelled: { bg: "bg-[var(--surface-soft)]", text: "text-[var(--text-muted)]", border: "border-[var(--border)]", dot: "bg-[var(--text-muted)]", label: "Cancelled" },
+    
   };
 
   const statusLower = (status || 'pending').toLowerCase();
@@ -176,8 +183,11 @@ const ApplicationDetailPanel = ({ application, onClose }: { application: MayaApp
             </div>
             <StatusBadge status={application.status || 'pending'} />
           </div>
-          {application.mayaNumber && (
-            <div className="text-xl font-bold mt-2">{application.mayaNumber}</div>
+          {application.mobileNumber && (
+            <div>
+              <div className="text-[10px] text-emerald-200 uppercase tracking-wide mb-0.5">Mobile Number</div>
+              <div className="text-xl font-bold">{application.mobileNumber}</div>
+            </div>
           )}
         </div>
 
@@ -221,26 +231,147 @@ const ApplicationDetailPanel = ({ application, onClose }: { application: MayaApp
               <div className="text-[13px] font-medium text-[var(--text-primary)]">{application.applicationType || 'Standard'}</div>
             </div>
           </div>
+
+          <div className="flex items-start gap-2.5 p-2.5 bg-[var(--success-soft)] rounded-md border border-[var(--success)]/20">
+            <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--success)]/30 flex items-center justify-center flex-shrink-0">
+              <Icons.Wallet className="w-3.5 h-3.5 text-[var(--success)]" />
+            </div>
+            <div className="flex-1">
+              <div className="text-[11px] text-[var(--success)] uppercase tracking-wide">Gross Monthly Income</div>
+              <div className="text-lg font-bold text-[var(--text-primary)]">₱{(application.grossMonthlyIncome || 0).toLocaleString()}</div>
+              {application.sourceOfFund && (
+                <div className="text-[11px] text-[var(--text-secondary)] mt-0.5">{application.sourceOfFund}</div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default function MayaTable() {
+export default function MayaTable({
+  searchQuery,
+  statusFilter,
+  walletTypeFilter,
+  dateRange,
+  onStatsChange,
+}: {
+  searchQuery: string;
+  statusFilter: string;
+  walletTypeFilter: string;
+  dateRange: [Date, Date] | null;
+  onStatsChange: (stats: {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+  }) => void;
+}) {
   const [selectedApplication, setSelectedApplication] = useState<MayaApplication | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["maya-applications", { page, limit }],
-    queryFn: () => getMayaApplications({ page, limit }),
-    placeholderData: keepPreviousData,
+    queryKey: ["maya-applications-all", statusFilter, walletTypeFilter, searchQuery, dateRange],
+    queryFn: () => {
+      console.log('[MayaTable] Fetching with limit 1000');
+      return getMayaApplications({ page: 1, limit: 1000 });
+    },
+    staleTime: 0,
+    gcTime: 0,
   });
 
-  const applications = (data?.data?.items ?? []) as MayaApplication[];
-  const total = data?.data?.pagination.total ?? 0;
+  const applications = useMemo(() => {
+    let filtered = (data?.data?.items ?? []) as MayaApplication[];
+    
+    console.log('[MayaTable] Total items from API:', filtered.length);
+    console.log('[MayaTable] Current filters:', { searchQuery, statusFilter, walletTypeFilter, dateRange });
+
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (app) =>
+          app._firebaseDocId.toLowerCase().includes(query) ||
+          getFullName(app.user).toLowerCase().includes(query) ||
+          (app.user.emailAddress || '').toLowerCase().includes(query) ||
+          (app.mobileNumber || '').toLowerCase().includes(query) ||
+          (app.userName || '').toLowerCase().includes(query) ||
+          (app.userEmail || '').toLowerCase().includes(query)
+      );
+      console.log('[MayaTable] After search filter:', filtered.length);
+    }
+
+    // Apply status filter
+    if (statusFilter && statusFilter !== "all") {
+      const beforeFilter = filtered.length;
+      filtered = filtered.filter((app) => {
+        const appStatus = (app.status || 'pending').toLowerCase();
+        const matches = appStatus === statusFilter.toLowerCase();
+        if (!matches) {
+          console.log('[MayaTable] Status mismatch:', { appStatus, filterStatus: statusFilter.toLowerCase() });
+        }
+        return matches;
+      });
+      console.log('[MayaTable] After status filter:', { before: beforeFilter, after: filtered.length, filter: statusFilter });
+    }
+
+    // Apply wallet type filter
+    if (walletTypeFilter && walletTypeFilter !== "all") {
+      const beforeFilter = filtered.length;
+      filtered = filtered.filter((app) => {
+        const appWalletType = app.ewalletType || '';
+        const matches = appWalletType === walletTypeFilter;
+        if (!matches) {
+          console.log('[MayaTable] Wallet type mismatch:', { appWalletType, filterWalletType: walletTypeFilter });
+        }
+        return matches;
+      });
+      console.log('[MayaTable] After wallet type filter:', { before: beforeFilter, after: filtered.length, filter: walletTypeFilter });
+    }
+
+    // Apply date range filter
+    if (dateRange && dateRange[0] && dateRange[1]) {
+      const startDate = new Date(dateRange[0]).setHours(0, 0, 0, 0);
+      const endDate = new Date(dateRange[1]).setHours(23, 59, 59, 999);
+      filtered = filtered.filter((app) => {
+        const appDate = new Date(app.applicationDate || app.submittedAt || app.createdAt || '').getTime();
+        return appDate >= startDate && appDate <= endDate;
+      });
+      console.log('[MayaTable] After date filter:', filtered.length);
+    }
+
+    console.log('[MayaTable] Final filtered count:', filtered.length);
+    return filtered;
+  }, [data, searchQuery, statusFilter, walletTypeFilter, dateRange]);
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setPage(1);
+  }, [searchQuery, statusFilter, walletTypeFilter, dateRange]);
+
+  const total = applications.length;
+  const paginatedApplications = useMemo(() => {
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    return applications.slice(startIndex, endIndex);
+  }, [applications, page, limit]);
+
+  // Calculate stats from all data
+  React.useEffect(() => {
+    const allApplications = (data?.data?.items ?? []) as MayaApplication[];
+    
+    const stats = {
+      total: allApplications.length,
+      pending: allApplications.filter((app) => (app.status || 'pending').toLowerCase() === 'pending').length,
+      approved: allApplications.filter((app) => (app.status || '').toLowerCase() === 'approved').length,
+      rejected: allApplications.filter((app) => (app.status || '').toLowerCase() === 'rejected').length,
+    };
+    
+    onStatsChange(stats);
+  }, [data, onStatsChange]);
   const errorMessage = error instanceof Error ? error.message : "Failed to fetch Maya applications";
 
   const handleRowClick = (application: MayaApplication) => {
@@ -286,7 +417,7 @@ export default function MayaTable() {
       >
         <div className="overflow-x-auto rounded-t-xl">
           <Table
-            data={applications}
+            data={paginatedApplications}
             autoHeight
             rowHeight={60}
             headerHeight={40}
@@ -295,16 +426,16 @@ export default function MayaTable() {
             rowKey="_firebaseDocId"
             onRowClick={(rowData) => handleRowClick(rowData as MayaApplication)}
           >
-            <Column width={120} align="left">
+            <Column width={300} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">ID</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: MayaApplication) => (
-                  <span className="text-xs font-mono font-medium text-[var(--success)]">{rowData._firebaseDocId.substring(0, 10)}...</span>
+                  <span className="text-xs font-mono font-medium text-[var(--primary)]">{rowData._firebaseDocId.substring(0, 30)}</span>
                 )}
               </Cell>
             </Column>
 
-            <Column flexGrow={2} minWidth={200} align="left">
+            <Column width={400} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">User</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: MayaApplication) => {
@@ -323,59 +454,82 @@ export default function MayaTable() {
               </Cell>
             </Column>
 
-            <Column width={150} align="left">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Maya Number</HeaderCell>
+            <Column width={250} align="left">
+              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Mobile Number</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: MayaApplication) => (
-                  <span className="text-xs font-mono text-[var(--text-secondary)]">{rowData.mayaNumber || 'N/A'}</span>
+                  <span className="text-xs font-mono text-[var(--text-secondary)]">{rowData.mobileNumber || 'N/A'}</span>
                 )}
               </Cell>
             </Column>
 
-            <Column width={110} align="left">
+            <Column width={250} align="left">
+              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Wallet Type</HeaderCell>
+              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
+                {(rowData: MayaApplication) => {
+                  const walletType = rowData.ewalletType || '';
+                  const isGcash = walletType === 'Gcash';
+                  const isMaya = walletType === 'Maya';
+                  
+                  const config = {
+                    gcash: {
+                      label: 'GCash',
+                      bg: 'bg-[var(--info-soft)]',
+                      text: 'text-[var(--info)]',
+                    },
+                    maya: {
+                      label: 'Maya',
+                      bg: 'bg-[var(--success-soft)]',
+                      text: 'text-[var(--success)]',
+                    },
+                    unknown: {
+                      label: 'Unknown',
+                      bg: 'bg-[var(--surface-soft)]',
+                      text: 'text-[var(--text-muted)]',
+                    },
+                  };
+                  
+                  const type = isGcash ? 'gcash' : isMaya ? 'maya' : 'unknown';
+                  const { label, bg, text } = config[type];
+                  
+                  return (
+                    <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg ${bg} ${text} text-[11px] font-medium`}>
+                      <Icons.Smartphone className="w-3 h-3" />
+                      {label}
+                    </div>
+                  );
+                }}
+              </Cell>
+            </Column>
+
+            <Column width={300} align="left">
+              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Income</HeaderCell>
+              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
+                {(rowData: MayaApplication) => (
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--text-primary)]">₱{(rowData.grossMonthlyIncome || 0).toLocaleString()}</div>
+                    {rowData.sourceOfFund && (
+                      <div className="text-[10px] text-[var(--text-muted)] truncate max-w-[140px]">{rowData.sourceOfFund}</div>
+                    )}
+                  </div>
+                )}
+              </Cell>
+            </Column>
+
+            <Column flexGrow={1} width={250} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Status</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: MayaApplication) => <StatusBadge status={rowData.status || 'pending'} />}
               </Cell>
             </Column>
 
-            <Column flexGrow={1} minWidth={160} align="left">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Application Date</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
-                {(rowData: MayaApplication) => (
-                  <span className="text-xs text-[var(--text-secondary)]">{formatDate(rowData.applicationDate || rowData.createdAt)}</span>
-                )}
-              </Cell>
-            </Column>
-
-            <Column width={60} align="center">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">...</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
-                {(rowData: MayaApplication) => (
-                  <Dropdown
-                    renderToggle={(props, ref) => (
-                      <button {...props} ref={ref} className="w-7 h-7 rounded-lg hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-muted)]" onClick={(e) => e.stopPropagation()}>
-                        <Icons.MoreHorizontal className="w-4 h-4" />
-                      </button>
-                    )}
-                    placement="bottomEnd"
-                  >
-                    <Dropdown.Item className="!text-xs !text-[var(--text-secondary)] hover:!bg-[var(--surface-hover)]" onClick={() => handleRowClick(rowData)}>
-                      <span className="flex items-center gap-2"><Icons.Eye className="w-3.5 h-3.5" />View</span>
-                    </Dropdown.Item>
-                    <Dropdown.Item className="!text-xs !text-[var(--text-secondary)] hover:!bg-[var(--surface-hover)]">
-                      <span className="flex items-center gap-2"><Icons.Copy className="w-3.5 h-3.5" />Copy ID</span>
-                    </Dropdown.Item>
-                  </Dropdown>
-                )}
-              </Cell>
-            </Column>
+            
           </Table>
         </div>
 
         <div className="px-4 py-3 border-t border-[var(--border)] flex items-center justify-between bg-[var(--surface-soft)] rounded-b-xl">
           <div className="text-xs text-[var(--text-muted)]">
-            Showing <span className="font-medium text-[var(--text-secondary)]">{applications.length > 0 ? ((page - 1) * limit) + 1 : 0}-{Math.min(page * limit, total)}</span> of <span className="font-medium text-[var(--text-secondary)]">{total}</span>
+            Showing <span className="font-medium text-[var(--text-secondary)]">{paginatedApplications.length > 0 ? ((page - 1) * limit) + 1 : 0}-{Math.min(page * limit, total)}</span> of <span className="font-medium text-[var(--text-secondary)]">{total}</span>
           </div>
           <Pagination
             prev

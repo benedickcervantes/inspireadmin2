@@ -22,25 +22,42 @@ const Icons = {
   ),
 };
 
-const typeOptions = [
-  { label: "All Types", value: "all" },
-  { label: "Send Money", value: "send" },
-  { label: "Receive Money", value: "receive" },
-  { label: "Pay Bills", value: "bills" },
-  { label: "Buy Load", value: "load" },
-  { label: "Cash In", value: "cash_in" },
-  { label: "Cash Out", value: "cash_out" },
-];
-
 const statusOptions = [
   { label: "All Status", value: "all" },
-  { label: "Completed", value: "completed" },
   { label: "Pending", value: "pending" },
-  { label: "Failed", value: "failed" },
-  { label: "Refunded", value: "refunded" },
+  { label: "Approved", value: "approved" },
+  { label: "Rejected", value: "rejected" },
 ];
 
-export default function MayaFilters() {
+const walletTypeOptions = [
+  { label: "All Wallets", value: "all" },
+  { label: "GCash", value: "Gcash" },
+  { label: "Maya", value: "Maya" },
+];
+
+interface MayaFiltersProps {
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  statusFilter: string;
+  onStatusChange: (value: string) => void;
+  walletTypeFilter: string;
+  onWalletTypeChange: (value: string) => void;
+  dateRange: [Date, Date] | null;
+  onDateRangeChange: (value: [Date, Date] | null) => void;
+  onReset: () => void;
+}
+
+export default function MayaFilters({
+  searchQuery,
+  onSearchChange,
+  statusFilter,
+  onStatusChange,
+  walletTypeFilter,
+  onWalletTypeChange,
+  dateRange,
+  onDateRangeChange,
+  onReset,
+}: MayaFiltersProps) {
   return (
     <motion.div
       className="bg-[var(--surface)] rounded-xl px-4 py-3 shadow-sm border border-[var(--border)]"
@@ -61,7 +78,9 @@ export default function MayaFilters() {
               <Icons.Search className="h-4 w-4" />
             </InputGroup.Addon>
             <Input
-              placeholder="Search transactions..."
+              placeholder="Search applications..."
+              value={searchQuery}
+              onChange={onSearchChange}
               className="!bg-transparent !text-sm !text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
             />
           </InputGroup>
@@ -76,23 +95,9 @@ export default function MayaFilters() {
         >
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <SelectPicker
-              data={typeOptions}
-              defaultValue="all"
-              searchable={false}
-              cleanable={false}
-              size="sm"
-              className="!w-[140px] maya-filter-select"
-              placeholder="Type"
-              renderValue={(value, item) => (
-                <span className="text-xs text-[var(--text-secondary)]">{item?.label}</span>
-              )}
-            />
-          </motion.div>
-
-          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-            <SelectPicker
               data={statusOptions}
-              defaultValue="all"
+              value={statusFilter}
+              onChange={(value) => onStatusChange(value || "all")}
               searchable={false}
               cleanable={false}
               size="sm"
@@ -105,9 +110,27 @@ export default function MayaFilters() {
           </motion.div>
 
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <SelectPicker
+              data={walletTypeOptions}
+              value={walletTypeFilter}
+              onChange={(value) => onWalletTypeChange(value || "all")}
+              searchable={false}
+              cleanable={false}
+              size="sm"
+              className="!w-[130px] maya-filter-select"
+              placeholder="Wallet Type"
+              renderValue={(value, item) => (
+                <span className="text-xs text-[var(--text-secondary)]">{item?.label}</span>
+              )}
+            />
+          </motion.div>
+
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <DateRangePicker
               size="sm"
               placeholder="Date Range"
+              value={dateRange}
+              onChange={onDateRangeChange}
               className="!w-[200px] maya-filter-date"
               character=" - "
               showOneCalendar
@@ -122,6 +145,7 @@ export default function MayaFilters() {
             <Button
               size="sm"
               appearance="subtle"
+              onClick={onReset}
               className="!h-8 !px-3 !rounded-lg !text-xs !text-[var(--text-muted)] hover:!text-[var(--text-primary)] hover:!bg-[var(--surface-hover)]"
             >
               <span className="flex items-center gap-1.5">

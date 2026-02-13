@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
-import { motion } from "motion/react";
-import { Button, Input, InputGroup } from "rsuite";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { Input, InputGroup } from "rsuite";
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
@@ -13,13 +13,12 @@ const Icons = {
       <path d="M20 20l-3.5-3.5" />
     </svg>
   ),
-  RefreshCw: (props: IconProps) => (
+  X: (props: IconProps) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <polyline points="23 4 23 10 17 10" />
-      <polyline points="1 20 1 14 7 14" />
-      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
-  ),
+  )
 };
 
 interface TaskWithdrawalFiltersProps {
@@ -35,6 +34,13 @@ interface TaskWithdrawalFiltersProps {
   };
 }
 
+const TABS: { key: 'all' | 'pending' | 'approved' | 'rejected'; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "pending", label: "Pending" },
+  { key: "approved", label: "Approved" },
+  { key: "rejected", label: "Rejected" }
+];
+
 export default function TaskWithdrawalFilters({
   searchQuery,
   onSearchChange,
@@ -42,90 +48,93 @@ export default function TaskWithdrawalFilters({
   onFilterChange,
   stats,
 }: TaskWithdrawalFiltersProps) {
+  const [isFocused, setIsFocused] = useState(false);
+
   return (
     <motion.div
-      className="bg-[var(--surface)] rounded-xl px-4 py-3 shadow-sm border border-[var(--border-subtle)]"
-      initial={{ opacity: 0, y: 20 }}
+      className="bg-[var(--surface)] rounded-xl px-4 py-3 shadow-[var(--shadow-card)] border border-[var(--border-subtle)] flex flex-col gap-3"
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+      transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+      whileHover={{ borderColor: "var(--border)" }}
+      style={{ overflow: "visible", position: "relative", zIndex: 100 }}
     >
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
-        {/* Search */}
+      {/* Search bar - full width on mobile */}
+      <motion.div
+        className="w-full relative"
+        initial={{ opacity: 0, x: -15 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.1, duration: 0.4 }}
+      >
         <motion.div
-          className="w-full lg:w-[300px]"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3, delay: 0.4 }}
+          animate={{
+            scale: isFocused ? 1.01 : 1,
+            boxShadow: isFocused ? "var(--shadow-glow-cyan)" : "none"
+          }}
+          transition={{ duration: 0.2 }}
         >
-          <InputGroup inside className="!bg-[var(--surface-soft)] !border-[var(--border)] !rounded-lg !h-[36px]">
+          <InputGroup inside className="!bg-[var(--surface-soft)] !border-[var(--border)] !rounded-lg !h-[36px] focus-within:!border-[var(--primary)] transition-all">
             <InputGroup.Addon className="!bg-transparent !text-[var(--text-muted)]">
-              <Icons.Search className="h-4 w-4" />
+              <motion.div animate={{ scale: isFocused ? 1.1 : 1 }} transition={{ duration: 0.2 }}>
+                <Icons.Search className="h-4 w-4" />
+              </motion.div>
             </InputGroup.Addon>
             <Input
-              placeholder="Search by email, name, or mobile..."
+              placeholder="Search by username or email..."
+              className="!bg-transparent !text-xs !text-[var(--text-primary)] placeholder:!text-[var(--text-muted)] font-quest-trial"
               value={searchQuery}
               onChange={onSearchChange}
-              className="!bg-transparent !text-sm !text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
             />
+            <AnimatePresence>
+              {searchQuery && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  transition={{ duration: 0.15 }}
+                  onClick={() => onSearchChange("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-md hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                >
+                  <Icons.X className="w-3 h-3" />
+                </motion.button>
+              )}
+            </AnimatePresence>
           </InputGroup>
         </motion.div>
+      </motion.div>
 
-        {/* Filters */}
+      {/* Tabs and Legend row - legend above tabs on mobile, side by side on desktop */}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+        {/* Status tabs */}
         <motion.div
-          className="flex flex-wrap items-center gap-2"
-          initial={{ opacity: 0, x: 20 }}
+          className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-0.5 overflow-x-auto order-2 lg:order-1"
+          initial={{ opacity: 0, x: 15 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3, delay: 0.45 }}
+          transition={{ delay: 0.15, duration: 0.4 }}
         >
-          <motion.button
-            onClick={() => onFilterChange('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              filter === 'all'
-                ? 'bg-rose-500 text-white shadow-sm'
-                : 'bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]'
-            }`}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            All ({stats.total})
-          </motion.button>
-          <motion.button
-            onClick={() => onFilterChange('pending')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              filter === 'pending'
-                ? 'bg-[var(--warning)] text-white shadow-sm'
-                : 'bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]'
-            }`}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            Pending ({stats.pending})
-          </motion.button>
-          <motion.button
-            onClick={() => onFilterChange('approved')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              filter === 'approved'
-                ? 'bg-[var(--success)] text-white shadow-sm'
-                : 'bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]'
-            }`}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            Approved ({stats.approved})
-          </motion.button>
-          <motion.button
-            onClick={() => onFilterChange('rejected')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              filter === 'rejected'
-                ? 'bg-[var(--error)] text-white shadow-sm'
-                : 'bg-[var(--surface-elevated)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]'
-            }`}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            Rejected ({stats.rejected})
-          </motion.button>
+          {TABS.map((tab) => {
+            const isActive = filter === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => onFilterChange(tab.key)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium font-google-sans transition-all whitespace-nowrap ${
+                  isActive
+                    ? "bg-[var(--primary)] text-white shadow-sm"
+                    : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </motion.div>
+
+        {/* Legend with stats counts - compact on mobile */}
+        
       </div>
     </motion.div>
   );

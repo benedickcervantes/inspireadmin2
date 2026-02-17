@@ -880,11 +880,13 @@ const TransactionList = ({ transactions, isLoading }: { transactions: Transactio
 const TransactionModal = ({
   open,
   onClose,
+  onAddTimeDeposit,
   user,
   isLoading
 }: {
   open: boolean;
   onClose: () => void;
+  onAddTimeDeposit: () => void;
   user: User;
   isLoading?: boolean;
 }) => {
@@ -1234,6 +1236,17 @@ const TransactionModal = ({
             <Button size="sm" appearance="subtle" onClick={onClose} className="!text-[var(--text-secondary)] hover:scale-[1.02] active:scale-[0.98] transition-transform">
               Close
             </Button>
+            <Button
+              size="sm"
+              appearance="primary"
+              onClick={onAddTimeDeposit}
+              className="!bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] hover:scale-[1.02] active:scale-[0.98] transition-transform"
+            >
+              <span className="flex items-center gap-1.5">
+                <Icons.Clock className="w-3.5 h-3.5" />
+                Add Time Deposit
+              </span>
+            </Button>
             <Button size="sm" appearance="primary" className="!bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] hover:scale-[1.02] active:scale-[0.98] transition-transform">
               Export CSV
             </Button>
@@ -1245,7 +1258,7 @@ const TransactionModal = ({
 };
 
 // User Detail Panel Component - Dark Theme with CSS transitions
-const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit, onAddTimeDeposit }: { user: User; onClose: () => void; onViewTransactions: () => void; onEdit: () => void; onAddTimeDeposit: () => void }) => {
+const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit }: { user: User; onClose: () => void; onViewTransactions: () => void; onEdit: () => void }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const queryClient = useQueryClient();
   const walletBalance = user.walletAmount || 0;
@@ -1432,12 +1445,6 @@ const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit, onAddTimeD
               <span className="flex items-center gap-2">
                 <Icons.Star className="w-3.5 h-3.5" />
                 Add 10 points
-              </span>
-            </Dropdown.Item>
-            <Dropdown.Item className="!text-xs" onSelect={onAddTimeDeposit}>
-              <span className="flex items-center gap-2">
-                <Icons.Clock className="w-3.5 h-3.5" />
-                Add Time Deposit
               </span>
             </Dropdown.Item>
             <Dropdown.Item className="!text-xs" onSelect={() => {}}>
@@ -1639,7 +1646,8 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
     setEditDrawerOpen(false);
   };
 
-  const handleOpenTimeDeposit = () => {
+  const handleAddTimeDepositFromTransactions = () => {
+    setTransactionModalOpen(false);
     setTimeDepositModalOpen(true);
   };
 
@@ -1820,7 +1828,6 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
                   onClose={handleCloseDrawer}
                   onViewTransactions={handleViewTransactions}
                   onEdit={handleEdit}
-                  onAddTimeDeposit={handleOpenTimeDeposit}
                 />
               </motion.div>
             )}
@@ -1833,6 +1840,7 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
         <TransactionModal
           open={transactionModalOpen}
           onClose={handleCloseTransactionModal}
+          onAddTimeDeposit={handleAddTimeDepositFromTransactions}
           user={activeUser}
           isLoading={isUserDetailPending}
         />

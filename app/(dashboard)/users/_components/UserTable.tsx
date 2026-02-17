@@ -8,6 +8,7 @@ import { getFirebaseUserById, getFirebaseUsers } from '@/lib/api/firebaseUsers';
 import type { UserTypeTab } from './UserFilters';
 import EditUserDrawer from './EditUserDrawer';
 import AddTimeDepositModal from './AddTimeDepositModal';
+import PasswordConfirmationModal from './PasswordConfirmationModal';
 
 const { Column, HeaderCell, Cell } = Table;
 
@@ -124,6 +125,31 @@ const Icons = {
       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
       <line x1="10" y1="11" x2="10" y2="17" />
       <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
+  ),
+  EyeOff: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  ),
+  AlertTriangle: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  ),
+  AlertCircle: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+  ),
+  Star: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
     </svg>
   ),
 };
@@ -1220,10 +1246,28 @@ const TransactionModal = ({
 
 // User Detail Panel Component - Dark Theme with CSS transitions
 const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit, onAddTimeDeposit }: { user: User; onClose: () => void; onViewTransactions: () => void; onEdit: () => void; onAddTimeDeposit: () => void }) => {
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const queryClient = useQueryClient();
   const walletBalance = user.walletAmount || 0;
   const availBalance = user.availBalanceAmount || 0;
   const subcollectionCount = user.subcollections ? Object.keys(user.subcollections).length : 0;
   const transactionCount = transformTransactions(user).length;
+
+  const handleDeleteUser = async () => {
+    try {
+      const { deleteFirebaseUser } = await import('@/lib/api/adminOperations');
+      await deleteFirebaseUser(user._id);
+      
+      // Refresh the user list
+      queryClient.invalidateQueries({ queryKey: ['firebase-users'] });
+      
+      // Close the panel
+      onClose();
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      throw error;
+    }
+  };
 
   const accountInfoItems = [
     { icon: Icons.Mail, label: "Email", value: user.emailAddress || 'Not provided' },
@@ -1327,41 +1371,73 @@ const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit, onAddTimeD
           </div>
         )}
 
-        {/* Actions - below Data Overview (or below Balance Summary when no Data Overview) */}
-        <div className="mt-1">
+        {/* Actions - Improved layout with primary buttons + dropdown */}
+        <div className="mt-1 space-y-2">
+          {/* Primary Action Buttons */}
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              size="sm"
+              appearance="primary"
+              onClick={onViewTransactions}
+              className="!bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] !rounded-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              <span className="flex items-center justify-center gap-1.5">
+                <Icons.Eye className="w-3.5 h-3.5" />
+                View Transactions
+              </span>
+            </Button>
+            <Button
+              size="sm"
+              appearance="primary"
+              onClick={onEdit}
+              className="!bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] !rounded-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              <span className="flex items-center justify-center gap-1.5">
+                <Icons.Edit className="w-3.5 h-3.5" />
+                Edit
+              </span>
+            </Button>
+          </div>
+
+          {/* Secondary Actions Dropdown */}
           <Dropdown
             renderToggle={(props, ref) => (
               <Button
                 {...props}
                 ref={ref}
                 size="sm"
-                appearance="primary"
+                appearance="ghost"
                 block
-                className="!bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] !rounded-lg hover:scale-[1.02] active:scale-[0.98] transition-transform"
+                className="!border !border-[var(--border)] !rounded-lg hover:!bg-[var(--surface-hover)] hover:scale-[1.01] active:scale-[0.99] transition-all"
               >
-                <span className="flex items-center justify-center gap-2">
+                <span className="flex items-center justify-center gap-2 !text-[var(--text-secondary)]">
                   <Icons.MoreHorizontal className="w-4 h-4" />
-                  Actions
+                  More Actions
                 </span>
               </Button>
             )}
           >
-            <Dropdown.Item className="!text-xs" onSelect={onViewTransactions}>
-              <span className="flex items-center gap-2">
-                <Icons.Eye className="w-3.5 h-3.5" />
-                View Transactions
-              </span>
-            </Dropdown.Item>
+            {/* View/Read Actions Group */}
             <Dropdown.Item className="!text-xs" onSelect={() => {}}>
               <span className="flex items-center gap-2">
                 <Icons.Phone className="w-3.5 h-3.5" />
                 Contact details
               </span>
             </Dropdown.Item>
+            
+            <Dropdown.Item divider />
+            
+            {/* Modify Actions Group */}
             <Dropdown.Item className="!text-xs" onSelect={() => {}}>
               <span className="flex items-center gap-2">
-                <Icons.Shield className="w-3.5 h-3.5" />
-                Remove agent
+                <Icons.Star className="w-3.5 h-3.5" />
+                Add 10 points
+              </span>
+            </Dropdown.Item>
+            <Dropdown.Item className="!text-xs" onSelect={onAddTimeDeposit}>
+              <span className="flex items-center gap-2">
+                <Icons.Clock className="w-3.5 h-3.5" />
+                Add Time Deposit
               </span>
             </Dropdown.Item>
             <Dropdown.Item className="!text-xs" onSelect={() => {}}>
@@ -1372,23 +1448,15 @@ const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit, onAddTimeD
             </Dropdown.Item>
             <Dropdown.Item className="!text-xs" onSelect={() => {}}>
               <span className="flex items-center gap-2">
-                <Icons.Plus className="w-3.5 h-3.5" />
-                Add 10 points
+                <Icons.Shield className="w-3.5 h-3.5" />
+                Remove agent
               </span>
             </Dropdown.Item>
-            <Dropdown.Item className="!text-xs" onSelect={onAddTimeDeposit}>
-              <span className="flex items-center gap-2">
-                <Icons.Clock className="w-3.5 h-3.5" />
-                Add Time Deposit
-              </span>
-            </Dropdown.Item>
-            <Dropdown.Item className="!text-xs" onSelect={onEdit}>
-              <span className="flex items-center gap-2">
-                <Icons.Edit className="w-3.5 h-3.5" />
-                Edit
-              </span>
-            </Dropdown.Item>
-            <Dropdown.Item className="!text-xs !text-[var(--danger)]" onSelect={() => {}}>
+            
+            <Dropdown.Item divider />
+            
+            {/* Dangerous Actions Group */}
+            <Dropdown.Item className="!text-xs !text-[var(--danger)] hover:!bg-[var(--danger-soft)]" onSelect={() => setShowDeleteModal(true)}>
               <span className="flex items-center gap-2">
                 <Icons.Trash2 className="w-3.5 h-3.5" />
                 Delete user
@@ -1397,6 +1465,14 @@ const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit, onAddTimeD
           </Dropdown>
         </div>
       </div>
+
+      {/* Password Confirmation Modal */}
+      <PasswordConfirmationModal
+        open={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteUser}
+        userName={getFullName(user)}
+      />
     </div>
   );
 };

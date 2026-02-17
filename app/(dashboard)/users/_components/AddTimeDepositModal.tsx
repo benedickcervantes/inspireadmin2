@@ -394,7 +394,7 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
               <h4 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Estimate</h4>
               {isQuoting && (
                 <span className="text-xs text-[var(--text-muted)]">
-                  <Loader inline size="xs" content="Updating" />
+                  <Loader size="xs" content="Updating" />
                 </span>
               )}
             </div>

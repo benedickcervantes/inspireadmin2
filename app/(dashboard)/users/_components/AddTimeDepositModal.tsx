@@ -17,6 +17,7 @@ import InvestmentGrowthChart from "./InvestmentGrowthChart";
 import CycleBreakdownChart from "./CycleBreakdownChart";
 import InvestmentSummary from "./InvestmentSummary";
 import RateEditorModal from "./RateEditorModal";
+import CycleScheduleTable from "./CycleScheduleTable";
 import { calculateCycleData } from "@/lib/utils/cycleCalculations";
 
 type UserSummary = {
@@ -283,6 +284,18 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
     return cycleData[cycleData.length - 1]?.date || initialDate;
   }, [cycleData, initialDate]);
 
+  const projectionTotals = useMemo(() => {
+    return cycleData.slice(1).reduce(
+      (acc, point) => {
+        acc.gross += point.grossInterest;
+        acc.tax += point.tax;
+        acc.net += point.netInterest;
+        return acc;
+      },
+      { gross: 0, tax: 0, net: 0 }
+    );
+  }, [cycleData]);
+
   const isRateUnavailable = Boolean(quoteError);
   const requiresReferrer = isReferralEnabled && !referrerUserId;
   const invalidFutureDate = isFutureDate(initialDate);
@@ -377,22 +390,28 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
 
   return (
     <>
-    <Modal open={open} onClose={onClose} size="lg" className="dark-modal">
+    <Modal
+      open={open}
+      onClose={onClose}
+      container={() => document.body}
+      size="full"
+      className="dark-modal !w-[98vw] !max-w-[98vw] [&_.rs-modal-content]:!h-[94vh] [&_.rs-modal-content]:!max-h-[94vh] [&_.rs-modal-content]:!flex [&_.rs-modal-content]:!flex-col [&_.rs-modal-body]:!flex-1 [&_.rs-modal-body]:!overflow-auto"
+    >
       <Modal.Header>
         <Modal.Title>Add Time Deposit</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        <div className="space-y-4">
+        <div className="p-4 space-y-4">
           {/* Target User */}
           <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-3">
             <div className="text-xs text-[var(--text-muted)]">Target User</div>
             <div className="text-sm font-medium text-[var(--text-primary)]">{displayName}</div>
           </div>
 
-          {/* Two-column Calculator Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* LEFT COLUMN: Calculator Input */}
-            <div className="space-y-3">
+          {/* Full-width Layout */}
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+            {/* LEFT: Inputs */}
+            <div className="xl:col-span-3 space-y-3">
               {/* Amount Display */}
               <div className="rounded-xl border-2 border-[var(--border-accent)] bg-gradient-to-br from-[var(--surface)] to-[var(--surface-soft)] p-4">
                 <div className="text-xs text-[var(--text-muted)] mb-1">Principal Amount</div>
@@ -485,36 +504,138 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
                   </div>
                 )}
               </div>
+
+              {/* Advanced Section (Collapsible) */}
+              <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-soft)]">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="w-full flex items-center justify-between p-3 hover:bg-[var(--surface-hover)] transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Advanced</h4>
+                    {advancedCount > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-[var(--primary)] text-white text-[10px] font-medium">
+                        {advancedCount}
+                      </span>
+                    )}
+                  </div>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={`w-4 h-4 text-[var(--text-muted)] transition-transform ${showAdvanced ? 'rotate-180' : ''}`}
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+
+                {showAdvanced && (
+                  <div className="p-3 pt-0 space-y-3">
+                    {/* Referral Section */}
+                    <div className="space-y-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-xs font-semibold text-[var(--text-secondary)]">Referral</h4>
+                          <p className="text-[10px] text-[var(--text-muted)]">Optional commission processing</p>
+                        </div>
+                        <Toggle checked={isReferralEnabled} onChange={setIsReferralEnabled} disabled={isSubmitting} />
+                      </div>
+
+                      {isReferralEnabled && (
+                        <div className="grid grid-cols-1 gap-3 mt-2">
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">Referrer</label>
+                            <SelectPicker
+                              data={referrerOptions}
+                              value={referrerUserId || null}
+                              loading={isReferrersLoading}
+                              onChange={(value) => setReferrerUserId((value as string) || "")}
+                              block
+                              searchable
+                              placeholder="Select referrer"
+                              disabled={isSubmitting}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">Mode</label>
+                              <SelectPicker
+                                data={referralModeOptions.map((option) => ({ ...option }))}
+                                value={referralMode}
+                                searchable={false}
+                                cleanable={false}
+                                onChange={(value) => {
+                                  if (value) {
+                                    setReferralMode(value as "manual" | "hierarchy");
+                                  }
+                                }}
+                                block
+                                disabled={isSubmitting}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">Commission (%)</label>
+                              <input
+                                type="number"
+                                value={commissionPercentage ?? ''}
+                                onChange={(e) => {
+                                  setIsCommissionDirty(true);
+                                  const val = parseFloat(e.target.value);
+                                  setCommissionPercentage(Number.isFinite(val) ? val : null);
+                                }}
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                disabled={isSubmitting}
+                                className="w-full px-2 py-1.5 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] text-xs"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="rounded border border-[var(--border)] bg-[var(--surface-soft)] p-2">
+                            <div className="text-[10px] uppercase text-[var(--text-muted)]">Net Commission</div>
+                            <div className="text-sm font-semibold text-[var(--text-primary)]">
+                              {formatPeso(quoteData?.referralNetCommission || 0)}
+                            </div>
+                            <p className="mt-1 text-[10px] text-[var(--text-muted)]">
+                              Estimated agent rate: {(quoteData?.estimatedAgentRate || 0).toFixed(4)}%
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Contract Section */}
+                    <div className="space-y-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-xs font-semibold text-[var(--text-secondary)]">Contract</h4>
+                          <p className="text-[10px] text-[var(--text-muted)]">Optional contract generation</p>
+                        </div>
+                        <Toggle checked={generateContract} onChange={setGenerateContract} disabled={isSubmitting} />
+                      </div>
+
+                      {generateContract && (
+                        <Checkbox checked={strictContract} onChange={(_, checked) => setStrictContract(checked)} disabled={isSubmitting}>
+                          <span className="text-xs">Block creation if contract generation fails</span>
+                        </Checkbox>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* RIGHT COLUMN: Interactive Projections */}
-            <div className="space-y-4">
-              {/* Investment Summary Cards */}
-              <InvestmentSummary
-                quoteData={quoteData}
-                amount={amount}
-                completionDate={completionDate}
-              />
+            {/* MIDDLE: Summary + Charts */}
+            <div className="xl:col-span-4 space-y-4">
+              <InvestmentSummary quoteData={quoteData} amount={amount} completionDate={completionDate} />
 
-              {/* Growth Chart */}
-              {cycleData.length > 0 && (
-                <div className="rounded-xl border-2 border-[var(--border-accent)] bg-gradient-to-br from-[var(--surface-soft)] to-[var(--surface)] p-4">
-                  <InvestmentGrowthChart
-                    cycleData={cycleData}
-                    viewMode={chartViewMode}
-                    onViewModeChange={setChartViewMode}
-                  />
-                </div>
-              )}
-
-              {/* Cycle Breakdown Chart */}
-              {cycleData.length > 0 && (
-                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-                  <CycleBreakdownChart cycleData={cycleData} />
-                </div>
-              )}
-
-              {/* Error Display with Edit Rates Button */}
               {quoteError && (
                 <div className="p-3 rounded-lg bg-[var(--danger-soft)] border border-[var(--danger)]">
                   <div className="flex items-start justify-between gap-3">
@@ -533,7 +654,6 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
                 </div>
               )}
 
-              {/* Loading State */}
               {isQuoting && (
                 <div className="flex items-center justify-center gap-2 text-xs text-[var(--text-muted)] py-2">
                   <Loader size="xs" />
@@ -541,7 +661,22 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
                 </div>
               )}
 
-              {/* Quick Info */}
+              {cycleData.length > 0 && (
+                <div className="rounded-xl border-2 border-[var(--border-accent)] bg-gradient-to-br from-[var(--surface-soft)] to-[var(--surface)] p-4">
+                  <InvestmentGrowthChart
+                    cycleData={cycleData}
+                    viewMode={chartViewMode}
+                    onViewModeChange={setChartViewMode}
+                  />
+                </div>
+              )}
+
+              {cycleData.length > 0 && (
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                  <CycleBreakdownChart cycleData={cycleData} />
+                </div>
+              )}
+
               <div className="text-xs text-[var(--text-muted)] space-y-1 px-1">
                 <div className="flex items-center gap-1">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
@@ -559,132 +694,36 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Advanced Section (Collapsible) */}
-          <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-soft)]">
-            <button
-              type="button"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="w-full flex items-center justify-between p-3 hover:bg-[var(--surface-hover)] transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Advanced</h4>
-                {advancedCount > 0 && (
-                  <span className="px-1.5 py-0.5 rounded-full bg-[var(--primary)] text-white text-[10px] font-medium">
-                    {advancedCount}
-                  </span>
-                )}
+            {/* RIGHT: Schedule + Totals */}
+            <div className="xl:col-span-5 space-y-4">
+              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                <CycleScheduleTable cycleData={cycleData} />
               </div>
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className={`w-4 h-4 text-[var(--text-muted)] transition-transform ${showAdvanced ? 'rotate-180' : ''}`}
-              >
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
 
-            {showAdvanced && (
-              <div className="p-3 pt-0 space-y-3">
-                {/* Referral Section */}
-                <div className="space-y-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-xs font-semibold text-[var(--text-secondary)]">Referral</h4>
-                      <p className="text-[10px] text-[var(--text-muted)]">Optional commission processing</p>
-                    </div>
-                    <Toggle checked={isReferralEnabled} onChange={setIsReferralEnabled} disabled={isSubmitting} />
-                  </div>
-
-                  {isReferralEnabled && (
-                    <div className="grid grid-cols-1 gap-3 mt-2">
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">Referrer</label>
-                        <SelectPicker
-                          data={referrerOptions}
-                          value={referrerUserId || null}
-                          loading={isReferrersLoading}
-                          onChange={(value) => setReferrerUserId((value as string) || "")}
-                          block
-                          searchable
-                          placeholder="Select referrer"
-                          disabled={isSubmitting}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">Mode</label>
-                          <SelectPicker
-                            data={referralModeOptions.map((option) => ({ ...option }))}
-                            value={referralMode}
-                            searchable={false}
-                            cleanable={false}
-                            onChange={(value) => {
-                              if (value) {
-                                setReferralMode(value as "manual" | "hierarchy");
-                              }
-                            }}
-                            block
-                            disabled={isSubmitting}
-                          />
-                        </div>
-
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">Commission (%)</label>
-                          <input
-                            type="number"
-                            value={commissionPercentage ?? ''}
-                            onChange={(e) => {
-                              setIsCommissionDirty(true);
-                              const val = parseFloat(e.target.value);
-                              setCommissionPercentage(Number.isFinite(val) ? val : null);
-                            }}
-                            min="0"
-                            max="100"
-                            step="0.01"
-                            disabled={isSubmitting}
-                            className="w-full px-2 py-1.5 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] text-xs"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="rounded border border-[var(--border)] bg-[var(--surface-soft)] p-2">
-                        <div className="text-[10px] uppercase text-[var(--text-muted)]">Net Commission</div>
-                        <div className="text-sm font-semibold text-[var(--text-primary)]">
-                          {formatPeso(quoteData?.referralNetCommission || 0)}
-                        </div>
-                        <p className="mt-1 text-[10px] text-[var(--text-muted)]">
-                          Estimated agent rate: {(quoteData?.estimatedAgentRate || 0).toFixed(4)}%
-                        </p>
-                      </div>
-                    </div>
-                  )}
+              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                  Projection totals
                 </div>
-
-                {/* Contract Section */}
-                <div className="space-y-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-xs font-semibold text-[var(--text-secondary)]">Contract</h4>
-                      <p className="text-[10px] text-[var(--text-muted)]">Optional contract generation</p>
-                    </div>
-                    <Toggle checked={generateContract} onChange={setGenerateContract} disabled={isSubmitting} />
+                <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
+                  <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
+                    <div className="text-[10px] uppercase text-[var(--text-muted)]">Gross</div>
+                    <div className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{formatPeso(projectionTotals.gross)}</div>
                   </div>
-
-                  {generateContract && (
-                    <Checkbox checked={strictContract} onChange={(_, checked) => setStrictContract(checked)} disabled={isSubmitting}>
-                      <span className="text-xs">Block creation if contract generation fails</span>
-                    </Checkbox>
-                  )}
+                  <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
+                    <div className="text-[10px] uppercase text-[var(--text-muted)]">Tax (20%)</div>
+                    <div className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{formatPeso(projectionTotals.tax)}</div>
+                  </div>
+                  <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
+                    <div className="text-[10px] uppercase text-[var(--text-muted)]">Net</div>
+                    <div className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{formatPeso(projectionTotals.net)}</div>
+                  </div>
+                </div>
+                <div className="mt-2 text-[10px] text-[var(--text-muted)]">
+                  Computed from the cycle schedule (non-compounding).
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
           {submitError && <Message type="error" showIcon>{submitError}</Message>}

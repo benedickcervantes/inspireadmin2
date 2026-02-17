@@ -249,20 +249,64 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
 
   // Keypad handlers
   const handleAppendDigit = (digit: string) => {
-    const newText = amountText + digit;
-    // Limit to reasonable length (e.g., 10 digits = 9,999,999,999)
-    if (newText.length <= 10) {
-      setAmountText(newText);
-    }
+    setAmountText((prev) => {
+      const newText = prev + digit;
+      // Limit to reasonable length (e.g., 10 digits = 9,999,999,999)
+      return newText.length <= 10 ? newText : prev;
+    });
   };
 
   const handleBackspace = () => {
-    setAmountText(amountText.slice(0, -1));
+    setAmountText((prev) => prev.slice(0, -1));
   };
 
   const handleClear = () => {
     setAmountText('');
   };
+
+  // Keyboard support for principal amount (number row + numpad)
+  useEffect(() => {
+    if (!open) return;
+
+    const isEditableTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false;
+      const tagName = target.tagName;
+      return (
+        target.isContentEditable ||
+        tagName === "INPUT" ||
+        tagName === "TEXTAREA" ||
+        tagName === "SELECT"
+      );
+    };
+
+    const handleAmountKeydown = (event: KeyboardEvent) => {
+      if (isSubmitting || isEditableTarget(event.target)) return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+      if (/^[0-9]$/.test(event.key)) {
+        event.preventDefault();
+        setAmountText((prev) => {
+          const next = prev + event.key;
+          return next.length <= 10 ? next : prev;
+        });
+        return;
+      }
+
+      if (event.key === "Backspace") {
+        event.preventDefault();
+        setAmountText((prev) => prev.slice(0, -1));
+        return;
+      }
+
+      if (event.key === "Delete") {
+        event.preventDefault();
+        setAmountText("");
+      }
+    };
+
+    window.addEventListener("keydown", handleAmountKeydown);
+    return () => window.removeEventListener("keydown", handleAmountKeydown);
+  }, [open, isSubmitting]);
 
   const parsedFinalRate = finalInterestRate !== null && Number.isFinite(finalInterestRate) ? finalInterestRate : 0;
   const parsedCommission = commissionPercentage !== null && Number.isFinite(commissionPercentage) ? commissionPercentage : 0;
@@ -401,7 +445,7 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
         <Modal.Title>Add Time Deposit</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        <div className="p-4 space-y-4">
+        <div className="p-3 space-y-3">
           {/* Target User */}
           <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-3">
             <div className="text-xs text-[var(--text-muted)]">Target User</div>
@@ -409,9 +453,9 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
           </div>
 
           {/* Full-width Layout */}
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-3">
             {/* LEFT: Inputs */}
-            <div className="xl:col-span-3 space-y-3">
+            <div className="xl:col-span-3 space-y-2.5">
               {/* Amount Display */}
               <div className="rounded-xl border-2 border-[var(--border-accent)] bg-gradient-to-br from-[var(--surface)] to-[var(--surface-soft)] p-4">
                 <div className="text-xs text-[var(--text-muted)] mb-1">Principal Amount</div>
@@ -505,12 +549,94 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
                 )}
               </div>
 
-              {/* Advanced Section (Collapsible) */}
-              <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-soft)]">
+            </div>
+
+            <div className="xl:col-span-9 space-y-3">
+            <div className="grid grid-cols-1 2xl:grid-cols-2 gap-3 items-start">
+            {/* MIDDLE: Summary */}
+            <div className="space-y-3">
+              <InvestmentSummary quoteData={quoteData} amount={amount} completionDate={completionDate} />
+
+              {quoteError && (
+                <div className="p-3 rounded-lg bg-[var(--danger-soft)] border border-[var(--danger)]">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-xs text-[var(--danger)] flex-1">{quoteError}</p>
+                    {quoteError.toLowerCase().includes("rate") && (
+                      <Button
+                        size="xs"
+                        appearance="ghost"
+                        onClick={() => setShowRateTierEditor(true)}
+                        className="!text-[var(--danger)] !border-[var(--danger)] hover:!bg-[var(--danger)] hover:!text-white"
+                      >
+                        Edit Rates
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {isQuoting && (
+                <div className="flex items-center justify-center gap-2 text-xs text-[var(--text-muted)] py-2">
+                  <Loader size="xs" />
+                  <span>Updating projections...</span>
+                </div>
+              )}
+
+              <div className="text-xs text-[var(--text-muted)] space-y-1 px-1">
+                <div className="flex items-center gap-1">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  <span>Projections update automatically</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
+                  <span>All figures are estimates based on current rates</span>
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT: Schedule + Totals */}
+            <div className="space-y-3">
+              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                <CycleScheduleTable cycleData={cycleData} />
+              </div>
+
+              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                  Projection totals
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
+                  <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
+                    <div className="text-[10px] uppercase text-[var(--text-muted)]">Gross</div>
+                    <div className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{formatPeso(projectionTotals.gross)}</div>
+                  </div>
+                  <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
+                    <div className="text-[10px] uppercase text-[var(--text-muted)]">Tax (20%)</div>
+                    <div className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{formatPeso(projectionTotals.tax)}</div>
+                  </div>
+                  <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
+                    <div className="text-[10px] uppercase text-[var(--text-muted)]">Net</div>
+                    <div className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{formatPeso(projectionTotals.net)}</div>
+                  </div>
+                </div>
+                <div className="mt-2 text-[10px] text-[var(--text-muted)]">
+                  Computed from the cycle schedule (non-compounding).
+                </div>
+              </div>
+            </div>
+            </div>
+
+            {/* Advanced Section (Collapsible) */}
+              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)]">
                 <button
                   type="button"
                   onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="w-full flex items-center justify-between p-3 hover:bg-[var(--surface-hover)] transition-colors"
+                  className="w-full flex items-center justify-between p-2.5 hover:bg-[var(--surface-hover)] transition-colors"
                 >
                   <div className="flex items-center gap-2">
                     <h4 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Advanced</h4>
@@ -534,10 +660,10 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
                 </button>
 
                 {showAdvanced && (
-                  <div className="p-3 pt-0 space-y-3">
+                  <div className="px-2.5 pb-2.5 grid grid-cols-1 xl:grid-cols-2 gap-2">
                     {/* Referral Section */}
-                    <div className="space-y-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
-                      <div className="flex items-center justify-between">
+                    <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-2.5">
+                      <div className="flex items-center justify-between mb-2">
                         <div>
                           <h4 className="text-xs font-semibold text-[var(--text-secondary)]">Referral</h4>
                           <p className="text-[10px] text-[var(--text-muted)]">Optional commission processing</p>
@@ -546,7 +672,7 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
                       </div>
 
                       {isReferralEnabled && (
-                        <div className="grid grid-cols-1 gap-3 mt-2">
+                        <div className="grid grid-cols-1 gap-2 pt-2 border-t border-[var(--border-subtle)]">
                           <div>
                             <label className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">Referrer</label>
                             <SelectPicker
@@ -561,7 +687,7 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
                             />
                           </div>
 
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-2 gap-2">
                             <div>
                               <label className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">Mode</label>
                               <SelectPicker
@@ -612,7 +738,7 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
                     </div>
 
                     {/* Contract Section */}
-                    <div className="space-y-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
+                    <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-2.5">
                       <div className="flex items-center justify-between">
                         <div>
                           <h4 className="text-xs font-semibold text-[var(--text-secondary)]">Contract</h4>
@@ -622,109 +748,37 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
                       </div>
 
                       {generateContract && (
-                        <Checkbox checked={strictContract} onChange={(_, checked) => setStrictContract(checked)} disabled={isSubmitting}>
-                          <span className="text-xs">Block creation if contract generation fails</span>
-                        </Checkbox>
+                        <div className="pt-2 border-t border-[var(--border-subtle)] mt-2">
+                          <Checkbox checked={strictContract} onChange={(_, checked) => setStrictContract(checked)} disabled={isSubmitting}>
+                            <span className="text-xs">Block creation if contract generation fails</span>
+                          </Checkbox>
+                        </div>
                       )}
                     </div>
                   </div>
                 )}
               </div>
             </div>
-
-            {/* MIDDLE: Summary + Charts */}
-            <div className="xl:col-span-4 space-y-4">
-              <InvestmentSummary quoteData={quoteData} amount={amount} completionDate={completionDate} />
-
-              {quoteError && (
-                <div className="p-3 rounded-lg bg-[var(--danger-soft)] border border-[var(--danger)]">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-xs text-[var(--danger)] flex-1">{quoteError}</p>
-                    {quoteError.toLowerCase().includes("rate") && (
-                      <Button
-                        size="xs"
-                        appearance="ghost"
-                        onClick={() => setShowRateTierEditor(true)}
-                        className="!text-[var(--danger)] !border-[var(--danger)] hover:!bg-[var(--danger)] hover:!text-white"
-                      >
-                        Edit Rates
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {isQuoting && (
-                <div className="flex items-center justify-center gap-2 text-xs text-[var(--text-muted)] py-2">
-                  <Loader size="xs" />
-                  <span>Updating projections...</span>
-                </div>
-              )}
-
-              {cycleData.length > 0 && (
-                <div className="rounded-xl border-2 border-[var(--border-accent)] bg-gradient-to-br from-[var(--surface-soft)] to-[var(--surface)] p-4">
-                  <InvestmentGrowthChart
-                    cycleData={cycleData}
-                    viewMode={chartViewMode}
-                    onViewModeChange={setChartViewMode}
-                  />
-                </div>
-              )}
-
-              {cycleData.length > 0 && (
-                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-                  <CycleBreakdownChart cycleData={cycleData} />
-                </div>
-              )}
-
-              <div className="text-xs text-[var(--text-muted)] space-y-1 px-1">
-                <div className="flex items-center gap-1">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                  <span>Projections update automatically</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                    <polyline points="22 4 12 14.01 9 11.01" />
-                  </svg>
-                  <span>All figures are estimates based on current rates</span>
-                </div>
-              </div>
-            </div>
-
-            {/* RIGHT: Schedule + Totals */}
-            <div className="xl:col-span-5 space-y-4">
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-                <CycleScheduleTable cycleData={cycleData} />
-              </div>
-
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
-                <div className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                  Projection totals
-                </div>
-                <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
-                  <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
-                    <div className="text-[10px] uppercase text-[var(--text-muted)]">Gross</div>
-                    <div className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{formatPeso(projectionTotals.gross)}</div>
-                  </div>
-                  <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
-                    <div className="text-[10px] uppercase text-[var(--text-muted)]">Tax (20%)</div>
-                    <div className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{formatPeso(projectionTotals.tax)}</div>
-                  </div>
-                  <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
-                    <div className="text-[10px] uppercase text-[var(--text-muted)]">Net</div>
-                    <div className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{formatPeso(projectionTotals.net)}</div>
-                  </div>
-                </div>
-                <div className="mt-2 text-[10px] text-[var(--text-muted)]">
-                  Computed from the cycle schedule (non-compounding).
-                </div>
-              </div>
-            </div>
           </div>
+
+          {/* Full-width Charts Row */}
+          {cycleData.length > 0 && (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+              {/* Growth Chart */}
+              <div className="rounded-xl border-2 border-[var(--border-accent)] bg-gradient-to-br from-[var(--surface-soft)] to-[var(--surface)] p-4">
+                <InvestmentGrowthChart
+                  cycleData={cycleData}
+                  viewMode={chartViewMode}
+                  onViewModeChange={setChartViewMode}
+                />
+              </div>
+
+              {/* Cycle Breakdown Chart */}
+              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                <CycleBreakdownChart cycleData={cycleData} />
+              </div>
+            </div>
+          )}
 
           {submitError && <Message type="error" showIcon>{submitError}</Message>}
           {submitSuccess && <Message type="success" showIcon>{submitSuccess}</Message>}

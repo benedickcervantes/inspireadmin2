@@ -4,7 +4,9 @@ import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { adminLogin } from "@/lib/api/adminAuth";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { getFirebaseAuth } from "@/lib/firebase/client";
+import { adminFirebaseLogin } from "@/lib/api/adminAuth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,10 +37,15 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const payload = await adminLogin({
-        emailAddress: trimmedEmail,
-        password,
-      });
+      // Sign in with Firebase Auth
+      const auth = getFirebaseAuth();
+      const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, password);
+      
+      // Get Firebase ID token
+      const firebaseToken = await userCredential.user.getIdToken();
+
+      // Send Firebase token to backend for admin verification
+      const payload = await adminFirebaseLogin(firebaseToken);
 
       const token = payload.data?.token;
       if (!token) {
@@ -51,8 +58,23 @@ export default function LoginPage() {
       }
 
       router.replace("/dashboard");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed. Please try again.");
+    } catch (err: any) {
+      // Handle Firebase auth errors
+      let errorMessage = "Login failed. Please try again.";
+      
+      if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password") {
+        errorMessage = "Invalid email or password.";
+      } else if (err.code === "auth/user-not-found") {
+        errorMessage = "No account found with this email.";
+      } else if (err.code === "auth/too-many-requests") {
+        errorMessage = "Too many failed attempts. Please try again later.";
+      } else if (err.code === "auth/network-request-failed") {
+        errorMessage = "Network error. Please check your connection.";
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

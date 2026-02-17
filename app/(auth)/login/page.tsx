@@ -4,7 +4,9 @@ import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { adminLogin } from "@/lib/api/adminAuth";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { getFirebaseAuth } from "@/lib/firebase/client";
+import { adminFirebaseLogin } from "@/lib/api/adminAuth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,10 +37,23 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const payload = await adminLogin({
-        emailAddress: trimmedEmail,
-        password,
-      });
+      console.log("🔐 [LOGIN] Starting Firebase authentication...");
+      
+      // Sign in with Firebase Auth
+      const auth = getFirebaseAuth();
+      console.log("🔐 [LOGIN] Firebase Auth initialized:", auth.app.name);
+      
+      const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, password);
+      console.log("✅ [LOGIN] Firebase sign-in successful. UID:", userCredential.user.uid);
+      
+      // Get Firebase ID token
+      const firebaseToken = await userCredential.user.getIdToken();
+      console.log("✅ [LOGIN] Got Firebase ID token (length):", firebaseToken.length);
+
+      // Send Firebase token to backend for admin verification
+      console.log("🚀 [LOGIN] Calling backend firebase-login endpoint...");
+      const payload = await adminFirebaseLogin(firebaseToken);
+      console.log("✅ [LOGIN] Backend response:", payload);
 
       const token = payload.data?.token;
       if (!token) {
@@ -50,9 +65,27 @@ export default function LoginPage() {
         localStorage.setItem("authUser", JSON.stringify(payload.data.user));
       }
 
+      console.log("✅ [LOGIN] Login complete, redirecting to dashboard...");
       router.replace("/dashboard");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed. Please try again.");
+    } catch (err: any) {
+      console.error("❌ [LOGIN] Error:", err);
+      
+      // Handle Firebase auth errors
+      let errorMessage = "Login failed. Please try again.";
+      
+      if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password") {
+        errorMessage = "Invalid email or password.";
+      } else if (err.code === "auth/user-not-found") {
+        errorMessage = "No account found with this email.";
+      } else if (err.code === "auth/too-many-requests") {
+        errorMessage = "Too many failed attempts. Please try again later.";
+      } else if (err.code === "auth/network-request-failed") {
+        errorMessage = "Network error. Please check your connection.";
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

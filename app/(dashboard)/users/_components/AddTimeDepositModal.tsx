@@ -13,6 +13,11 @@ import {
   type TimeDepositTerm,
 } from "@/lib/api/timeDeposits";
 import CalculatorKeypad from "./CalculatorKeypad";
+import InvestmentGrowthChart from "./InvestmentGrowthChart";
+import CycleBreakdownChart from "./CycleBreakdownChart";
+import InvestmentSummary from "./InvestmentSummary";
+import RateEditorModal from "./RateEditorModal";
+import { calculateCycleData } from "@/lib/utils/cycleCalculations";
 
 type UserSummary = {
   _id: string;
@@ -88,6 +93,12 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
   const [quoteData, setQuoteData] = useState<TimeDepositQuoteData | null>(null);
   const [isQuoting, setIsQuoting] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
+  
+  // Chart view mode
+  const [chartViewMode, setChartViewMode] = useState<"accumulation" | "payout">("accumulation");
+  
+  // Rate tier editor modal
+  const [showRateTierEditor, setShowRateTierEditor] = useState(false);
 
   // Advanced section
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -255,6 +266,23 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
   const parsedFinalRate = finalInterestRate !== null && Number.isFinite(finalInterestRate) ? finalInterestRate : 0;
   const parsedCommission = commissionPercentage !== null && Number.isFinite(commissionPercentage) ? commissionPercentage : 0;
 
+  // Calculate cycle data for charts
+  const cycleData = useMemo(() => {
+    if (!quoteData || amount <= 0) return [];
+    return calculateCycleData(
+      amount,
+      term,
+      quoteData.finalInterestRate,
+      initialDate
+    );
+  }, [amount, term, quoteData, initialDate]);
+  
+  // Calculate completion date
+  const completionDate = useMemo(() => {
+    if (cycleData.length === 0) return initialDate;
+    return cycleData[cycleData.length - 1]?.date || initialDate;
+  }, [cycleData, initialDate]);
+
   const isRateUnavailable = Boolean(quoteError);
   const requiresReferrer = isReferralEnabled && !referrerUserId;
   const invalidFutureDate = isFutureDate(initialDate);
@@ -348,6 +376,7 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
   const advancedCount = (isReferralEnabled ? 1 : 0) + (generateContract ? 1 : 0);
 
   return (
+    <>
     <Modal open={open} onClose={onClose} size="lg" className="dark-modal">
       <Modal.Header>
         <Modal.Title>Add Time Deposit</Modal.Title>
@@ -458,61 +487,59 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
               </div>
             </div>
 
-            {/* RIGHT COLUMN: Receipt-style Estimate */}
-            <div className="space-y-3">
-              <div className="rounded-xl border-2 border-[var(--border-accent)] bg-gradient-to-br from-[var(--surface-soft)] to-[var(--surface)] p-4 relative overflow-hidden">
-                {/* Decorative gradient overlay */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[var(--primary)]/10 to-transparent rounded-bl-full" />
-                
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Estimate</h4>
-                    {isQuoting && (
-                      <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
-                        <Loader size="xs" />
-                        Updating
-                      </span>
+            {/* RIGHT COLUMN: Interactive Projections */}
+            <div className="space-y-4">
+              {/* Investment Summary Cards */}
+              <InvestmentSummary
+                quoteData={quoteData}
+                amount={amount}
+                completionDate={completionDate}
+              />
+
+              {/* Growth Chart */}
+              {cycleData.length > 0 && (
+                <div className="rounded-xl border-2 border-[var(--border-accent)] bg-gradient-to-br from-[var(--surface-soft)] to-[var(--surface)] p-4">
+                  <InvestmentGrowthChart
+                    cycleData={cycleData}
+                    viewMode={chartViewMode}
+                    onViewModeChange={setChartViewMode}
+                  />
+                </div>
+              )}
+
+              {/* Cycle Breakdown Chart */}
+              {cycleData.length > 0 && (
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-soft)] p-4">
+                  <CycleBreakdownChart cycleData={cycleData} />
+                </div>
+              )}
+
+              {/* Error Display with Edit Rates Button */}
+              {quoteError && (
+                <div className="p-3 rounded-lg bg-[var(--danger-soft)] border border-[var(--danger)]">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-xs text-[var(--danger)] flex-1">{quoteError}</p>
+                    {quoteError.toLowerCase().includes("rate") && (
+                      <Button
+                        size="xs"
+                        appearance="ghost"
+                        onClick={() => setShowRateTierEditor(true)}
+                        className="!text-[var(--danger)] !border-[var(--danger)] hover:!bg-[var(--danger)] hover:!text-white"
+                      >
+                        Edit Rates
+                      </Button>
                     )}
                   </div>
-
-                  {/* Receipt Line Items */}
-                  <div className="space-y-3">
-                    <div className="flex justify-between py-2 border-b border-[var(--border-subtle)]">
-                      <span className="text-xs text-[var(--text-muted)]">Principal</span>
-                      <span className="text-sm font-medium text-[var(--text-primary)]">{formatPeso(amount)}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-[var(--border-subtle)]">
-                      <span className="text-xs text-[var(--text-muted)]">Term</span>
-                      <span className="text-sm font-medium text-[var(--text-primary)]">
-                        {termOptions.find(t => t.value === term)?.label}
-                      </span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-[var(--border-subtle)]">
-                      <span className="text-xs text-[var(--text-muted)]">Interest Rate</span>
-                      <span className="text-sm font-medium text-[var(--text-primary)]">{parsedFinalRate.toFixed(4)}%</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-[var(--border-subtle)]">
-                      <span className="text-xs text-[var(--text-muted)]">Net Per Cycle</span>
-                      <span className="text-sm font-semibold text-[var(--success)]">{formatPeso(quoteData?.annualNetInterest || 0)}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-[var(--border-subtle)]">
-                      <span className="text-xs text-[var(--text-muted)]">Total Net Gain</span>
-                      <span className="text-sm font-semibold text-[var(--success)]">{formatPeso(quoteData?.totalNetInterestForTerm || 0)}</span>
-                    </div>
-                    {/* Total Return - Highlighted */}
-                    <div className="flex justify-between py-3 bg-gradient-to-r from-[var(--primary-soft)] to-transparent rounded-lg px-3 -mx-3">
-                      <span className="text-sm font-semibold text-[var(--primary)] uppercase tracking-wide">Total Return</span>
-                      <span className="text-lg font-bold text-[var(--primary)]">{formatPeso(quoteData?.totalReturnAmount || 0)}</span>
-                    </div>
-                  </div>
-
-                  {quoteError && (
-                    <div className="mt-3 p-2 rounded bg-[var(--danger-soft)] border border-[var(--danger)]">
-                      <p className="text-xs text-[var(--danger)]">{quoteError}</p>
-                    </div>
-                  )}
                 </div>
-              </div>
+              )}
+
+              {/* Loading State */}
+              {isQuoting && (
+                <div className="flex items-center justify-center gap-2 text-xs text-[var(--text-muted)] py-2">
+                  <Loader size="xs" />
+                  <span>Updating projections...</span>
+                </div>
+              )}
 
               {/* Quick Info */}
               <div className="text-xs text-[var(--text-muted)] space-y-1 px-1">
@@ -521,7 +548,7 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
                     <circle cx="12" cy="12" r="10" />
                     <polyline points="12 6 12 12 16 14" />
                   </svg>
-                  <span>Calculations update automatically</span>
+                  <span>Projections update automatically</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
@@ -680,5 +707,18 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
         </Button>
       </Modal.Footer>
     </Modal>
+    
+    {/* Rate Tier Editor Modal */}
+    <RateEditorModal
+      open={showRateTierEditor}
+      onClose={() => setShowRateTierEditor(false)}
+      onSave={() => {
+        // After saving rates, clear error and trigger quote refresh
+        setQuoteError(null);
+        // Quote will auto-refresh via existing debounce logic
+      }}
+      docId="eFy3nFCysIC824WKNfKW"
+    />
+    </>
   );
 }

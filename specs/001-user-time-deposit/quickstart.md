@@ -55,7 +55,14 @@ npm run dev
 
 ## Seed Rate Configuration (Firestore)
 
-Create a document at `investmentRates/default` with the tier-based shape used for interpolation:
+Preferred option (script):
+
+```powershell
+cd C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend
+npm run seed:investment-rates
+```
+
+Fallback option (manual): create a document at `investmentRates/default` with the tier-based shape used for interpolation:
 
 ```json
 {
@@ -70,6 +77,12 @@ Notes:
 
 - Keys must be numeric (stored as strings in Firestore maps).
 - Rates are percent values.
+
+## Required Env/CORS Notes
+
+- Ensure `NEXT_PUBLIC_LOCAL_API_URL` points to the running backend (default `http://localhost:4000`).
+- Ensure backend `CORS_ORIGINS` (or `CORS_DEV_ORIGINS`) includes your frontend origin when not using defaults.
+- The new create endpoint supports and echoes `X-Request-Id`; keep this header allowed in CORS.
 
 ## Manual API Test (Quote + Create)
 
@@ -92,4 +105,17 @@ $REQUEST_ID = [guid]::NewGuid().ToString()
 curl -Method POST "http://localhost:4000/api/firebase-users/$USER_ID/time-deposits" `
   -Headers @{ Authorization = "Bearer $TOKEN"; "Content-Type" = "application/json"; "X-Request-Id" = $REQUEST_ID } `
   -Body '{ "amount": 75000, "term": "oneYear", "initialDate": "2026-02-17" }'
+```
+
+Optional (referral + contract):
+
+```powershell
+$TOKEN = "<admin-jwt>"
+$USER_ID = "<firebase-uid>"
+$REFERRER_ID = "<referrer-firebase-uid>"
+$REQUEST_ID = [guid]::NewGuid().ToString()
+
+curl -Method POST "http://localhost:4000/api/firebase-users/$USER_ID/time-deposits" `
+  -Headers @{ Authorization = "Bearer $TOKEN"; "Content-Type" = "application/json"; "X-Request-Id" = $REQUEST_ID } `
+  -Body "{ `"amount`": 75000, `"term`": `"oneYear`", `"initialDate`": `"2026-02-17`", `"referral`": { `"referrerUserId`": `"$REFERRER_ID`", `"commissionPercentage`": 5, `"mode`": `"manual`" }, `"contract`": { `"enabled`": true, `"strict`": false } }"
 ```

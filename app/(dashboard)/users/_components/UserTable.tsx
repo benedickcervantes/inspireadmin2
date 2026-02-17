@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from "motion/react";
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Table, Drawer, Button, Modal, Nav, Badge, Avatar, Divider, Progress, ButtonGroup, Loader, Pagination, Dropdown } from 'rsuite';
 import { getFirebaseUserById, getFirebaseUsers } from '@/lib/api/firebaseUsers';
 import type { UserTypeTab } from './UserFilters';
 import EditUserDrawer from './EditUserDrawer';
+import AddTimeDepositModal from './AddTimeDepositModal';
 
 const { Column, HeaderCell, Cell } = Table;
 
@@ -231,6 +232,9 @@ const parseNumber = (value: unknown): number | null => {
   return null;
 };
 
+const formatCurrency = (value: number): string =>
+  value.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' });
+
 const getFirstNumber = (item: SubcollectionItem, keys: string[]): number => {
   for (const key of keys) {
     const value = parseNumber(item[key]);
@@ -436,7 +440,14 @@ const transformTransactions = (user: User): Transaction[] => {
     const amount = getFirstNumber(contract, ['amount', 'totalReturnAmount', 'totalNetInterestForTerm', 'annualNetInterest']);
     const dateValue = contract.initialDate ?? contract.createdAt ?? contract.contractDate;
     const contractType = typeof contract.contractType === 'string' ? contract.contractType : '';
-    const description = resolveDescription(contract, contractType ? `Time Deposit (${contractType})` : 'Time Deposit');
+    const totalReturn = getFirstNumber(contract, ['totalReturnAmount']);
+    const statusText = typeof contract.status === 'string'
+      ? contract.status
+      : (typeof contract.isActive === 'string' ? contract.isActive : 'Active');
+    const fallbackDescription = contractType
+      ? `Time Deposit (${formatContractType(contractType)}) - ${statusText} - Return ${formatCurrency(totalReturn)}`
+      : `Time Deposit - ${statusText}`;
+    const description = resolveDescription(contract, fallbackDescription);
     const reference = resolveReference(contract, `TD-${index + 1}`);
     normalized.push(buildTransaction({
       id: typeof contract._firebaseDocId === 'string' ? contract._firebaseDocId : `td-${index}`,
@@ -1208,7 +1219,7 @@ const TransactionModal = ({
 };
 
 // User Detail Panel Component - Dark Theme with CSS transitions
-const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit }: { user: User; onClose: () => void; onViewTransactions: () => void; onEdit: () => void }) => {
+const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit, onAddTimeDeposit }: { user: User; onClose: () => void; onViewTransactions: () => void; onEdit: () => void; onAddTimeDeposit: () => void }) => {
   const walletBalance = user.walletAmount || 0;
   const availBalance = user.availBalanceAmount || 0;
   const subcollectionCount = user.subcollections ? Object.keys(user.subcollections).length : 0;
@@ -1365,6 +1376,12 @@ const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit }: { user: 
                 Add 10 points
               </span>
             </Dropdown.Item>
+            <Dropdown.Item className="!text-xs" onSelect={onAddTimeDeposit}>
+              <span className="flex items-center gap-2">
+                <Icons.Clock className="w-3.5 h-3.5" />
+                Add Time Deposit
+              </span>
+            </Dropdown.Item>
             <Dropdown.Item className="!text-xs" onSelect={onEdit}>
               <span className="flex items-center gap-2">
                 <Icons.Edit className="w-3.5 h-3.5" />
@@ -1408,12 +1425,14 @@ interface UserTableProps {
 }
 
 export default function UserTable({ searchQuery, userType = 'all', onTotalChange, onCountsChange }: UserTableProps) {
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [timeDepositModalOpen, setTimeDepositModalOpen] = useState(false);
 
   const filterParams = userTypeToParams(userType);
   
@@ -1542,6 +1561,23 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
 
   const handleCloseEditDrawer = () => {
     setEditDrawerOpen(false);
+  };
+
+  const handleOpenTimeDeposit = () => {
+    setTimeDepositModalOpen(true);
+  };
+
+  const handleCloseTimeDeposit = () => {
+    setTimeDepositModalOpen(false);
+  };
+
+  const handleTimeDepositSuccess = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['firebase-users'] }),
+      queryClient.invalidateQueries({ queryKey: ['firebase-user', selectedUserId] }),
+      queryClient.invalidateQueries({ queryKey: ['firebase-users-agent-count'] }),
+      queryClient.invalidateQueries({ queryKey: ['firebase-users-non-agent-count'] })
+    ]);
   };
 
   if (isLoading) {
@@ -1708,6 +1744,7 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
                   onClose={handleCloseDrawer}
                   onViewTransactions={handleViewTransactions}
                   onEdit={handleEdit}
+                  onAddTimeDeposit={handleOpenTimeDeposit}
                 />
               </motion.div>
             )}
@@ -1730,6 +1767,16 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
         open={editDrawerOpen}
         onClose={handleCloseEditDrawer}
         user={activeUser}
+      />
+
+      <AddTimeDepositModal
+        open={timeDepositModalOpen}
+        onClose={handleCloseTimeDeposit}
+        user={activeUser}
+        onSuccess={async () => {
+          await handleTimeDepositSuccess();
+          handleCloseTimeDeposit();
+        }}
       />
     </>
   );

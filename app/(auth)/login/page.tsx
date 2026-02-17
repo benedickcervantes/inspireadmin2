@@ -37,15 +37,23 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
+      console.log("🔐 [LOGIN] Starting Firebase authentication...");
+      
       // Sign in with Firebase Auth
       const auth = getFirebaseAuth();
+      console.log("🔐 [LOGIN] Firebase Auth initialized:", auth.app.name);
+      
       const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, password);
+      console.log("✅ [LOGIN] Firebase sign-in successful. UID:", userCredential.user.uid);
       
       // Get Firebase ID token
       const firebaseToken = await userCredential.user.getIdToken();
+      console.log("✅ [LOGIN] Got Firebase ID token (length):", firebaseToken.length);
 
       // Send Firebase token to backend for admin verification
+      console.log("🚀 [LOGIN] Calling backend firebase-login endpoint...");
       const payload = await adminFirebaseLogin(firebaseToken);
+      console.log("✅ [LOGIN] Backend response:", payload);
 
       const token = payload.data?.token;
       if (!token) {
@@ -57,8 +65,11 @@ export default function LoginPage() {
         localStorage.setItem("authUser", JSON.stringify(payload.data.user));
       }
 
+      console.log("✅ [LOGIN] Login complete, redirecting to dashboard...");
       router.replace("/dashboard");
     } catch (err: any) {
+      console.error("❌ [LOGIN] Error:", err);
+      
       // Handle Firebase auth errors
       let errorMessage = "Login failed. Please try again.";
       

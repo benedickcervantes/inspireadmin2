@@ -203,6 +203,40 @@ components:
           description: Optional override. When omitted, backend may default to the estimated rate for the selected term.
         referral:
           $ref: "#/components/schemas/TimeDepositReferral"
+        contract:
+          $ref: "#/components/schemas/TimeDepositContract"
+
+    TimeDepositContract:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: When true, generate a contract record linked to the created time deposit.
+        strict:
+          type: boolean
+          description: When true, fail the create request if contract generation fails.
+
+    TimeDepositContractResult:
+      type: object
+      required: [contractId]
+      properties:
+        contractId:
+          type: string
+        urls:
+          type: object
+          properties:
+            view:
+              type: string
+              nullable: true
+            download:
+              type: string
+              nullable: true
+            pdf:
+              type: string
+              nullable: true
+        expiresAt:
+          type: string
+          nullable: true
 
     TimeDeposit:
       type: object
@@ -269,6 +303,14 @@ components:
           properties:
             timeDeposit:
               $ref: "#/components/schemas/TimeDeposit"
+            idempotent:
+              type: boolean
+              description: True when an existing time deposit was returned for a duplicate request ID.
+            contract:
+              $ref: "#/components/schemas/TimeDepositContractResult"
+            contractWarning:
+              type: string
+              description: Warning message when contract generation is non-blocking and fails.
 
     ErrorResponse:
       type: object

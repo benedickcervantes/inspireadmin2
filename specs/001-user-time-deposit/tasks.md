@@ -23,8 +23,8 @@ description: "Task list for implementing Add User Time Deposit"
 
 **Purpose**: Minimal wiring so the repo can validate the critical business logic locally
 
-- [ ] T001 Add backend unit test script (`node --test`) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\package.json`
-- [ ] T002 [P] Add backend tests folder marker in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\tests\.gitkeep`
+- [X] T001 Add backend unit test script (`node --test`) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\package.json`
+- [X] T002 [P] Add backend tests folder marker in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\tests\.gitkeep`
 
 ---
 
@@ -34,12 +34,12 @@ description: "Task list for implementing Add User Time Deposit"
 
 **Checkpoint**: Calculator + rate loading + request validation are ready for endpoints/UI to consume
 
-- [ ] T003 [P] Add admin authorization middleware in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\middleware\requireAdmin.js`
-- [ ] T004 [P] Implement v1 formulas (interpolation, cycles, rounding, tax, commissions) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\utils\timeDepositCalculator.js`
-- [ ] T005 Add calculator unit tests (edge cases + term coverage) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\tests\timeDepositCalculator.test.js`
-- [ ] T006 [P] Add Firestore investment rate loader/normalizer for `investmentRates/default` in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\investmentRatesService.js`
-- [ ] T007 [P] Add quote/create request validation schemas (term, amount, rate, initialDate not in future) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\validation\schemas.js`
-- [ ] T008 [P] Add frontend API client (quote + create, supports `X-Request-Id`) in `C:\Projects\companyprojects\inspireadmin2\lib\api\timeDeposits.ts`
+- [X] T003 [P] Add admin authorization middleware in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\middleware\requireAdmin.js`
+- [X] T004 [P] Implement v1 formulas (interpolation, cycles, rounding, tax, commissions) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\utils\timeDepositCalculator.js`
+- [X] T005 Add calculator unit tests (edge cases + term coverage) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\tests\timeDepositCalculator.test.js`
+- [X] T006 [P] Add Firestore investment rate loader/normalizer for `investmentRates/default` in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\investmentRatesService.js`
+- [X] T007 [P] Add quote/create request validation schemas (term, amount, rate, initialDate not in future) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\validation\schemas.js`
+- [X] T008 [P] Add frontend API client (quote + create, supports `X-Request-Id`) in `C:\Projects\companyprojects\inspireadmin2\lib\api\timeDeposits.ts`
 
 ---
 
@@ -55,23 +55,23 @@ description: "Task list for implementing Add User Time Deposit"
 
 ### Backend (API + Persistence)
 
-- [ ] T009 [P] [US1] Create time deposit service (quote + create core) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\timeDepositService.js`
-- [ ] T010 [US1] Create controller wiring (quote + create handlers) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\controllers\timeDepositController.js`
-- [ ] T011 [US1] Add quote route `POST /api/time-deposits/quote` (auth + admin guard + body validation) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\routes\timeDepositRoutes.js`
-- [ ] T012 [US1] Mount time deposit routes at `/api/time-deposits` in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\routes\index.js`
-- [ ] T013 [US1] Add create route `POST /api/firebase-users/:id/time-deposits` (auth + admin guard + params/body validation) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\routes\firebaseUserRoutes.js`
-- [ ] T014 [US1] Implement quote logic (load tiers, interpolate, rounding/tax rules, clear error when rates missing) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\timeDepositService.js`
-- [ ] T015 [US1] Implement create logic with Firestore transaction (resolve user by doc id or userId, counter, balance update, dates, inspireAuto doc, user transaction, admin audit log) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\timeDepositService.js`
-- [ ] T016 [US1] Implement duplicate-submit protection (idempotent create using `X-Request-Id` / `req.id`) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\timeDepositService.js`
+- [X] T009 [P] [US1] Create time deposit service (quote + create core) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\timeDepositService.js`
+- [X] T010 [US1] Create controller wiring (quote + create handlers) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\controllers\timeDepositController.js`
+- [X] T011 [US1] Add quote route `POST /api/time-deposits/quote` (auth + admin guard + body validation) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\routes\timeDepositRoutes.js`
+- [X] T012 [US1] Mount time deposit routes at `/api/time-deposits` in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\routes\index.js`
+- [X] T013 [US1] Add create route `POST /api/firebase-users/:id/time-deposits` (auth + admin guard + params/body validation) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\routes\firebaseUserRoutes.js`
+- [X] T014 [US1] Implement quote logic (load tiers, interpolate, rounding/tax rules, clear error when rates missing) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\timeDepositService.js`
+- [X] T015 [US1] Implement create logic with Firestore transaction (resolve user by doc id or userId, counter, balance update, dates, inspireAuto doc, user transaction, admin audit log) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\timeDepositService.js`
+- [X] T016 [US1] Implement duplicate-submit protection (idempotent create using `X-Request-Id` / `req.id`) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\timeDepositService.js`
 
 ### Frontend (Users Page)
 
-- [ ] T017 [P] [US1] Create Add Time Deposit modal UI skeleton (default initial date = today; prevent future dates) in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\AddTimeDepositModal.tsx`
-- [ ] T018 [US1] Wire quote preview (call quote API on changes, show estimated rate + gain summary) in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\AddTimeDepositModal.tsx`
-- [ ] T019 [US1] Wire create submit (send `X-Request-Id`, show success/error, disable while submitting) in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\AddTimeDepositModal.tsx`
-- [ ] T020 [US1] Add "Add Time Deposit" action to user detail dropdown and modal plumbing in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\UserTable.tsx`
-- [ ] T021 [US1] Invalidate user detail + user list queries after success in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\UserTable.tsx`
-- [ ] T022 [US1] Prevent submission when rate configuration is missing/unavailable (clear error + disabled submit) in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\AddTimeDepositModal.tsx`
+- [X] T017 [P] [US1] Create Add Time Deposit modal UI skeleton (default initial date = today; prevent future dates) in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\AddTimeDepositModal.tsx`
+- [X] T018 [US1] Wire quote preview (call quote API on changes, show estimated rate + gain summary) in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\AddTimeDepositModal.tsx`
+- [X] T019 [US1] Wire create submit (send `X-Request-Id`, show success/error, disable while submitting) in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\AddTimeDepositModal.tsx`
+- [X] T020 [US1] Add "Add Time Deposit" action to user detail dropdown and modal plumbing in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\UserTable.tsx`
+- [X] T021 [US1] Invalidate user detail + user list queries after success in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\UserTable.tsx`
+- [X] T022 [US1] Prevent submission when rate configuration is missing/unavailable (clear error + disabled submit) in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\AddTimeDepositModal.tsx`
 
 **Checkpoint**: US1 works end-to-end without referral/contract features.
 
@@ -88,16 +88,16 @@ description: "Task list for implementing Add User Time Deposit"
 
 ### Backend (Commission Processing)
 
-- [ ] T023 [P] [US2] Extend request schemas to accept `referral` payload (referrerUserId, commissionPercentage, mode) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\validation\schemas.js`
-- [ ] T024 [US2] Extend quote to return `estimatedAgentRate` + `referralNetCommission` when referral provided in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\timeDepositService.js`
-- [ ] T025 [US2] Implement manual referral commission credit + agentTransactions log in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\timeDepositService.js`
-- [ ] T026 [US2] Implement hierarchy distribution commission credit + per-member agentTransactions log in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\timeDepositService.js`
+- [X] T023 [P] [US2] Extend request schemas to accept `referral` payload (referrerUserId, commissionPercentage, mode) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\validation\schemas.js`
+- [X] T024 [US2] Extend quote to return `estimatedAgentRate` + `referralNetCommission` when referral provided in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\timeDepositService.js`
+- [X] T025 [US2] Implement manual referral commission credit + agentTransactions log in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\timeDepositService.js`
+- [X] T026 [US2] Implement hierarchy distribution commission credit + per-member agentTransactions log in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\timeDepositService.js`
 
 ### Frontend (Referral UI)
 
-- [ ] T027 [P] [US2] Extend API client request/response types for referral fields in `C:\Projects\companyprojects\inspireadmin2\lib\api\timeDeposits.ts`
-- [ ] T028 [P] [US2] Add referral controls (toggle, referrer picker, commission %, mode) in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\AddTimeDepositModal.tsx`
-- [ ] T029 [US2] Wire referral payload into quote + create calls and show commission preview in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\AddTimeDepositModal.tsx`
+- [X] T027 [P] [US2] Extend API client request/response types for referral fields in `C:\Projects\companyprojects\inspireadmin2\lib\api\timeDeposits.ts`
+- [X] T028 [P] [US2] Add referral controls (toggle, referrer picker, commission %, mode) in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\AddTimeDepositModal.tsx`
+- [X] T029 [US2] Wire referral payload into quote + create calls and show commission preview in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\AddTimeDepositModal.tsx`
 
 **Checkpoint**: US2 can be demonstrated independently by adding a referral deposit and verifying wallets/logs.
 
@@ -113,14 +113,14 @@ description: "Task list for implementing Add User Time Deposit"
 
 ### Backend (Contract Integration)
 
-- [ ] T030 [P] [US3] Add contract service client (configurable URL + timeout + error mapping) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\contractService.js`
-- [ ] T031 [US3] Extend create request schema for contract generation options in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\validation\schemas.js`
-- [ ] T032 [US3] Implement contract generation + contractLinks persistence + contractId linkage in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\timeDepositService.js`
-- [ ] T033 [P] [US3] Update API contract documentation for contract fields in `C:\Projects\companyprojects\inspireadmin2\specs\001-user-time-deposit\contracts\openapi.yaml`
+- [X] T030 [P] [US3] Add contract service client (configurable URL + timeout + error mapping) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\contractService.js`
+- [X] T031 [US3] Extend create request schema for contract generation options in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\validation\schemas.js`
+- [X] T032 [US3] Implement contract generation + contractLinks persistence + contractId linkage in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\timeDepositService.js`
+- [X] T033 [P] [US3] Update API contract documentation for contract fields in `C:\Projects\companyprojects\inspireadmin2\specs\001-user-time-deposit\contracts\openapi.yaml`
 
 ### Frontend (Contract Toggle)
 
-- [ ] T034 [US3] Add "Generate Contract" toggle and display contract result on success in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\AddTimeDepositModal.tsx`
+- [X] T034 [US3] Add "Generate Contract" toggle and display contract result on success in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\AddTimeDepositModal.tsx`
 
 **Checkpoint**: US3 can be demonstrated independently by creating a deposit and verifying contractLinks.
 
@@ -130,11 +130,11 @@ description: "Task list for implementing Add User Time Deposit"
 
 **Purpose**: Hardening, docs, and consistency improvements across stories
 
-- [ ] T035 [P] Add seed script for `investmentRates/default` tier tables in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\scripts\seedInvestmentRates.js`
-- [ ] T036 Update quickstart to reference the seed script (keep Firestore console as fallback) in `C:\Projects\companyprojects\inspireadmin2\specs\001-user-time-deposit\quickstart.md`
-- [ ] T037 Ensure admin audit logs from time deposits appear correctly in Admin Logs UI (field mapping) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\timeDepositService.js`
-- [ ] T038 [P] Validate Users Transaction Modal display for new time deposits (status/term/return); adjust mapping if needed in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\UserTable.tsx`
-- [ ] T039 [P] Add brief inline docs for rounding/tax rules in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\utils\timeDepositCalculator.js`
+- [X] T035 [P] Add seed script for `investmentRates/default` tier tables in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\scripts\seedInvestmentRates.js`
+- [X] T036 Update quickstart to reference the seed script (keep Firestore console as fallback) in `C:\Projects\companyprojects\inspireadmin2\specs\001-user-time-deposit\quickstart.md`
+- [X] T037 Ensure admin audit logs from time deposits appear correctly in Admin Logs UI (field mapping) in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\services\timeDepositService.js`
+- [X] T038 [P] Validate Users Transaction Modal display for new time deposits (status/term/return); adjust mapping if needed in `C:\Projects\companyprojects\inspireadmin2\app\(dashboard)\users\_components\UserTable.tsx`
+- [X] T039 [P] Add brief inline docs for rounding/tax rules in `C:\Projects\companyprojects\inspireadmin2\inspirewalletadmin_backend\utils\timeDepositCalculator.js`
 - [ ] T040 Run quickstart manual API checks and record any required env/CORS tweaks in `C:\Projects\companyprojects\inspireadmin2\specs\001-user-time-deposit\quickstart.md`
 
 ---
@@ -199,3 +199,4 @@ T030, T033
 2. US2 (referral commissions)
 3. US3 (contract record)
 4. Phase 6 polish
+

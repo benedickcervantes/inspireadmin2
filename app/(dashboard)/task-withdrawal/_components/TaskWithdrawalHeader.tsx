@@ -174,7 +174,7 @@ export default function TaskWithdrawalHeader({ stats }: TaskWithdrawalHeaderProp
         <motion.div
           className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 shadow-sm"
           variants={cardVariants}
-          whileHover={{ scale: 1.02, borderColor: "var(--border-strong)" }}
+           whileHover={{ scale: 1.02, boxShadow: "0 8px 20px rgba(16, 185, 129, 0.3)" }}
         >
           <div className="flex items-center justify-between mb-2">
             <div className="w-8 h-8 rounded-lg bg-[var(--success-soft)] flex items-center justify-center">
@@ -195,7 +195,7 @@ export default function TaskWithdrawalHeader({ stats }: TaskWithdrawalHeaderProp
         <motion.div
           className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 shadow-sm"
           variants={cardVariants}
-          whileHover={{ scale: 1.02 }}
+           whileHover={{ scale: 1.02, boxShadow: "0 8px 20px rgba(158, 206, 13, 0.3)" }}
         >
           <div className="flex items-center justify-between mb-2">
             <div className="w-8 h-8 rounded-lg bg-[var(--warning-soft)] flex items-center justify-center">
@@ -243,7 +243,7 @@ export default function TaskWithdrawalHeader({ stats }: TaskWithdrawalHeaderProp
         <motion.div
           className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 shadow-sm"
           variants={cardVariants}
-          whileHover={{ scale: 1.02 }}
+           whileHover={{ scale: 1.02, boxShadow: "0 8px 20px rgba(185, 16, 16, 0.3)" }}
         >
           <div className="flex items-center justify-between mb-2">
             <div className="w-8 h-8 rounded-lg bg-[var(--danger-soft)] flex items-center justify-center">

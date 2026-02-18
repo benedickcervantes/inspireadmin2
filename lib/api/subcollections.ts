@@ -139,6 +139,9 @@ async function fetchSubcollection<T>(
   const queryString = buildQueryString(params);
   const url = `${API_BASE_URL}/api/subcollections/${endpoint}${queryString ? `?${queryString}` : ''}`;
 
+  console.log('[API] Fetching:', url);
+  console.log('[API] Params:', params);
+
   const response = await fetch(url, {
     method: 'GET',
     headers: authHeaders(),
@@ -180,3 +183,53 @@ export const getUserAvatarUrl = (user: SubcollectionUser): string => {
   const name = getUserFullName(user);
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=150`;
 };
+
+export interface Task {
+  _firebaseDocId: string;
+  name?: string;
+  description?: string;
+  points?: number;
+  link?: string;
+  expiration?: string;
+  hasExpiration?: boolean;
+  createdAt?: string;
+  lastUpdated?: string;
+  completedCount?: number;
+  notCompletedCount?: number;
+  totalUsers?: number;
+  completionRate?: number;
+  status?: 'active' | 'inactive';
+  [key: string]: unknown;
+}
+
+export async function getTasks(params?: {
+  page?: number;
+  limit?: number;
+  status?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}): Promise<SubcollectionResponse<Task>> {
+  const queryParams = new URLSearchParams();
+  if (params?.page) queryParams.append('page', params.page.toString());
+  if (params?.limit) queryParams.append('limit', params.limit.toString());
+  if (params?.status) queryParams.append('status', params.status);
+  if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+  if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+
+  const url = `${API_BASE_URL}/api/subcollections/tasks${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch tasks: ${response.statusText}`);
+  }
+
+  return response.json();
+}

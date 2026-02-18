@@ -196,11 +196,13 @@ export default function AdminHistoryPage() {
           data={logs}
           loading={loading}
           height={600}
+          rowHeight={80}
           
           hover
           className="!bg-[var(--surface)]"
           onRowClick={handleRowClick}
           rowClassName="cursor-pointer hover:!bg-[var(--surface-elevated)]"
+
         >
           <Column width={180} align="left">
             <HeaderCell className="!bg-[var(--surface-elevated)] !text-[var(--text-primary)] !font-semibold">
@@ -233,7 +235,7 @@ export default function AdminHistoryPage() {
             </Cell>
           </Column>
 
-          <Column width={200} align="left">
+          <Column width={300} align="left">
             <HeaderCell className="!bg-[var(--surface-elevated)] !text-[var(--text-primary)] !font-semibold">
               Action
             </HeaderCell>

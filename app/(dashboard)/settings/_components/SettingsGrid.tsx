@@ -15,14 +15,15 @@ interface SettingItem {
 interface SettingsGridProps {
   onCardClick?: (settingId: string) => void;
   currentEmail?: string;
+  currentUsername?: string;
 }
 
-export default function SettingsGrid({ onCardClick, currentEmail }: SettingsGridProps) {
+export default function SettingsGrid({ onCardClick, currentEmail, currentUsername }: SettingsGridProps) {
   const mockSettings: SettingItem[] = [
     {
       id: "1",
       title: "Change Username",
-      description: "Update your username and make it more wonderfull!",
+      description: currentUsername || "No username set",
       icon: "user",
       color: "primary",
       enabled: true,

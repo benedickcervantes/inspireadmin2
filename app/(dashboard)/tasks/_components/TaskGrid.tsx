@@ -2,96 +2,10 @@
 
 import React from "react";
 import { motion } from "motion/react";
+import { useQuery } from "@tanstack/react-query";
+import { Loader } from "rsuite";
+import { getTasks, type Task } from "@/lib/api/subcollections";
 import TaskCard from "./TaskCard";
-
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  points: number;
-  url: string;
-  completed: number;
-  notCompleted: number;
-  totalUsers: number;
-  completionRate: number;
-  status: "active" | "inactive";
-}
-
-// Mock data based on the image
-const mockTasks: Task[] = [
-  {
-    id: "1",
-    title: "Follow us on FB!",
-    description: "Follow Inspire Next Global Inc. on Facebook and get 3 points!",
-    points: 3,
-    url: "https://www.facebook.com/inspirenextglobal",
-    completed: 60,
-    notCompleted: 536,
-    totalUsers: 596,
-    completionRate: 10,
-    status: "active",
-  },
-  {
-    id: "2",
-    title: "Follow Inspire Next Global Inc. on Instagram !!!",
-    description: "📸 Follow us on Instagram! Stay connected and be part of our journey of growth, innovation, and inspiration. 🚀 Follow Inspire Next Global Inc. on...",
-    points: 2,
-    url: "https://www.instagram.com/inspirenextglobal",
-    completed: 43,
-    notCompleted: 553,
-    totalUsers: 596,
-    completionRate: 7,
-    status: "active",
-  },
-  {
-    id: "3",
-    title: "Follow our TikTok Account !!!",
-    description: "📱 Follow us on TikTok! Catch fun moments, event highlights, and inspiring stories - all in one place! 🎬 Follow our TikTok account today and join the...",
-    points: 3,
-    url: "https://www.tiktok.com/@inspire.group?_r...",
-    completed: 41,
-    notCompleted: 555,
-    totalUsers: 596,
-    completionRate: 7,
-    status: "active",
-  },
-  {
-    id: "4",
-    title: "Follow Inspire Holdings Inc. on Instagram !!!",
-    description: "📸 Follow us on Instagram! Stay updated with our latest events, highlights, and inspiring moments — 🚀 Follow Inspire Holdings Inc. on Instagram today! 📸",
-    points: 2,
-    url: "https://www.instagram.com/inspire.holdin",
-    completed: 40,
-    notCompleted: 556,
-    totalUsers: 596,
-    completionRate: 7,
-    status: "active",
-  },
-  {
-    id: "5",
-    title: "Follow Inspire Holdings on Facebook!",
-    description: "Follow Inspire Holdings Inc. on Facebook and get 3 points!",
-    points: 3,
-    url: "https://www.facebook.com/inspireholdings",
-    completed: 53,
-    notCompleted: 543,
-    totalUsers: 596,
-    completionRate: 9,
-    status: "active",
-  },
-  {
-    id: "6",
-    title: "Follow Inspire Beauty on Facebook!",
-    description: "Follow our page IBeauty on Facebook!",
-    points: 2,
-    url: "https://www.facebook.com/profile.php?id=...",
-    completed: 52,
-    notCompleted: 544,
-    totalUsers: 596,
-    completionRate: 9,
-    status: "active",
-  },
-];
 
 // Animation variants
 const containerVariants = {
@@ -106,6 +20,43 @@ const containerVariants = {
 };
 
 export default function TaskGrid() {
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["tasks"],
+    queryFn: () => getTasks({ page: 1, limit: 100 }),
+    staleTime: 30000, // 30 seconds
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader size="md" content="Loading tasks..." />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <div className="text-center">
+          <div className="text-red-500 mb-2">Error loading tasks</div>
+          <div className="text-sm text-gray-500">
+            {error instanceof Error ? error.message : "Failed to fetch tasks"}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const tasks = (data?.data?.items ?? []) as Task[];
+
+  if (tasks.length === 0) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <div className="text-center text-gray-500">No tasks available</div>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
@@ -113,8 +64,8 @@ export default function TaskGrid() {
       initial="hidden"
       animate="visible"
     >
-      {mockTasks.map((task, index) => (
-        <TaskCard key={task.id} task={task} index={index} />
+      {tasks.map((task, index) => (
+        <TaskCard key={task._firebaseDocId} task={task} index={index} />
       ))}
     </motion.div>
   );

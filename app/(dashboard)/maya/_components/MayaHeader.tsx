@@ -81,21 +81,30 @@ const cardVariants = {
   },
 };
 
-export default function MayaHeader() {
+export default function MayaHeader({
+  stats,
+}: {
+  stats: {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+  };
+}) {
   return (
     <div className="flex flex-col gap-4">
       {/* Title Row */}
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
           <motion.div
-            className="w-11 h-11 rounded-xl bg-gradient-to-br from-[var(--success)] to-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/25"
+            className="w-11 h-11 rounded-xl bg-[] border border-[var(--primary)] flex items-center justify-center shadow-sm"
             initial={{ scale: 0, rotate: -180 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.1 }}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Icons.Wallet className="w-5 h-5 text-white" />
+            <Icons.Wallet className="w-5 h-5 text-[var(--primary)]" />
           </motion.div>
           <motion.div
             initial={{ opacity: 0, x: -15 }}
@@ -108,7 +117,7 @@ export default function MayaHeader() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.3 }}
             >
-              Maya Services
+              Ewallet Dashboard 
             </motion.div>
             <motion.div
               className="text-xs text-[var(--text-muted)]"
@@ -152,92 +161,90 @@ export default function MayaHeader() {
         <motion.div
           className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 shadow-sm"
           variants={cardVariants}
-          whileHover={{ scale: 1.02, borderColor: "var(--border-strong)" }}
+          whileHover={{ scale: 1.02, boxShadow: "0 8px 20px rgba(16, 114, 185, 0.3)" }}
         >
           <div className="flex items-center justify-between mb-2">
             <div className="w-8 h-8 rounded-lg bg-[var(--success-soft)] flex items-center justify-center">
-              <Icons.TrendingUp className="w-4 h-4 text-[var(--success)]" />
+              <Icons.TrendingUp className="w-4 h-4 text-[var(--primary)]" />
             </div>
-            <span className="text-[10px] text-[var(--success)] font-medium bg-[var(--success-soft)] px-1.5 py-0.5 rounded">+12.5%</span>
           </div>
-          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Total Transactions</div>
+          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Total Applications</div>
           <motion.div
             className="text-xl font-bold text-[var(--text-primary)] mt-1"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
           >
-            24,589
+            {stats.total.toLocaleString()}
           </motion.div>
         </motion.div>
 
         <motion.div
           className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 shadow-sm"
           variants={cardVariants}
-          whileHover={{ scale: 1.02 }}
+           whileHover={{ scale: 1.02, boxShadow: "0 8px 20px rgba(158, 206, 13, 0.3)" }}
         >
           <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-lg bg-[var(--primary-soft)] flex items-center justify-center">
-              <Icons.Users className="w-4 h-4 text-[var(--primary)]" />
+            <div className="w-8 h-8 rounded-lg bg-[var(--warning-soft)] flex items-center justify-center">
+              <Icons.Users className="w-4 h-4 text-[var(--warning)]" />
             </div>
-            <span className="text-[10px] text-[var(--primary)] font-medium bg-[var(--primary-soft)] px-1.5 py-0.5 rounded">+8.2%</span>
           </div>
-          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Active Users</div>
+          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Pending</div>
           <motion.div
             className="text-xl font-bold text-[var(--text-primary)] mt-1"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.5, type: "spring", stiffness: 300 }}
           >
-            3,842
+            {stats.pending.toLocaleString()}
           </motion.div>
         </motion.div>
 
         <motion.div
-          className="bg-gradient-to-br from-[var(--success)] to-emerald-500 rounded-xl p-4 text-white shadow-lg shadow-emerald-500/20"
+          className="bg-[var(--surface)] rounded-xl p-4 shadow-sm border border-[var(--border)]"
           variants={cardVariants}
-          whileHover={{ scale: 1.02, boxShadow: "0 20px 40px rgba(16, 185, 129, 0.3)" }}
+           whileHover={{ scale: 1.02, boxShadow: "0 8px 20px rgba(16, 185, 129, 0.3)" }}
         >
           <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
-              <Icons.Wallet className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-[#10b981]/20 flex items-center justify-center">
+              <Icons.CheckCircle className="w-4 h-4 text-[#10b981]" />
             </div>
             <motion.div
               animate={{ rotate: [0, 15, -15, 0] }}
               transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
             >
-              <Icons.Zap className="w-4 h-4 text-white/70" />
+              <Icons.Zap className="w-4 h-4 text-[#10b981]/70" />
             </motion.div>
           </div>
-          <div className="text-[11px] text-emerald-100 uppercase tracking-wide font-medium">Total Volume</div>
+          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Approved</div>
           <motion.div
-            className="text-xl font-bold mt-1"
+            className="text-xl font-bold text-[var(--text-primary)] mt-1"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.6, type: "spring", stiffness: 300 }}
           >
-            ₱18.5M
+            {stats.approved.toLocaleString()}
           </motion.div>
         </motion.div>
 
         <motion.div
           className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 shadow-sm"
           variants={cardVariants}
-          whileHover={{ scale: 1.02 }}
+          whileHover={{ scale: 1.02, boxShadow: "0 8px 20px rgba(185, 16, 16, 0.3)" }}
         >
           <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-lg bg-[var(--accent-soft)] flex items-center justify-center">
-              <Icons.CheckCircle className="w-4 h-4 text-[var(--accent)]" />
+            <div className="w-8 h-8 rounded-lg bg-[var(--danger-soft)] flex items-center justify-center">
+              <Icons.Wallet className="w-4 h-4 text-[var(--danger)]" />
             </div>
           </div>
-          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Success Rate</div>
+          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Rejected</div>
           <motion.div
             className="text-xl font-bold text-[var(--text-primary)] mt-1"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.7, type: "spring", stiffness: 300 }}
           >
-            99.2%
+            {stats.rejected.toLocaleString()}
           </motion.div>
         </motion.div>
       </motion.div>

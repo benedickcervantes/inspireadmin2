@@ -3,6 +3,7 @@
 import React from "react";
 import { motion } from "motion/react";
 import { Button } from "rsuite";
+import { type Task } from "@/lib/api/subcollections";
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
@@ -46,19 +47,6 @@ const Icons = {
     </svg>
   ),
 };
-
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  points: number;
-  url: string;
-  completed: number;
-  notCompleted: number;
-  totalUsers: number;
-  completionRate: number;
-  status: "active" | "inactive";
-}
 
 interface TaskCardProps {
   task: Task;
@@ -124,7 +112,7 @@ export default function TaskCard({ task, index }: TaskCardProps) {
           animate={{ opacity: 1 }}
           transition={{ delay: index * 0.1 + 0.4 }}
         >
-          {task.title}
+          {task.name || 'Untitled Task'}
         </motion.h3>
 
         {/* Description */}
@@ -151,7 +139,7 @@ export default function TaskCard({ task, index }: TaskCardProps) {
         >
           <Icons.Link className="w-3 h-3 text-[var(--primary)] flex-shrink-0" />
           <span className="text-xs text-[var(--primary)] truncate font-mono">
-            {task.url}
+            {task.link || 'No link'}
           </span>
         </motion.div>
 
@@ -169,7 +157,7 @@ export default function TaskCard({ task, index }: TaskCardProps) {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.1 + 0.7, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
-              {task.completed}
+              {task.completedCount || 0}
             </motion.span>
           </div>
 
@@ -184,7 +172,7 @@ export default function TaskCard({ task, index }: TaskCardProps) {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.1 + 0.8, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
-              {task.notCompleted}
+              {task.notCompletedCount || 0}
             </motion.span>
           </div>
 

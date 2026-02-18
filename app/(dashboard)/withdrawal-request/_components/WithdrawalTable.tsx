@@ -165,9 +165,14 @@ type SubcollectionWithdrawalRecord = Omit<
   completedAt?: DateValue;
   createdAt?: DateValue;
   updatedAt?: DateValue;
+  withdrawalMethod?: string; // "Local Bank" or "EWallet"
+  ewalletType?: string; // "Gcash" or "Maya"
   paymentMethod?: string;
   mobileNumber?: string;
   walletAddress?: string;
+  walletNumber?: string;
+  ewalletAccountNumber?: string;
+  ewalletAccountName?: string;
   userName?: string;
   userEmail?: string;
   user?: {
@@ -195,14 +200,56 @@ const formatDateTime = (value?: DateValue) => {
 };
 
 const getAvatarUrl = (name: string) =>
-  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=150`;
+  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=fee2e2&color=dc2626&size=150`;
 
 const normalizeMethod = (record: SubcollectionWithdrawalRecord): WithdrawalMethod => {
-  const value = `${record.paymentMethod || record.withdrawalType || ""}`.toLowerCase();
-  if (value.includes("gcash")) return "gcash";
-  if (value.includes("maya")) return "maya";
-  if (value.includes("crypto") || value.includes("usdt")) return "crypto";
-  if (record.bankAccountNumber || record.bankName || record.bankAccountName || value.includes("bank")) return "bank_transfer";
+  // V1 uses withdrawalMethod and ewalletType fields
+  const withdrawalMethod = (record.withdrawalMethod || "").toString();
+  const ewalletType = (record.ewalletType || "").toString();
+  const bankName = (record.bankName || "").toString();
+  
+  // Check withdrawalMethod first (matches v1 logic)
+  if (withdrawalMethod.toLowerCase() === "ewallet") {
+    // Check ewalletType for specific wallet
+    if (ewalletType.toLowerCase() === "gcash") {
+      return "gcash";
+    }
+    if (ewalletType.toLowerCase() === "maya" || ewalletType.toLowerCase() === "paymaya") {
+      return "maya";
+    }
+    // If ewallet but no specific type, check bankName
+    if (bankName.toLowerCase() === "gcash") {
+      return "gcash";
+    }
+    if (bankName.toLowerCase() === "maya" || bankName.toLowerCase() === "paymaya") {
+      return "maya";
+    }
+  }
+  
+  if (withdrawalMethod.toLowerCase() === "local bank" || withdrawalMethod.toLowerCase() === "bank") {
+    return "bank_transfer";
+  }
+  
+  // Fallback: check bankName for GCash/Maya
+  if (bankName.toLowerCase() === "gcash") {
+    return "gcash";
+  }
+  if (bankName.toLowerCase() === "maya" || bankName.toLowerCase() === "paymaya") {
+    return "maya";
+  }
+  
+  // Check for crypto keywords
+  const combined = `${withdrawalMethod} ${bankName}`.toLowerCase();
+  if (combined.includes("crypto") || combined.includes("usdt") || combined.includes("bitcoin") || combined.includes("btc")) {
+    return "crypto";
+  }
+  
+  // Default to bank transfer if has bank account details
+  if (record.bankAccountNumber || record.bankName) {
+    return "bank_transfer";
+  }
+  
+  // Final fallback
   return "bank_transfer";
 };
 
@@ -223,8 +270,11 @@ const normalizeWithdrawal = (record: SubcollectionWithdrawalRecord): WithdrawalR
     statusLower === "rejected"
       ? statusLower
       : "pending";
+  
+  // Get account details based on method
   const bankAccountNumber = record.bankAccountNumber ? String(record.bankAccountNumber) : "";
-  const mobile = record.mobileNumber ? String(record.mobileNumber) : "";
+  const walletNumber = record.ewalletAccountNumber || record.walletNumber || record.mobileNumber || "";
+  const walletName = record.ewalletAccountName || record.walletName || record.bankAccountName || userName;
   const bankLabel = record.bankName
     ? record.branchName
       ? `${record.bankName} (${record.branchName})`
@@ -234,22 +284,22 @@ const normalizeWithdrawal = (record: SubcollectionWithdrawalRecord): WithdrawalR
   const details = {
     bankDetails: method === "bank_transfer" && (bankAccountNumber || record.bankName || record.bankAccountName)
       ? {
-          bankName: String(bankLabel ?? record.paymentMethod ?? "Bank Transfer"),
+          bankName: String(bankLabel ?? "Bank Transfer"),
           accountName: String(record.bankAccountName ?? userName),
           accountNumber: bankAccountNumber || "N/A",
         }
       : undefined,
-    walletDetails: (method === "gcash" || method === "maya") && (mobile || bankAccountNumber)
+    walletDetails: (method === "gcash" || method === "maya") && walletNumber
       ? {
           walletType: method === "gcash" ? "GCash" : "Maya",
-          walletNumber: mobile || bankAccountNumber,
-          walletName: String(record.bankAccountName ?? userName),
+          walletNumber: String(walletNumber),
+          walletName: String(walletName),
         }
       : undefined,
-    cryptoDetails: method === "crypto" && (record.walletAddress || mobile)
+    cryptoDetails: method === "crypto" && (record.walletAddress || walletNumber)
       ? {
           network: String(record.paymentMethod ?? "Crypto"),
-          walletAddress: String(record.walletAddress ?? mobile),
+          walletAddress: String(record.walletAddress ?? walletNumber),
         }
       : undefined,
   };
@@ -294,10 +344,10 @@ const StatusBadge = ({ status }: { status: WithdrawalStatus }) => {
       label: "Processing",
     },
     approved: {
-      bg: "bg-[var(--accent-soft)]",
-      text: "text-[var(--accent)]",
-      border: "border-[var(--accent)]/30",
-      dot: "bg-[var(--accent)]",
+      bg: "bg-[var(--success-soft)]",
+      text: "text-[var(--success)]",
+      border: "border-[var(--success)]/30",
+      dot: "bg-[var(--success)]",
       label: "Approved",
     },
     completed: {
@@ -622,29 +672,135 @@ const WithdrawalDetailPanel = ({
   );
 };
 
-export default function WithdrawalTable() {
+export default function WithdrawalTable({
+  searchQuery,
+  statusFilter,
+  methodFilter,
+  dateRange,
+  onStatsChange,
+}: {
+  searchQuery: string;
+  statusFilter: string;
+  methodFilter: string;
+  dateRange: [Date, Date] | null;
+  onStatsChange: (stats: {
+    total: number;
+    pending: number;
+    processing: number;
+    completed: number;
+    totalAmount: string;
+  }) => void;
+}) {
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<WithdrawalRequest | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
 
-  const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["withdrawal-requests", { page, limit }],
+  // Fetch all data (for both table and stats)
+  const { data: allData, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ["withdrawal-requests-all"],
     queryFn: () =>
       getWithdrawalRequests({
-        page,
-        limit,
+        page: 1,
+        limit: 1000, // Fetch all records
         sortBy: "submittedAt",
         sortOrder: "desc",
       }),
-    placeholderData: keepPreviousData,
+    staleTime: 60000, // Cache for 1 minute
   });
 
-  const withdrawalRequests = useMemo(
-    () => (data?.data?.items ?? []).map(normalizeWithdrawal),
-    [data]
-  );
-  const total = data?.data?.pagination.total ?? 0;
+  const withdrawalRequests = useMemo(() => {
+    let filtered = (allData?.data?.items ?? []).map(normalizeWithdrawal);
+
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (w) =>
+          w.id.toLowerCase().includes(query) ||
+          w.user.name.toLowerCase().includes(query) ||
+          w.user.email.toLowerCase().includes(query) ||
+          w.referenceNo.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply status filter
+    if (statusFilter && statusFilter !== "all") {
+      filtered = filtered.filter((w) => w.status === statusFilter);
+    }
+
+    // Apply method filter
+    if (methodFilter && methodFilter !== "all") {
+      filtered = filtered.filter((w) => w.withdrawalMethod === methodFilter);
+    }
+
+    // Apply date range filter
+    if (dateRange && dateRange[0] && dateRange[1]) {
+      const startDate = new Date(dateRange[0]).setHours(0, 0, 0, 0);
+      const endDate = new Date(dateRange[1]).setHours(23, 59, 59, 999);
+      filtered = filtered.filter((w) => {
+        const createdDate = new Date(w.createdAt).getTime();
+        return createdDate >= startDate && createdDate <= endDate;
+      });
+    }
+
+    return filtered;
+  }, [allData, searchQuery, statusFilter, methodFilter, dateRange]);
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setPage(1);
+  }, [searchQuery, statusFilter, methodFilter, dateRange]);
+  
+  const total = withdrawalRequests.length;
+  const paginatedWithdrawals = useMemo(() => {
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    return withdrawalRequests.slice(startIndex, endIndex);
+  }, [withdrawalRequests, page, limit]);
+
+  // Calculate stats from all data (not filtered)
+  React.useEffect(() => {
+    const allWithdrawals = (allData?.data?.items ?? []).map(normalizeWithdrawal);
+    
+    // Log first few records to see structure and identify payment method field
+    if (allData?.data?.items && allData.data.items.length > 0) {
+      console.log('[WithdrawalTable] Total records:', allData.data.items.length);
+      console.log('[WithdrawalTable] First 3 raw records:', JSON.stringify(allData.data.items.slice(0, 3), null, 2));
+      
+      // Log all unique field names across all records
+      const allFields = new Set<string>();
+      allData.data.items.forEach((item: any) => {
+        Object.keys(item).forEach(key => allFields.add(key));
+      });
+      console.log('[WithdrawalTable] All unique fields:', Array.from(allFields).sort());
+      
+      // Check for payment method related fields
+      const firstRecord = allData.data.items[0] as any;
+      console.log('[WithdrawalTable] Payment-related fields in first record:', {
+        withdrawalType: firstRecord.withdrawalType,
+        withdrawalMethod: firstRecord.withdrawalMethod,
+        ewalletType: firstRecord.ewalletType,
+        paymentMethod: firstRecord.paymentMethod,
+        bankName: firstRecord.bankName,
+        requestType: firstRecord.requestType,
+      });
+    }
+    
+    const stats = {
+      total: allWithdrawals.length,
+      pending: allWithdrawals.filter((w) => w.status === "pending").length,
+      processing: allWithdrawals.filter((w) => w.status === "rejected").length, // Using rejected as processing
+      completed: allWithdrawals.filter((w) => w.status === "approved" || w.status === "completed").length,
+      totalAmount: allWithdrawals
+        .filter((w) => w.status === "approved" || w.status === "completed")
+        .reduce((sum, w) => sum + w.amount, 0)
+        .toLocaleString(),
+    };
+    
+    onStatsChange(stats);
+  }, [allData, onStatsChange]);
+  
   const errorMessage =
     error instanceof Error ? error.message : "Failed to fetch withdrawal requests";
 
@@ -725,16 +881,16 @@ export default function WithdrawalTable() {
       >
         <div className="overflow-x-auto">
           <Table
-            data={withdrawalRequests}
-            height={Math.max(withdrawalRequests.length * 60 + 40, 200)}
+            data={paginatedWithdrawals}
+            height={Math.max(paginatedWithdrawals.length * 60 + 40, 200)}
             rowHeight={60}
             headerHeight={40}
             hover
-            className="app-table !bg-transparent min-w-[1000px] cursor-pointer"
+            className="app-table !bg-transparent min-w-[1000px] cursor-pointer [&_.rs-table-row:hover_.rs-table-cell]:!bg-[var(--surface-hover)] [&_.rs-table-row:hover_.rs-table-cell]:!transition-colors [&_.rs-table-row:hover_.rs-table-cell]:!duration-200"
             rowKey="id"
             onRowClick={(rowData) => handleRowClick(rowData as WithdrawalRequest)}
           >
-            <Column width={90} align="left">
+            <Column width={300} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">ID</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
                 {(rowData: WithdrawalRequest) => (
@@ -743,7 +899,7 @@ export default function WithdrawalTable() {
               </Cell>
             </Column>
 
-            <Column flexGrow={2} minWidth={180} align="left">
+            <Column  width={400} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">User</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
                 {(rowData: WithdrawalRequest) => (
@@ -758,12 +914,12 @@ export default function WithdrawalTable() {
               </Cell>
             </Column>
 
-            <Column width={120} align="right">
+            <Column width={200} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Amount</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
                 {(rowData: WithdrawalRequest) => (
                   <div>
-                    <div className="text-sm font-semibold text-rose-400">₱{rowData.amount.toLocaleString()}</div>
+                    <div className="text-sm font-semibold text-E5E5E5">₱{rowData.amount.toLocaleString()}</div>
                     {rowData.fee > 0 && (
                       <div className="text-[10px] text-[var(--text-muted)]">Fee: ₱{rowData.fee}</div>
                     )}
@@ -772,7 +928,7 @@ export default function WithdrawalTable() {
               </Cell>
             </Column>
 
-            <Column width={100} align="left">
+            <Column width={200} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Method</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
                 {(rowData: WithdrawalRequest) => (
@@ -781,7 +937,7 @@ export default function WithdrawalTable() {
               </Cell>
             </Column>
 
-            <Column flexGrow={1} minWidth={140} align="left">
+            <Column width={400} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Account</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
                 {(rowData: WithdrawalRequest) => {
@@ -796,7 +952,7 @@ export default function WithdrawalTable() {
               </Cell>
             </Column>
 
-            <Column width={110} align="left">
+            <Column flexGrow={1} width={200} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Status</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
                 {(rowData: WithdrawalRequest) => (
@@ -805,72 +961,9 @@ export default function WithdrawalTable() {
               </Cell>
             </Column>
 
-            <Column width={140} align="left">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Date</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
-                {(rowData: WithdrawalRequest) => (
-                  <span className="text-xs text-[var(--text-muted)]">{rowData.createdAt}</span>
-                )}
-              </Cell>
-            </Column>
+            
 
-            <Column width={70} align="center">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Actions</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border-subtle)]">
-                {(rowData: WithdrawalRequest) => (
-                  <Dropdown
-                    renderToggle={(props, ref) => (
-                      <button
-                        {...props}
-                        ref={ref}
-                        className="w-7 h-7 rounded-lg hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-muted)]"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Icons.MoreHorizontal className="w-4 h-4" />
-                      </button>
-                    )}
-                    placement="bottomEnd"
-                  >
-                    <Dropdown.Item className="!text-xs" onClick={() => handleRowClick(rowData)}>
-                      <span className="flex items-center gap-2">
-                        <Icons.Eye className="w-3.5 h-3.5" />
-                        View Details
-                      </span>
-                    </Dropdown.Item>
-                    {rowData.status === "pending" && (
-                      <>
-                        <Dropdown.Item className="!text-xs !text-[var(--accent)]">
-                          <span className="flex items-center gap-2">
-                            <Icons.Check className="w-3.5 h-3.5" />
-                            Approve
-                          </span>
-                        </Dropdown.Item>
-                        <Dropdown.Item className="!text-xs !text-[var(--danger)]">
-                          <span className="flex items-center gap-2">
-                            <Icons.X className="w-3.5 h-3.5" />
-                            Reject
-                          </span>
-                        </Dropdown.Item>
-                      </>
-                    )}
-                    {rowData.status === "approved" && (
-                      <Dropdown.Item className="!text-xs !text-[var(--success)]">
-                        <span className="flex items-center gap-2">
-                          <Icons.Send className="w-3.5 h-3.5" />
-                          Process
-                        </span>
-                      </Dropdown.Item>
-                    )}
-                    <Dropdown.Item className="!text-xs">
-                      <span className="flex items-center gap-2">
-                        <Icons.Copy className="w-3.5 h-3.5" />
-                        Copy Reference
-                      </span>
-                    </Dropdown.Item>
-                  </Dropdown>
-                )}
-              </Cell>
-            </Column>
+          
           </Table>
         </div>
 
@@ -879,7 +972,7 @@ export default function WithdrawalTable() {
           <div className="text-xs text-[var(--text-muted)]">
             Showing{" "}
             <span className="font-medium text-[var(--text-primary)]">
-              {withdrawalRequests.length > 0 ? (page - 1) * limit + 1 : 0}-
+              {paginatedWithdrawals.length > 0 ? (page - 1) * limit + 1 : 0}-
               {Math.min(page * limit, total)}
             </span>{" "}
             of{" "}

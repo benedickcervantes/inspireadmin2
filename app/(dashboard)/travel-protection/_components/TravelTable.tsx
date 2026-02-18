@@ -623,6 +623,23 @@ export default function TravelTable({
     }
 
     return true;
+  }).sort((a, b) => {
+    // Sort by most recent date (newest first)
+    const getTimestamp = (app: TravelApplication): number => {
+      const date = app.submittedAt || app.createdAt;
+      if (!date) return 0;
+      
+      if (typeof date === 'number') {
+        return date < 1e12 ? date * 1000 : date;
+      } else if (typeof date === 'string') {
+        return new Date(date).getTime();
+      } else if (typeof date === 'object' && '_seconds' in date) {
+        return date._seconds * 1000;
+      }
+      return 0;
+    };
+    
+    return getTimestamp(b) - getTimestamp(a); // Descending order (newest first)
   });
 
   const handleRowClick = (application: TravelApplication) => {
@@ -691,7 +708,7 @@ export default function TravelTable({
             rowHeight={60}
             headerHeight={40}
             hover
-            className="app-table !bg-transparent min-w-[1000px] cursor-pointer"
+            className="app-table !bg-transparent min-w-[1000px] cursor-pointer [&_.rs-table-row:hover_.rs-table-cell]:!bg-[var(--surface-hover)] [&_.rs-table-row:hover_.rs-table-cell]:!transition-colors [&_.rs-table-row:hover_.rs-table-cell]:!duration-200"
             rowKey="_firebaseDocId"
             onRowClick={(rowData) => handleRowClick(rowData as TravelApplication)}
           >

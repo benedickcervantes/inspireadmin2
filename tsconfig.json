@@ -49,8 +49,10 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
-, "app/(dashboard)/task-withdrawal/page.-old.sx"  ],
+    "**/*.mts",
+    "app/(dashboard)/task-withdrawal/page.-old.sx",
+    ".next/dev/dev/types/**/*.ts"
+  ],
   "exclude": [
     "node_modules"
   ]

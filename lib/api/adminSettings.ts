@@ -1,6 +1,34 @@
 import { API_BASE_URL } from "./client";
 
 /**
+ * Get admin profile
+ */
+export async function getAdminProfile() {
+  try {
+    const token = localStorage.getItem("authToken");
+    
+    const response = await fetch(`${API_BASE_URL}/api/admin/profile`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || "Failed to fetch profile");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching profile:", error);
+    throw error;
+  }
+}
+
+/**
  * Update admin username
  */
 export async function updateAdminUsername(username: string) {

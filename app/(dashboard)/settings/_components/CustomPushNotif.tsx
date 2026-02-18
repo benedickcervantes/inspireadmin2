@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Modal, Button, Input, Form, Message, toaster } from "rsuite";
 import { motion } from "motion/react";
-import { sendPushNotification } from "@/lib/api/notifications";
+import { sendPushNotification } from "@/lib/api/settings";
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
@@ -69,11 +69,7 @@ export default function CustomPushNotif({ open, onClose }: CustomPushNotifProps)
 
     try {
       // Send notification via API
-      const response = await sendPushNotification({
-        title: title.trim(),
-        description: description.trim(),
-        sendToAll: true,
-      });
+      const result = await sendPushNotification(title.trim(), description.trim());
 
       // Save to local notification history for reference
       const notification = {
@@ -82,8 +78,8 @@ export default function CustomPushNotif({ open, onClose }: CustomPushNotifProps)
         description,
         sentAt: new Date().toISOString(),
         sentBy: "Admin",
-        sentCount: response.sentCount || 0,
-        failedCount: response.failedCount || 0,
+        sentCount: result.successfulSends || 0,
+        failedCount: result.failedSends || 0,
       };
 
       const history = JSON.parse(localStorage.getItem("notificationHistory") || "[]");
@@ -97,8 +93,8 @@ export default function CustomPushNotif({ open, onClose }: CustomPushNotifProps)
           <div>
             <strong>Notification sent successfully!</strong>
             <p className="text-xs mt-1">
-              Delivered to {response.sentCount || 0} users
-              {response.failedCount ? ` (${response.failedCount} failed)` : ""}
+              Delivered to {result.successfulSends || 0} users
+              {result.failedSends ? ` (${result.failedSends} failed)` : ""}
             </p>
           </div>
         </Message>,

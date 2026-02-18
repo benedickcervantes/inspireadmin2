@@ -1,3 +1,4 @@
+//app\(dashboard)\deposit-request\_components\DepositTable.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -558,7 +559,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
             rowHeight={60}
             headerHeight={40}
             hover
-            className="app-table deposit-table !bg-transparent min-w-[900px] cursor-pointer"
+            className="app-table deposit-table !bg-transparent min-w-[900px] cursor-pointer [&_.rs-table-row:hover_.rs-table-cell]:!bg-[var(--surface-hover)] [&_.rs-table-row:hover_.rs-table-cell]:!transition-colors [&_.rs-table-row:hover_.rs-table-cell]:!duration-200"
             rowKey="_firebaseDocId"
             onRowClick={(rowData) => handleRowClick(rowData as DepositRequest)}
           >

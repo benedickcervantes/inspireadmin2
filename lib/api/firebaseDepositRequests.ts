@@ -21,6 +21,10 @@ const buildQueryString = (params: GetSubcollectionParams): string => {
   if (params.page) queryParams.append("page", params.page.toString());
   if (params.limit) queryParams.append("limit", params.limit.toString());
   if (params.status) queryParams.append("status", params.status);
+  if (params.paymentMethod) queryParams.append("paymentMethod", params.paymentMethod);
+  if (params.search) queryParams.append("search", params.search);
+  if (params.dateFrom) queryParams.append("dateFrom", params.dateFrom);
+  if (params.dateTo) queryParams.append("dateTo", params.dateTo);
   if (params.sortBy) queryParams.append("sortBy", params.sortBy);
   if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
   return queryParams.toString();
@@ -44,4 +48,32 @@ export const getFirebaseDepositRequests = async (
   }
 
   return payload;
+};
+
+export interface DepositRequestStats {
+  total: number;
+  pending: number;
+  approved: number;
+  totalAmount: string;
+}
+
+export const getFirebaseDepositRequestStats = async (): Promise<DepositRequestStats> => {
+  const url = `${API_BASE_URL}/api/firebase-deposit-requests/stats`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: authHeaders(),
+  });
+
+  const payload = (await response.json()) as { success: boolean; error?: string; data?: DepositRequestStats };
+
+  if (!response.ok || !payload.success) {
+    throw new Error(payload.error || "Failed to fetch deposit request stats");
+  }
+
+  if (!payload.data) {
+    return { total: 0, pending: 0, approved: 0, totalAmount: "0" };
+  }
+
+  return payload.data;
 };

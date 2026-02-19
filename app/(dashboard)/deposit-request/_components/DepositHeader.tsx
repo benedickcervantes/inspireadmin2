@@ -72,15 +72,15 @@ const cardVariants = {
   },
 };
 
-export default function DepositHeader({ stats }: DepositHeaderProps) {
-  const defaultStats: DepositStats = {
-    total: 1247,
-    pending: 48,
-    approved: 1156,
-    totalAmount: "2,450,000",
-  };
+const emptyStats: DepositStats = {
+  total: 0,
+  pending: 0,
+  approved: 0,
+  totalAmount: "0",
+};
 
-  const displayStats = stats || defaultStats;
+export default function DepositHeader({ stats }: DepositHeaderProps) {
+  const displayStats = stats ?? emptyStats;
 
   return (
     <div className="flex flex-col gap-4">

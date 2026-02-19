@@ -153,6 +153,7 @@ interface WithdrawalRequest {
   processedAt?: string;
   completedAt?: string;
   remarks?: string;
+  description?: string; // User's reason for withdrawal
 }
 
 type SubcollectionWithdrawalRecord = Omit<
@@ -175,6 +176,9 @@ type SubcollectionWithdrawalRecord = Omit<
   ewalletAccountName?: string;
   userName?: string;
   userEmail?: string;
+  description?: string; // User's reason for withdrawal
+  reason?: string; // Alternative field name for withdrawal reason
+  withdrawalDescription?: string; // Field name used in Firebase
   user?: {
     firstName?: string;
     lastName?: string;
@@ -324,6 +328,7 @@ const normalizeWithdrawal = (record: SubcollectionWithdrawalRecord): WithdrawalR
     processedAt: record.processedAt ? formatDateTime(record.processedAt) : record.approvedAt ? formatDateTime(record.approvedAt) : undefined,
     completedAt: record.completedAt ? formatDateTime(record.completedAt) : undefined,
     remarks: record.notes != null ? String(record.notes) : record.rejectionReason != null ? String(record.rejectionReason) : undefined,
+    description: record.withdrawalDescription != null ? String(record.withdrawalDescription) : record.description != null ? String(record.description) : record.reason != null ? String(record.reason) : undefined,
   };
 };
 
@@ -615,6 +620,18 @@ const WithdrawalDetailPanel = ({
               <div>
                 <div className="text-[11px] text-[var(--danger)] uppercase tracking-wide">Remarks</div>
                 <div className="text-[13px] text-[var(--danger)]">{withdrawal.remarks}</div>
+              </div>
+            </div>
+          )}
+
+          {withdrawal.description && (
+            <div className="flex items-start gap-2.5 p-2.5 bg-[var(--info-soft)] rounded-md border border-[var(--info)]/20">
+              <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--info)]/30 flex items-center justify-center flex-shrink-0">
+                <Icons.FileText className="w-3.5 h-3.5 text-[var(--info)]" />
+              </div>
+              <div>
+                <div className="text-[11px] text-[var(--info)] uppercase tracking-wide">Withdrawal Reason</div>
+                <div className="text-[13px] text-[var(--text-primary)]">{withdrawal.description}</div>
               </div>
             </div>
           )}

@@ -148,6 +148,8 @@ interface DepositRequest {
   referenceNumber?: string;
   amount?: number;
   paymentMethod?: string;
+  depositMethod?: string;
+  depositType?: string;
   status?: string;
   createdAt?: string;
   processedAt?: string;
@@ -396,7 +398,7 @@ const DepositDetailPanel = ({
               <Icons.CreditCard className="w-3.5 h-3.5 text-[var(--text-muted)]" />
             </div>
             <div>
-              <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Payment Method</div>
+              <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Deposit Type</div>
               <div className="mt-0.5">
                 <PaymentMethodBadge method={deposit.paymentMethod || 'bank_transfer'} />
               </div>
@@ -489,39 +491,180 @@ export default function DepositTable({ filters }: DepositTableProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
+  const [allDeposits, setAllDeposits] = useState<DepositRequest[]>([]);
+  const [isFetchingAll, setIsFetchingAll] = useState(false);
 
   const apiParams = useMemo(() => {
-    const params: Parameters<typeof getFirebaseDepositRequests>[0] = { page, limit };
+    const params: Parameters<typeof getFirebaseDepositRequests>[0] = { 
+      page, 
+      limit,
+      sortBy: 'createdAt',
+      sortOrder: 'desc'
+    };
     if (filters.status && filters.status !== "all") params.status = filters.status;
-    if (filters.paymentMethod && filters.paymentMethod !== "all") params.paymentMethod = filters.paymentMethod;
+    // Don't send paymentMethod to API - we'll filter client-side to check multiple fields
     if (filters.searchQuery?.trim()) params.search = filters.searchQuery.trim();
     if (filters.dateRange?.[0]) params.dateFrom = filters.dateRange[0].toISOString();
     if (filters.dateRange?.[1]) params.dateTo = filters.dateRange[1].toISOString();
     return params;
-  }, [page, limit, filters.status, filters.paymentMethod, filters.searchQuery, filters.dateRange]);
+  }, [page, limit, filters.status, filters.searchQuery, filters.dateRange]);
 
   useEffect(() => {
     setPage(1);
-  }, [filters.status, filters.paymentMethod, filters.searchQuery, filters.dateRange]);
+  }, [filters.status, filters.searchQuery, filters.dateRange]);
+
+  // Fetch all pages when deposit type filter OR status filter is active
+  useEffect(() => {
+    const shouldFetchAll = filters.paymentMethod !== "all" || filters.status !== "all";
+    
+    if (shouldFetchAll) {
+      setIsFetchingAll(true);
+      
+      // Build params without status if we're fetching all for status filtering
+      const fetchParams = { 
+        ...apiParams, 
+        page: 1,
+        status: undefined // Remove status to fetch all statuses
+      };
+      
+      getFirebaseDepositRequests(fetchParams).then(async (firstResponse) => {
+        const total = firstResponse.data?.pagination?.total ?? 0;
+        const totalPages = Math.ceil(total / limit);
+        
+        // Fetch all pages
+        const allPages = [firstResponse];
+        const promises = [];
+        
+        for (let p = 2; p <= totalPages; p++) {
+          promises.push(getFirebaseDepositRequests({ ...fetchParams, page: p }));
+        }
+        
+        const remainingPages = await Promise.all(promises);
+        allPages.push(...remainingPages);
+        
+        // Combine all items
+        const allItems = allPages.flatMap(response => 
+          (response.data?.items ?? []) as (DepositRequest & { 
+            maturity_date?: string; 
+            contract_period?: string;
+            payment_method?: string;
+            deposit_method?: string;
+            depositType?: string;
+          })[]
+        );
+        
+        // Normalize all items
+        const normalized = allItems.map((item) => normalizeDepositRequest(item)) as DepositRequest[];
+        setAllDeposits(normalized);
+        setIsFetchingAll(false);
+      }).catch(() => {
+        setIsFetchingAll(false);
+      });
+    } else {
+      setAllDeposits([]);
+    }
+  }, [filters.paymentMethod, filters.status, apiParams, limit]);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["firebase-deposit-requests", apiParams],
     queryFn: () => getFirebaseDepositRequests(apiParams),
     placeholderData: keepPreviousData,
+    enabled: filters.paymentMethod === "all" && filters.status === "all", // Only fetch paginated data when no filters
   });
 
   const deposits = useMemo(() => {
+    // Use all deposits when any filter is active
+    const hasActiveFilter = filters.paymentMethod !== "all" || filters.status !== "all";
+    
+    if (hasActiveFilter && allDeposits.length > 0) {
+      let filtered = allDeposits;
+      
+      // Filter by status
+      if (filters.status !== "all") {
+        filtered = filtered.filter((deposit) => {
+          const status = (deposit.status || '').toLowerCase();
+          const filterStatus = filters.status.toLowerCase();
+          
+          // Handle "approved" to include both "approved" and "completed"
+          if (filterStatus === 'approved') {
+            return status === 'approved' || status === 'completed';
+          }
+          
+          return status === filterStatus;
+        });
+      }
+      
+      // Filter by deposit type
+      if (filters.paymentMethod !== "all") {
+        filtered = filtered.filter((deposit) => {
+          const paymentMethod = (deposit.paymentMethod || '').toLowerCase();
+          const type = (deposit.type || '').toLowerCase();
+          const depositMethod = (deposit.depositMethod || '').toLowerCase();
+          const depositType = ((deposit as any).depositType || '').toLowerCase();
+          
+          const filterValue = filters.paymentMethod.toLowerCase();
+          
+          // Check if any of the fields match the filter
+          if (filterValue === 'time_deposit') {
+            return paymentMethod.includes('time') || 
+                   type.includes('time') || 
+                   depositMethod.includes('time') ||
+                   depositType.includes('time');
+          } else if (filterValue === 'stock') {
+            return paymentMethod.includes('stock') || 
+                   type.includes('stock') || 
+                   depositMethod.includes('stock') ||
+                   depositType.includes('stock');
+          } else if (filterValue === 'topup_available_balance') {
+            return paymentMethod.includes('topup') || 
+                   paymentMethod.includes('top up') ||
+                   type.includes('topup') || 
+                   type.includes('top up') ||
+                   depositMethod.includes('topup') ||
+                   depositMethod.includes('top up') ||
+                   depositType.includes('topup') ||
+                   depositType.includes('top up') ||
+                   paymentMethod.includes('available balance') ||
+                   type.includes('available balance') ||
+                   depositType.includes('available balance');
+          }
+          
+          return false;
+        });
+      }
+      
+      // Filter by search query (client-side for when we have all deposits)
+      if (filters.searchQuery?.trim()) {
+        const query = filters.searchQuery.toLowerCase().trim();
+        filtered = filtered.filter((deposit) => {
+          const userName = `${deposit.user.firstName || ''} ${deposit.user.lastName || ''}`.toLowerCase();
+          const email = (deposit.user.emailAddress || '').toLowerCase();
+          const reference = (deposit.referenceNumber || deposit._firebaseDocId).toLowerCase();
+          const userId = (deposit.userId || '').toLowerCase();
+          
+          return userName.includes(query) || 
+                 email.includes(query) || 
+                 reference.includes(query) ||
+                 userId.includes(query);
+        });
+      }
+      
+      return filtered;
+    }
+    
+    // Use paginated data when no filters
     const items = (data?.data?.items ?? []) as (DepositRequest & { 
       maturity_date?: string; 
       contract_period?: string;
       payment_method?: string;
       deposit_method?: string;
+      depositType?: string;
     })[];
-    // Normalize field names from Firebase (handles both camelCase and snake_case)
+    
     return items.map((item) => normalizeDepositRequest(item)) as DepositRequest[];
-  }, [data?.data?.items]);
+  }, [data?.data?.items, filters.paymentMethod, filters.status, filters.searchQuery, allDeposits]);
 
-  const total = data?.data?.pagination.total ?? 0;
+  const total = (filters.paymentMethod !== "all" || filters.status !== "all") ? deposits.length : (data?.data?.pagination.total ?? 0);
   const errorMessage = error instanceof Error ? error.message : "Failed to fetch deposit requests";
 
   const handleRowClick = (deposit: DepositRequest) => {
@@ -544,7 +687,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
     handleCloseDrawer();
   };
 
-  if (isLoading) {
+  if (isLoading || isFetchingAll) {
     return (
       <motion.div
         className="bg-[var(--surface)] rounded-xl shadow-sm border border-[var(--border)] p-12 flex items-center justify-center"
@@ -552,7 +695,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.4 }}
       >
-        <Loader size="md" content="Loading deposit requests..." className="!text-[var(--text-secondary)]" />
+        <Loader size="md" content={isFetchingAll ? "Loading all deposits..." : "Loading deposit requests..."} className="!text-[var(--text-secondary)]" />
       </motion.div>
     );
   }
@@ -630,7 +773,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
             </Column>
 
             <Column width={140} align="left">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Payment Method</HeaderCell>
+              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Deposit Type</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: DepositRequest) => (
                   <PaymentMethodBadge method={rowData.paymentMethod || 'bank_transfer'} />
@@ -711,18 +854,24 @@ export default function DepositTable({ filters }: DepositTableProps) {
         {/* Pagination Footer */}
         <div className="px-4 py-3 border-t border-[var(--border)] flex items-center justify-between bg-[var(--surface-soft)] rounded-b-xl">
           <div className="text-xs text-[var(--text-muted)]">
-            Showing <span className="font-medium text-[var(--text-secondary)]">{deposits.length > 0 ? ((page - 1) * limit) + 1 : 0}-{Math.min(page * limit, total)}</span> of <span className="font-medium text-[var(--text-secondary)]">{total}</span> requests
+            {(filters.paymentMethod !== "all" || filters.status !== "all") ? (
+              <>Showing <span className="font-medium text-[var(--text-secondary)]">{deposits.length}</span> filtered requests</>
+            ) : (
+              <>Showing <span className="font-medium text-[var(--text-secondary)]">{deposits.length > 0 ? ((page - 1) * limit) + 1 : 0}-{Math.min(page * limit, total)}</span> of <span className="font-medium text-[var(--text-secondary)]">{total}</span> requests</>
+            )}
           </div>
-          <Pagination
-            prev
-            next
-            size="xs"
-            total={total}
-            limit={limit}
-            activePage={page}
-            onChangePage={setPage}
-            className="deposit-pagination !text-xs"
-          />
+          {(filters.paymentMethod === "all" && filters.status === "all") && (
+            <Pagination
+              prev
+              next
+              size="xs"
+              total={total}
+              limit={limit}
+              activePage={page}
+              onChangePage={setPage}
+              className="deposit-pagination !text-xs"
+            />
+          )}
         </div>
       </motion.div>
 

@@ -44,23 +44,16 @@ const Icons = {
 
 const statusOptions = [
   { label: "All Status", value: "all" },
-  { label: "Pending", value: "pending" },
   { label: "Approved", value: "approved" },
+  { label: "Pending", value: "pending" },
   { label: "Rejected", value: "rejected" },
-  { label: "Processing", value: "processing" },
 ];
 
-const paymentMethodOptions = [
-  { label: "All Methods", value: "all" },
-  { label: "Bank Transfer", value: "bank_transfer" },
-  { label: "GCash", value: "gcash" },
-  { label: "Maya", value: "maya" },
-  { label: "Credit Card", value: "credit_card" },
-  { label: "Crypto", value: "crypto" },
+const depositTypeOptions = [
+  { label: "All Type", value: "all" },
   { label: "Time Deposit", value: "time_deposit" },
-  { label: "Topup Available Balance", value: "topup_available_balance" },
   { label: "Stock", value: "stock" },
-  { label: "Top Up", value: "topup" },
+  { label: "Top Up Available Balance", value: "topup_available_balance" },
 ];
 
 export default function DepositFilters({ filters, onFiltersChange }: DepositFiltersProps) {
@@ -124,14 +117,14 @@ export default function DepositFilters({ filters, onFiltersChange }: DepositFilt
             whileTap={{ scale: 0.98 }}
           >
             <SelectPicker
-              data={paymentMethodOptions}
+              data={depositTypeOptions}
               value={filters.paymentMethod}
               searchable={false}
               cleanable={false}
               size="sm"
-              className="!w-[140px] deposit-filter-select"
+              className="!w-[180px] deposit-filter-select"
               popupClassName="!text-sm !bg-[var(--surface)] !border-[var(--border)]"
-              placeholder="Payment Method"
+              placeholder="Deposit Type"
               onChange={(value) => onFiltersChange({ paymentMethod: value || "all" })}
               renderValue={(value, item) => (
                 <span className="text-xs text-[var(--text-secondary)]">{item?.label}</span>

@@ -39,6 +39,7 @@ interface DepositStats {
   total: number;
   pending: number;
   approved: number;
+  rejected: number;
   totalAmount: string;
 }
 
@@ -76,6 +77,7 @@ const emptyStats: DepositStats = {
   total: 0,
   pending: 0,
   approved: 0,
+  rejected: 0,
   totalAmount: "0",
 };
 
@@ -160,7 +162,7 @@ export default function DepositHeader({ stats }: DepositHeaderProps) {
 
       {/* Stats Cards */}
       <motion.div
-        className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+        className="grid grid-cols-2 lg:grid-cols-5 gap-3"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -181,27 +183,9 @@ export default function DepositHeader({ stats }: DepositHeaderProps) {
             {displayStats.total.toLocaleString()}
           </motion.div>
           <div className="flex items-center gap-1 mt-1">
-            <Icons.TrendingUp className="w-3 h-3 text-[var(--success)]" />
-            <span className="text-[10px] text-[var(--success)]">+12%</span>
+            <Icons.TrendingUp className="w-3 h-3 text-[var(--primary)]" />
+            <span className="text-[10px] text-[var(--text-muted)]">All time</span>
           </div>
-        </motion.div>
-
-        <motion.div
-          className="bg-[var(--warning-soft)] rounded-xl border border-[var(--warning)]/20 p-3"
-          variants={cardVariants}
-          whileHover={{ scale: 1.02 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
-        >
-          <div className="text-[11px] text-[var(--warning)] uppercase tracking-wide font-medium">Pending</div>
-          <motion.div
-            className="text-xl font-bold text-[var(--warning)] mt-1"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5, type: "spring", stiffness: 300 }}
-          >
-            {displayStats.pending}
-          </motion.div>
-          <div className="text-[10px] text-[var(--text-muted)] mt-1">Awaiting review</div>
         </motion.div>
 
         <motion.div
@@ -215,11 +199,47 @@ export default function DepositHeader({ stats }: DepositHeaderProps) {
             className="text-xl font-bold text-[var(--success)] mt-1"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.6, type: "spring", stiffness: 300 }}
+            transition={{ delay: 0.5, type: "spring", stiffness: 300 }}
           >
             {displayStats.approved.toLocaleString()}
           </motion.div>
-          <div className="text-[10px] text-[var(--text-muted)] mt-1">This month</div>
+          <div className="text-[10px] text-[var(--text-muted)] mt-1">Completed</div>
+        </motion.div>
+
+        <motion.div
+          className="bg-[var(--warning-soft)] rounded-xl border border-[var(--warning)]/20 p-3"
+          variants={cardVariants}
+          whileHover={{ scale: 1.02 }}
+          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+        >
+          <div className="text-[11px] text-[var(--warning)] uppercase tracking-wide font-medium">Pending</div>
+          <motion.div
+            className="text-xl font-bold text-[var(--warning)] mt-1"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.6, type: "spring", stiffness: 300 }}
+          >
+            {displayStats.pending}
+          </motion.div>
+          <div className="text-[10px] text-[var(--text-muted)] mt-1">Awaiting review</div>
+        </motion.div>
+
+        <motion.div
+          className="bg-[var(--danger-soft)] rounded-xl border border-[var(--danger)]/20 p-3"
+          variants={cardVariants}
+          whileHover={{ scale: 1.02 }}
+          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+        >
+          <div className="text-[11px] text-[var(--danger)] uppercase tracking-wide font-medium">Rejected</div>
+          <motion.div
+            className="text-xl font-bold text-[var(--danger)] mt-1"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.7, type: "spring", stiffness: 300 }}
+          >
+            {displayStats.rejected}
+          </motion.div>
+          <div className="text-[10px] text-[var(--text-muted)] mt-1">Declined</div>
         </motion.div>
 
         <motion.div
@@ -233,7 +253,7 @@ export default function DepositHeader({ stats }: DepositHeaderProps) {
             className="text-xl font-bold text-[var(--text-primary)] mt-1"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.7, type: "spring", stiffness: 300 }}
+            transition={{ delay: 0.8, type: "spring", stiffness: 300 }}
           >
             ₱{displayStats.totalAmount}
           </motion.div>

@@ -54,6 +54,7 @@ export interface DepositRequestStats {
   total: number;
   pending: number;
   approved: number;
+  rejected: number;
   totalAmount: string;
 }
 
@@ -72,7 +73,7 @@ export const getFirebaseDepositRequestStats = async (): Promise<DepositRequestSt
   }
 
   if (!payload.data) {
-    return { total: 0, pending: 0, approved: 0, totalAmount: "0" };
+    return { total: 0, pending: 0, approved: 0, rejected: 0, totalAmount: "0" };
   }
 
   return payload.data;

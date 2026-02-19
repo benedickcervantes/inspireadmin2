@@ -1,53 +1,128 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-
-type IconProps = React.SVGProps<SVGSVGElement>;
-
-const Icons = {
-  MessageCircle: (props: IconProps) => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-    </svg>
-  ),
-};
+import { Loader, Message } from "rsuite";
+import { getTickets, type Ticket, type TicketStats } from "@/lib/api/tickets";
+import TicketHeader from "./_components/TicketHeader";
+import PendingTickets from "./_components/PendingTickets";
+import AssignedTickets from "./_components/AssignedTickets";
 
 export default function TicketingSupportPage() {
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [pendingTickets, setPendingTickets] = useState<Ticket[]>([]);
+  const [stats, setStats] = useState<TicketStats>({
+    pending: 0,
+    total: 0,
+    open: 0,
+    inProgress: 0,
+    resolved: 0,
+    closed: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<"all" | "open" | "in-progress" | "resolved">("all");
+  const [viewMode, setViewMode] = useState<"my-tickets" | "all">("all"); // Default to "all" for superadmin
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const fetchTickets = async (showLoader = true) => {
+    try {
+      if (showLoader) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
+      setError(null);
+
+      const result = await getTickets({
+        page,
+        limit,
+        status: selectedStatus,
+        viewMode,
+      });
+
+      if (result.success) {
+        setTickets(result.data.tickets);
+        setPendingTickets(result.data.pendingTickets);
+        setStats(result.data.stats);
+        setTotalPages(result.data.pagination.totalPages);
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to fetch tickets");
+      console.error("Error fetching tickets:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTickets();
+  }, [page, selectedStatus, viewMode]);
+
+  const handleRefresh = () => {
+    fetchTickets(false);
+  };
+
+  const handleStatusChange = (status: "all" | "open" | "in-progress" | "resolved") => {
+    setSelectedStatus(status);
+    setPage(1);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader size="lg" content="Loading tickets..." />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex w-full flex-col gap-4">
-      <motion.div
-        className="bg-[var(--surface)] rounded-xl p-8 shadow-sm border border-[var(--border)]"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <motion.div
-            className="w-20 h-20 rounded-full bg-[var(--primary-soft)] border border-[var(--border-accent)] flex items-center justify-center mb-6"
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-          >
-            <Icons.MessageCircle className="w-10 h-10 text-[var(--primary)]" />
-          </motion.div>
-          <motion.h1
-            className="text-2xl font-bold text-[var(--text-primary)] mb-2"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            Ticketing Support
-          </motion.h1>
-          <motion.p
-            className="text-[var(--text-muted)] max-w-md"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            Support ticket management and customer inquiries will be displayed here.
-          </motion.p>
-        </div>
-      </motion.div>
+    <div className="flex w-full flex-col gap-6">
+      {/* Header */}
+      <TicketHeader
+        stats={stats}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+      />
+
+      {/* Error Message */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Message showIcon type="error" header="Error">
+            {error}
+          </Message>
+        </motion.div>
+      )}
+
+      {/* Pending Tickets Section */}
+      {pendingTickets.length > 0 && (
+        <PendingTickets
+          tickets={pendingTickets}
+          onRefresh={handleRefresh}
+        />
+      )}
+
+      {/* Assigned Tickets Section */}
+      <AssignedTickets
+        tickets={tickets}
+        selectedStatus={selectedStatus}
+        onStatusChange={handleStatusChange}
+        stats={stats}
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        onRefresh={handleRefresh}
+        viewMode={viewMode}
+      />
     </div>
   );
 }

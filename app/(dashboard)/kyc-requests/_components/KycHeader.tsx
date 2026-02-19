@@ -138,62 +138,86 @@ export default function KycHeader({ kycRequests }: KycHeaderProps) {
 
         <motion.div
           variants={cardVariants}
-          className="bg-[var(--surface)] rounded-xl p-4 shadow-sm border border-[var(--border)] hover:shadow-md transition-shadow"
+          className="group relative bg-[var(--surface)] rounded-[12px] border border-[var(--border-subtle)] shadow-[var(--shadow-card)] p-4 transition-colors duration-300 hover:border-[var(--border)] hover:shadow-[var(--shadow-glow-cyan)] overflow-hidden"
+          whileHover={{ scale: 1.02 }}
+          style={{ transformStyle: "preserve-3d" }}
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-lg bg-[var(--warning-soft)] flex items-center justify-center">
-              <Icons.Clock className="w-5 h-5 text-[var(--warning)]" />
+          <motion.div className="absolute inset-0 bg-gradient-to-br from-[var(--primary-soft)] to-transparent pointer-events-none" initial={{ opacity: 0 }} whileHover={{ opacity: 1 }} transition={{ duration: 0.3 }} />
+          <motion.div className="absolute inset-0 pointer-events-none" initial={{ x: "-100%", opacity: 0 }} whileHover={{ x: "100%", opacity: [0, 0.1, 0], transition: { duration: 0.8, ease: "easeInOut" } }} style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)", transform: "skewX(-20deg)" }} />
+          <div className="relative z-10" style={{ transform: "translateZ(20px)" }}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-lg bg-[var(--warning-soft)] flex items-center justify-center">
+                <Icons.Clock className="w-5 h-5 text-[var(--warning)]" />
+              </div>
             </div>
+            <div className="text-3xl font-bold text-[var(--text-primary)] mb-1">
+              {stats.pending}
+            </div>
+            <div className="text-sm text-[var(--text-muted)]">Pending</div>
           </div>
-          <div className="text-3xl font-bold text-[var(--text-primary)] mb-1">
-            {stats.pending}
-          </div>
-          <div className="text-sm text-[var(--text-muted)]">Pending</div>
         </motion.div>
 
         <motion.div
           variants={cardVariants}
-          className="bg-[var(--surface)] rounded-xl p-4 shadow-sm border border-[var(--border)] hover:shadow-md transition-shadow"
+          className="group relative bg-[var(--surface)] rounded-[12px] border border-[var(--border-subtle)] shadow-[var(--shadow-card)] p-4 transition-colors duration-300 hover:border-[var(--border)] hover:shadow-[var(--shadow-glow-cyan)] overflow-hidden"
+          whileHover={{ scale: 1.02 }}
+          style={{ transformStyle: "preserve-3d" }}
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-lg bg-[var(--primary-soft)] flex items-center justify-center">
-              <Icons.TrendingUp className="w-5 h-5 text-[var(--primary)]" />
+          <motion.div className="absolute inset-0 bg-gradient-to-br from-[var(--primary-soft)] to-transparent pointer-events-none" initial={{ opacity: 0 }} whileHover={{ opacity: 1 }} transition={{ duration: 0.3 }} />
+          <motion.div className="absolute inset-0 pointer-events-none" initial={{ x: "-100%", opacity: 0 }} whileHover={{ x: "100%", opacity: [0, 0.1, 0], transition: { duration: 0.8, ease: "easeInOut" } }} style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)", transform: "skewX(-20deg)" }} />
+          <div className="relative z-10" style={{ transform: "translateZ(20px)" }}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-lg bg-[var(--primary-soft)] flex items-center justify-center">
+                <Icons.TrendingUp className="w-5 h-5 text-[var(--primary)]" />
+              </div>
             </div>
+            <div className="text-3xl font-bold text-[var(--text-primary)] mb-1">
+              {stats.inReview}
+            </div>
+            <div className="text-sm text-[var(--text-muted)]">In Review</div>
           </div>
-          <div className="text-3xl font-bold text-[var(--text-primary)] mb-1">
-            {stats.inReview}
-          </div>
-          <div className="text-sm text-[var(--text-muted)]">In Review</div>
         </motion.div>
 
         <motion.div
           variants={cardVariants}
-          className="bg-[var(--surface)] rounded-xl p-4 shadow-sm border border-[var(--border)] hover:shadow-md transition-shadow"
+          className="group relative bg-[var(--surface)] rounded-[12px] border border-[var(--border-subtle)] shadow-[var(--shadow-card)] p-4 transition-colors duration-300 hover:border-[var(--border)] hover:shadow-[var(--shadow-glow-cyan)] overflow-hidden"
+          whileHover={{ scale: 1.02 }}
+          style={{ transformStyle: "preserve-3d" }}
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-lg bg-[var(--success-soft)] flex items-center justify-center">
-              <Icons.ShieldCheck className="w-5 h-5 text-[var(--success)]" />
+          <motion.div className="absolute inset-0 bg-gradient-to-br from-[var(--primary-soft)] to-transparent pointer-events-none" initial={{ opacity: 0 }} whileHover={{ opacity: 1 }} transition={{ duration: 0.3 }} />
+          <motion.div className="absolute inset-0 pointer-events-none" initial={{ x: "-100%", opacity: 0 }} whileHover={{ x: "100%", opacity: [0, 0.1, 0], transition: { duration: 0.8, ease: "easeInOut" } }} style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)", transform: "skewX(-20deg)" }} />
+          <div className="relative z-10" style={{ transform: "translateZ(20px)" }}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-lg bg-[var(--success-soft)] flex items-center justify-center">
+                <Icons.ShieldCheck className="w-5 h-5 text-[var(--success)]" />
+              </div>
             </div>
+            <div className="text-3xl font-bold text-[var(--text-primary)] mb-1">
+              {stats.approved}
+            </div>
+            <div className="text-sm text-[var(--text-muted)]">Approved</div>
           </div>
-          <div className="text-3xl font-bold text-[var(--text-primary)] mb-1">
-            {stats.approved}
-          </div>
-          <div className="text-sm text-[var(--text-muted)]">Approved</div>
         </motion.div>
 
         <motion.div
           variants={cardVariants}
-          className="bg-[var(--surface)] rounded-xl p-4 shadow-sm border border-[var(--border)] hover:shadow-md transition-shadow"
+          className="group relative bg-[var(--surface)] rounded-[12px] border border-[var(--border-subtle)] shadow-[var(--shadow-card)] p-4 transition-colors duration-300 hover:border-[var(--border)] hover:shadow-[var(--shadow-glow-cyan)] overflow-hidden"
+          whileHover={{ scale: 1.02 }}
+          style={{ transformStyle: "preserve-3d" }}
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-lg bg-[var(--danger-soft)] flex items-center justify-center">
-              <Icons.Inbox className="w-5 h-5 text-[var(--danger)]" />
+          <motion.div className="absolute inset-0 bg-gradient-to-br from-[var(--primary-soft)] to-transparent pointer-events-none" initial={{ opacity: 0 }} whileHover={{ opacity: 1 }} transition={{ duration: 0.3 }} />
+          <motion.div className="absolute inset-0 pointer-events-none" initial={{ x: "-100%", opacity: 0 }} whileHover={{ x: "100%", opacity: [0, 0.1, 0], transition: { duration: 0.8, ease: "easeInOut" } }} style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)", transform: "skewX(-20deg)" }} />
+          <div className="relative z-10" style={{ transform: "translateZ(20px)" }}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-lg bg-[var(--danger-soft)] flex items-center justify-center">
+                <Icons.Inbox className="w-5 h-5 text-[var(--danger)]" />
+              </div>
             </div>
+            <div className="text-3xl font-bold text-[var(--text-primary)] mb-1">
+              {stats.rejected}
+            </div>
+            <div className="text-sm text-[var(--text-muted)]">Rejected</div>
           </div>
-          <div className="text-3xl font-bold text-[var(--text-primary)] mb-1">
-            {stats.rejected}
-          </div>
-          <div className="text-sm text-[var(--text-muted)]">Rejected</div>
         </motion.div>
       </motion.div>
     </div>

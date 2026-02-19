@@ -30,8 +30,15 @@ export interface DepositRequest {
   amount?: number;
   status?: string;
   paymentMethod?: string;
+  depositMethod?: string;
   referenceNumber?: string;
   createdAt?: string;
+  type?: string;
+  maturityDate?: string;
+  contractPeriod?: string;
+  currency?: string;
+  userEmail?: string;
+  userName?: string;
   user: SubcollectionUser;
   [key: string]: unknown;
 }
@@ -103,6 +110,10 @@ export interface GetSubcollectionParams {
   page?: number;
   limit?: number;
   status?: string;
+  paymentMethod?: string;
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }

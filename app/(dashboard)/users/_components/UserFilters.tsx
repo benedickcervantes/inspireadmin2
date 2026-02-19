@@ -31,6 +31,8 @@ interface UserFiltersProps {
   agentCount?: number;
   investorCount?: number;
   totalCount?: number;
+  demoCount?: number;
+  testCount?: number;
 }
 
 const TABS: { key: UserTypeTab; label: string }[] = [
@@ -48,7 +50,9 @@ export default function UserFilters({
   onUserTypeChange,
   agentCount = 0,
   investorCount = 0,
-  totalCount = 0
+  totalCount = 0,
+  demoCount = 0,
+  testCount = 0
 }: UserFiltersProps) {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -88,6 +92,7 @@ export default function UserFilters({
               onChange={onSearchChange}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
+              autoComplete="off"
             />
             <AnimatePresence>
               {searchQuery && (
@@ -137,7 +142,7 @@ export default function UserFilters({
 
         {/* Legend with Total, Agent and Investor counts - compact on mobile */}
         <motion.div
-          className="flex items-center gap-1.5 order-1 lg:order-2"
+          className="flex items-center gap-1.5 order-1 lg:order-2 flex-wrap"
           initial={{ opacity: 0, x: 15 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2, duration: 0.4 }}
@@ -158,6 +163,18 @@ export default function UserFilters({
             <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] flex-shrink-0" />
             <span className="text-[10px] font-medium text-[var(--text-primary)]">
               Investors: <span className="font-semibold text-[var(--accent)]">{investorCount}</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--warning-soft)] border border-[rgba(245,158,11,0.3)] whitespace-nowrap">
+            <div className="w-1.5 h-1.5 rounded-full bg-[var(--warning)] flex-shrink-0" />
+            <span className="text-[10px] font-medium text-[var(--text-primary)]">
+              Demo: <span className="font-semibold text-[var(--warning)]">{demoCount}</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--surface-soft)] border border-[var(--border)] whitespace-nowrap">
+            <div className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)] flex-shrink-0" />
+            <span className="text-[10px] font-medium text-[var(--text-primary)]">
+              Test: <span className="font-semibold text-[var(--text-muted)]">{testCount}</span>
             </span>
           </div>
         </motion.div>

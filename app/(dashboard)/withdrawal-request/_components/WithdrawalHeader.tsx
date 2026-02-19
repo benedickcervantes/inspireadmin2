@@ -116,14 +116,14 @@ export default function WithdrawalHeader({ stats }: WithdrawalHeaderProps) {
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
           <motion.div
-            className="w-11 h-11 rounded-xl bg-[] border border-[var(--danger)] flex items-center justify-center shadow-sm"
+            className="w-11 h-11 rounded-xl bg-[] border border-[var(--text-primary] flex items-center justify-center shadow-sm"
             initial={{ scale: 0, rotate: -180 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.1 }}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Icons.ArrowUpRight className="w-5 h-5 text-[var(--danger)]" />
+            <Icons.ArrowUpRight className="w-5 h-5 text-[var(--text-primary)]" />
           </motion.div>
           <motion.div
             initial={{ opacity: 0, x: -15 }}
@@ -183,115 +183,137 @@ export default function WithdrawalHeader({ stats }: WithdrawalHeaderProps) {
         animate="visible"
       >
         <motion.div
-          className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 shadow-sm"
-          variants={cardVariants}
-          whileHover={{ scale: 1.02, boxShadow: "0 8px 20px rgba(16, 114, 185, 0.3)" }}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-lg bg-[var(--success-soft)] flex items-center justify-center">
-              <Icons.TrendingUp className="w-4 h-4 text-[var(--primary)]" />
-            </div>
-          </div>
-          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Total Requests</div>
-          <motion.div
-            className="text-xl font-bold text-[var(--text-primary)] mt-1"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
-          >
-            {displayStats.total.toLocaleString()}
-          </motion.div>
-        </motion.div>
-
-        <motion.div
-          className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 shadow-sm"
-          variants={cardVariants}
-          whileHover={{ scale: 1.02, boxShadow: "0 8px 20px rgba(158, 206, 13, 0.3)" }}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-lg bg-[var(--warning-soft)] flex items-center justify-center">
-              <Icons.Users className="w-4 h-4 text-[var(--warning)]" />
-            </div>
-          </div>
-          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Pending</div>
-          <motion.div
-            className="text-xl font-bold text-[var(--text-primary)] mt-1"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5, type: "spring", stiffness: 300 }}
-          >
-            {displayStats.pending.toLocaleString()}
-          </motion.div>
-        </motion.div>
-
-        <motion.div
-          className="bg-[var(--surface)] rounded-xl p-4 shadow-sm border border-[var(--border)]"
-          variants={cardVariants}
-          whileHover={{ scale: 1.02, boxShadow: "0 8px 20px rgba(16, 185, 129, 0.3)" }}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-lg bg-[#10b981]/20 flex items-center justify-center">
-              <Icons.CheckCircle className="w-4 h-4 text-[#10b981]" />
-            </div>
-            <motion.div
-              animate={{ rotate: [0, 15, -15, 0] }}
-              transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-            >
-              <Icons.Zap className="w-4 h-4 text-[#10b981]/70" />
-            </motion.div>
-          </div>
-          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Approved</div>
-          <motion.div
-            className="text-xl font-bold text-[var(--text-primary)] mt-1"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.6, type: "spring", stiffness: 300 }}
-          >
-            {displayStats.completed.toLocaleString()}
-          </motion.div>
-        </motion.div>
-
-        <motion.div
-          className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 shadow-sm"
-          variants={cardVariants}
-          whileHover={{ scale: 1.02, boxShadow: "0 8px 20px rgba(185, 16, 16, 0.3)" }}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-lg bg-[var(--danger-soft)] flex items-center justify-center">
-              <Icons.Wallet className="w-4 h-4 text-[var(--danger)]" />
-            </div>
-          </div>
-          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Rejected</div>
-          <motion.div
-            className="text-xl font-bold text-[var(--text-primary)] mt-1"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.7, type: "spring", stiffness: 300 }}
-          >
-            {displayStats.processing.toLocaleString()}
-          </motion.div>
-        </motion.div>
-
-        <motion.div
-          className="bg-gradient-to-br from-[var(--danger)]/20 to-rose-500/20 rounded-xl border border-[var(--danger)]/30 p-4"
+          className="group relative bg-[var(--surface)] rounded-[12px] border border-[var(--border-subtle)] shadow-[var(--shadow-card)] p-4 transition-colors duration-300 hover:border-[var(--border)] hover:shadow-[var(--shadow-glow-cyan)] overflow-hidden"
           variants={cardVariants}
           whileHover={{ scale: 1.02 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+          style={{ transformStyle: "preserve-3d" }}
         >
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-8 h-8 rounded-lg bg-[var(--danger)]/20 flex items-center justify-center">
-              <Icons.ArrowUpRight className="w-4 h-4 text-[var(--danger)]" />
-            </div>
-          </div>
-          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Total Withdrawn</div>
+          {/* Animated gradient overlay on hover */}
           <motion.div
-            className="text-xl font-bold text-[var(--text-primary)] mt-1"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.8, type: "spring", stiffness: 300 }}
-          >
-            ₱{displayStats.totalAmount}
-          </motion.div>
+            className="absolute inset-0 bg-gradient-to-br from-[var(--primary-soft)] to-transparent pointer-events-none"
+            initial={{ opacity: 0 }}
+            whileHover={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          />
+
+          {/* Shimmer effect */}
+          <motion.div
+            className="absolute inset-0 pointer-events-none"
+            initial={{ x: "-100%", opacity: 0 }}
+            whileHover={{
+              x: "100%",
+              opacity: [0, 0.1, 0],
+              transition: { duration: 0.8, ease: "easeInOut" }
+            }}
+            style={{
+              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)",
+              transform: "skewX(-20deg)"
+            }}
+          />
+
+          <div className="relative z-10" style={{ transform: "translateZ(20px)" }}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-8 h-8 rounded-lg bg-[var(--success-soft)] flex items-center justify-center">
+                <Icons.TrendingUp className="w-4 h-4 text-[var(--primary)]" />
+              </div>
+            </div>
+            <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.08em] font-medium">Total Requests</div>
+            <motion.div
+              className="text-xl font-bold text-[var(--text-primary)] mt-1"
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
+            >
+              {displayStats.total.toLocaleString()}
+            </motion.div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="group relative bg-[var(--surface)] rounded-[12px] border border-[var(--border-subtle)] shadow-[var(--shadow-card)] p-4 transition-colors duration-300 hover:border-[var(--border)] hover:shadow-[var(--shadow-glow-cyan)] overflow-hidden"
+          variants={cardVariants}
+          whileHover={{ scale: 1.02 }}
+          style={{ transformStyle: "preserve-3d" }}
+        >
+          <motion.div className="absolute inset-0 bg-gradient-to-br from-[var(--primary-soft)] to-transparent pointer-events-none" initial={{ opacity: 0 }} whileHover={{ opacity: 1 }} transition={{ duration: 0.3 }} />
+          <motion.div className="absolute inset-0 pointer-events-none" initial={{ x: "-100%", opacity: 0 }} whileHover={{ x: "100%", opacity: [0, 0.1, 0], transition: { duration: 0.8, ease: "easeInOut" } }} style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)", transform: "skewX(-20deg)" }} />
+          <div className="relative z-10" style={{ transform: "translateZ(20px)" }}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-8 h-8 rounded-lg bg-[var(--warning-soft)] flex items-center justify-center">
+                <Icons.Users className="w-4 h-4 text-[var(--warning)]" />
+              </div>
+            </div>
+            <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.08em] font-medium">Pending</div>
+            <motion.div className="text-xl font-bold text-[var(--text-primary)] mt-1" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5, type: "spring", stiffness: 300 }}>
+              {displayStats.pending.toLocaleString()}
+            </motion.div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="group relative bg-[var(--surface)] rounded-[12px] border border-[var(--border-subtle)] shadow-[var(--shadow-card)] p-4 transition-colors duration-300 hover:border-[var(--border)] hover:shadow-[var(--shadow-glow-cyan)] overflow-hidden"
+          variants={cardVariants}
+          whileHover={{ scale: 1.02 }}
+          style={{ transformStyle: "preserve-3d" }}
+        >
+          <motion.div className="absolute inset-0 bg-gradient-to-br from-[var(--primary-soft)] to-transparent pointer-events-none" initial={{ opacity: 0 }} whileHover={{ opacity: 1 }} transition={{ duration: 0.3 }} />
+          <motion.div className="absolute inset-0 pointer-events-none" initial={{ x: "-100%", opacity: 0 }} whileHover={{ x: "100%", opacity: [0, 0.1, 0], transition: { duration: 0.8, ease: "easeInOut" } }} style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)", transform: "skewX(-20deg)" }} />
+          <div className="relative z-10" style={{ transform: "translateZ(20px)" }}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-8 h-8 rounded-lg bg-[#10b981]/20 flex items-center justify-center">
+                <Icons.CheckCircle className="w-4 h-4 text-[#10b981]" />
+              </div>
+              <motion.div animate={{ rotate: [0, 15, -15, 0] }} transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}>
+                <Icons.Zap className="w-4 h-4 text-[#10b981]/70" />
+              </motion.div>
+            </div>
+            <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.08em] font-medium">Approved</div>
+            <motion.div className="text-xl font-bold text-[var(--text-primary)] mt-1" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.6, type: "spring", stiffness: 300 }}>
+              {displayStats.completed.toLocaleString()}
+            </motion.div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="group relative bg-[var(--surface)] rounded-[12px] border border-[var(--border-subtle)] shadow-[var(--shadow-card)] p-4 transition-colors duration-300 hover:border-[var(--border)] hover:shadow-[var(--shadow-glow-cyan)] overflow-hidden"
+          variants={cardVariants}
+          whileHover={{ scale: 1.02 }}
+          style={{ transformStyle: "preserve-3d" }}
+        >
+          <motion.div className="absolute inset-0 bg-gradient-to-br from-[var(--primary-soft)] to-transparent pointer-events-none" initial={{ opacity: 0 }} whileHover={{ opacity: 1 }} transition={{ duration: 0.3 }} />
+          <motion.div className="absolute inset-0 pointer-events-none" initial={{ x: "-100%", opacity: 0 }} whileHover={{ x: "100%", opacity: [0, 0.1, 0], transition: { duration: 0.8, ease: "easeInOut" } }} style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)", transform: "skewX(-20deg)" }} />
+          <div className="relative z-10" style={{ transform: "translateZ(20px)" }}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-8 h-8 rounded-lg bg-[var(--danger-soft)] flex items-center justify-center">
+                <Icons.Wallet className="w-4 h-4 text-[var(--danger)]" />
+              </div>
+            </div>
+            <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.08em] font-medium">Rejected</div>
+            <motion.div className="text-xl font-bold text-[var(--text-primary)] mt-1" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.7, type: "spring", stiffness: 300 }}>
+              {displayStats.processing.toLocaleString()}
+            </motion.div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="group relative bg-gradient-to-br from-[var(--danger)]/20 to-rose-500/20 rounded-[12px] border border-[var(--danger)]/30 shadow-[var(--shadow-card)] p-4 transition-colors duration-300 hover:shadow-[var(--shadow-glow-cyan)] overflow-hidden"
+          variants={cardVariants}
+          whileHover={{ scale: 1.02 }}
+          style={{ transformStyle: "preserve-3d" }}
+        >
+          <motion.div className="absolute inset-0 bg-gradient-to-br from-[var(--primary-soft)] to-transparent pointer-events-none" initial={{ opacity: 0 }} whileHover={{ opacity: 1 }} transition={{ duration: 0.3 }} />
+          <motion.div className="absolute inset-0 pointer-events-none" initial={{ x: "-100%", opacity: 0 }} whileHover={{ x: "100%", opacity: [0, 0.1, 0], transition: { duration: 0.8, ease: "easeInOut" } }} style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)", transform: "skewX(-20deg)" }} />
+          <div className="relative z-10" style={{ transform: "translateZ(20px)" }}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="w-8 h-8 rounded-lg bg-[var(--danger)]/20 flex items-center justify-center">
+                <Icons.ArrowUpRight className="w-4 h-4 text-[var(--danger)]" />
+              </div>
+            </div>
+            <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.08em] font-medium">Total Withdrawn</div>
+            <motion.div className="text-xl font-bold text-[var(--text-primary)] mt-1" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.8, type: "spring", stiffness: 300 }}>
+              ₱{displayStats.totalAmount}
+            </motion.div>
+          </div>
         </motion.div>
       </motion.div>
     </div>

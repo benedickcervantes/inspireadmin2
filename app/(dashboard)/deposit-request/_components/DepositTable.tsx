@@ -563,7 +563,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
             rowKey="_firebaseDocId"
             onRowClick={(rowData) => handleRowClick(rowData as DepositRequest)}
           >
-            <Column width={120} align="left">
+            <Column width={260} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Reference</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: DepositRequest) => (
@@ -572,7 +572,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
               </Cell>
             </Column>
 
-            <Column flexGrow={2} minWidth={200} align="left">
+            <Column width={250} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">User</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: DepositRequest) => {
@@ -591,7 +591,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
               </Cell>
             </Column>
 
-            <Column width={130} align="right">
+            <Column width={250} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Amount</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: DepositRequest) => (
@@ -600,7 +600,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
               </Cell>
             </Column>
 
-            <Column width={140} align="left">
+            <Column width={250} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Payment Method</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: DepositRequest) => (
@@ -609,7 +609,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
               </Cell>
             </Column>
 
-            <Column width={110} align="left">
+            <Column width={150} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Status</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: DepositRequest) => (
@@ -618,7 +618,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
               </Cell>
             </Column>
 
-            <Column flexGrow={1} minWidth={150} align="left">
+            <Column flexGrow={1} minWidth={200} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Date</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: DepositRequest) => (
@@ -627,55 +627,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
               </Cell>
             </Column>
 
-            <Column width={70} align="center">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Actions</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
-                {(rowData: DepositRequest) => (
-                  <Dropdown
-                    renderToggle={(props, ref) => (
-                      <button
-                        {...props}
-                        ref={ref}
-                        className="w-7 h-7 rounded-lg hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-muted)]"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Icons.MoreHorizontal className="w-4 h-4" />
-                      </button>
-                    )}
-                    placement="bottomEnd"
-                  >
-                    <Dropdown.Item className="!text-xs !text-[var(--text-secondary)] hover:!bg-[var(--surface-hover)]" onClick={() => handleRowClick(rowData)}>
-                      <span className="flex items-center gap-2">
-                        <Icons.Eye className="w-3.5 h-3.5" />
-                        View Details
-                      </span>
-                    </Dropdown.Item>
-                    {(rowData.status || '').toLowerCase() === "pending" && (
-                      <>
-                        <Dropdown.Item className="!text-xs !text-[var(--success)] hover:!bg-[var(--success-soft)]">
-                          <span className="flex items-center gap-2">
-                            <Icons.Check className="w-3.5 h-3.5" />
-                            Approve
-                          </span>
-                        </Dropdown.Item>
-                        <Dropdown.Item className="!text-xs !text-[var(--danger)] hover:!bg-[var(--danger-soft)]">
-                          <span className="flex items-center gap-2">
-                            <Icons.X className="w-3.5 h-3.5" />
-                            Reject
-                          </span>
-                        </Dropdown.Item>
-                      </>
-                    )}
-                    <Dropdown.Item className="!text-xs !text-[var(--text-secondary)] hover:!bg-[var(--surface-hover)]">
-                      <span className="flex items-center gap-2">
-                        <Icons.Copy className="w-3.5 h-3.5" />
-                        Copy Reference
-                      </span>
-                    </Dropdown.Item>
-                  </Dropdown>
-                )}
-              </Cell>
-            </Column>
+           
           </Table>
         </div>
 

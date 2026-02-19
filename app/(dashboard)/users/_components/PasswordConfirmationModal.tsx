@@ -149,6 +149,7 @@ export default function PasswordConfirmationModal({
                 className="!pr-10"
                 disabled={loading}
                 autoFocus
+                autoComplete="off"
               />
               <button
                 type="button"

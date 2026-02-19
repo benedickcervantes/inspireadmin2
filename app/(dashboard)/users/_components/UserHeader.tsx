@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "motion/react";
-import { Avatar, Button, Stack } from "rsuite";
+import { Button, Stack } from "rsuite";
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
@@ -13,12 +13,6 @@ const Icons = {
       <polyline points="22,6 12,13 2,6" />
     </svg>
   ),
-  Plus: (props: IconProps) => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <line x1="12" y1="5" x2="12" y2="19" />
-      <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  ),
   Users: (props: IconProps) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -26,14 +20,46 @@ const Icons = {
       <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </svg>
-  )
+  ),
+  CheckSquare: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polyline points="9 11 12 14 22 4" />
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+    </svg>
+  ),
+  X: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  ),
+  Trash2: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
+  ),
 };
 
 interface UserHeaderProps {
   totalCount?: number | null;
+  selectionMode?: boolean;
+  onToggleSelectionMode?: () => void;
+  selectedCount?: number;
+  onClearSelection?: () => void;
+  onDeleteSelected?: () => void;
 }
 
-export default function UserHeader({ totalCount }: UserHeaderProps) {
+export default function UserHeader({ 
+  totalCount, 
+  selectionMode = false,
+  onToggleSelectionMode,
+  selectedCount = 0,
+  onClearSelection,
+  onDeleteSelected
+}: UserHeaderProps) {
   const displayCount = totalCount != null ? totalCount.toLocaleString() : "—";
 
   return (
@@ -69,10 +95,15 @@ export default function UserHeader({ totalCount }: UserHeaderProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25, duration: 0.3 }}
             >
-              Manage access, roles, and activity.
+              {selectionMode ? (
+                <span className="text-[var(--primary)]">
+                  {selectedCount} user{selectedCount !== 1 ? 's' : ''} selected
+                </span>
+              ) : (
+                "Manage access, roles, and activity."
+              )}
             </motion.div>
           </motion.div>
-         
         </div>
 
         <motion.div
@@ -81,17 +112,72 @@ export default function UserHeader({ totalCount }: UserHeaderProps) {
           transition={{ delay: 0.35, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
         >
           <Stack direction="row" spacing={8} className="flex-wrap">
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Button size="sm" appearance="default" className="!h-8 !px-3 !rounded-lg !text-xs !text-[var(--text-secondary)] !border-[var(--border)] !bg-[var(--surface)] !shadow-none hover:!bg-[var(--surface-hover)] hover:!border-[var(--border-strong)] transition-all">
-                <span className="flex items-center gap-2">
-                  <Icons.Mail className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-                  Send Email
-                </span>
-              </Button>
-            </motion.div>
+            {selectionMode ? (
+              <>
+                {selectedCount > 0 && (
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button 
+                      size="sm" 
+                      appearance="primary" 
+                      className="!h-8 !px-3 !rounded-lg !text-xs !bg-gradient-to-r !from-[var(--danger)] !to-[var(--danger-strong)] hover:!shadow-lg transition-all"
+                      onClick={onDeleteSelected}
+                    >
+                      <span className="flex items-center gap-2">
+                        <Icons.Trash2 className="w-3.5 h-3.5" />
+                        Delete Selected
+                      </span>
+                    </Button>
+                  </motion.div>
+                )}
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button 
+                    size="sm" 
+                    appearance="primary" 
+                    className="!h-8 !px-3 !rounded-lg !text-xs !bg-gradient-to-r !from-[var(--danger)] !to-[var(--danger-strong)] hover:!shadow-lg transition-all"
+                    onClick={onClearSelection}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Icons.X className="w-3.5 h-3.5" />
+                      Clear Selection
+                    </span>
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button 
+                    size="sm" 
+                    appearance="default" 
+                    className="!h-8 !px-3 !rounded-lg !text-xs !text-[var(--text-secondary)] !border-[var(--border)] !bg-[var(--surface)] hover:!bg-[var(--surface-hover)] transition-all"
+                    onClick={onToggleSelectionMode}
+                  >
+                    Done
+                  </Button>
+                </motion.div>
+              </>
+            ) : (
+              <>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button 
+                    size="sm" 
+                    appearance="primary" 
+                    className="!h-8 !px-3 !rounded-lg !text-xs !bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] hover:!shadow-lg transition-all"
+                    onClick={onToggleSelectionMode}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Icons.CheckSquare className="w-3.5 h-3.5" />
+                      Select Multiple
+                    </span>
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button size="sm" appearance="default" className="!h-8 !px-3 !rounded-lg !text-xs !text-[var(--text-secondary)] !border-[var(--border)] !bg-[var(--surface)] !shadow-none hover:!bg-[var(--surface-hover)] hover:!border-[var(--border-strong)] transition-all">
+                    <span className="flex items-center gap-2">
+                      <Icons.Mail className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                      Send Email
+                    </span>
+                  </Button>
+                </motion.div>
+              </>
+            )}
           </Stack>
         </motion.div>
       </div>

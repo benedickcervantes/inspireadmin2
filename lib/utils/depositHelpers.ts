@@ -26,5 +26,6 @@ export const normalizeDepositRequest = <T extends Record<string, any>>(deposit: 
     contractPeriod: deposit.contractPeriod ?? deposit.contract_period,
     paymentMethod: deposit.paymentMethod ?? deposit.payment_method,
     depositMethod: deposit.depositMethod ?? deposit.deposit_method,
+    depositType: deposit.depositType ?? deposit.deposit_type,
   };
 };

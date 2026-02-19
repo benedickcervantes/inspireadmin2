@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from "motion/react";
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Table, Drawer, Button, Modal, Nav, Badge, Avatar, Divider, Progress, ButtonGroup, Loader, Pagination, Dropdown } from 'rsuite';
+import { Table, Drawer, Button, Modal, Nav, Badge, Avatar, Divider, Progress, ButtonGroup, Loader, Pagination, Dropdown, Checkbox } from 'rsuite';
 import { getFirebaseUserById, getFirebaseUsers } from '@/lib/api/firebaseUsers';
 import type { UserTypeTab } from './UserFilters';
 import EditUserDrawer from './EditUserDrawer';
@@ -1504,10 +1504,13 @@ interface UserTableProps {
   searchQuery?: string;
   userType?: UserTypeTab;
   onTotalChange?: (total: number) => void;
-  onCountsChange?: (agentCount: number, investorCount: number) => void;
+  onCountsChange?: (agentCount: number, investorCount: number, demoCount: number, testCount: number) => void;
+  selectionMode?: boolean;
+  selectedUsers?: string[];
+  onSelectionChange?: (userIds: string[]) => void;
 }
 
-export default function UserTable({ searchQuery, userType = 'all', onTotalChange, onCountsChange }: UserTableProps) {
+export default function UserTable({ searchQuery, userType = 'all', onTotalChange, onCountsChange, selectionMode = false, selectedUsers = [], onSelectionChange }: UserTableProps) {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
@@ -1545,6 +1548,17 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
   });
 
   // Fetch agent and investor counts using pagination totals
+  // Delay fetching counts by 10 seconds to prioritize main user list
+  const [enableCountQueries, setEnableCountQueries] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setEnableCountQueries(true);
+    }, 10000); // 10 seconds delay
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const { data: agentData } = useQuery({
     queryKey: ['firebase-users-agent-count'],
     queryFn: () => getFirebaseUsers({
@@ -1552,6 +1566,8 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
       limit: 1,
       agent: true,
     }),
+    staleTime: 30000, // Cache for 30 seconds
+    enabled: enableCountQueries,
   });
 
   const { data: nonAgentData } = useQuery({
@@ -1561,6 +1577,8 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
       limit: 1,
       agent: false,
     }),
+    staleTime: 30000,
+    enabled: enableCountQueries,
   });
 
   const { data: demoData } = useQuery({
@@ -1570,6 +1588,8 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
       limit: 1,
       isDummyAccount: true,
     }),
+    staleTime: 30000,
+    enabled: enableCountQueries,
   });
 
   const { data: testData } = useQuery({
@@ -1579,6 +1599,18 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
       limit: 1,
       accountType: 'test',
     }),
+    staleTime: 30000,
+    enabled: enableCountQueries,
+  });
+
+  const { data: allUsersData } = useQuery({
+    queryKey: ['firebase-users-all-count'],
+    queryFn: () => getFirebaseUsers({
+      page: 1,
+      limit: 1,
+    }),
+    staleTime: 30000,
+    enabled: enableCountQueries,
   });
   
 
@@ -1592,19 +1624,33 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
   const investorCount = nonAgentData?.data?.pagination.total ?? 0;
   const demoCount = demoData?.data?.pagination.total ?? 0;
   const testCount = testData?.data?.pagination.total ?? 0;
-  const totalExcludingDemoTest = total - demoCount - testCount;
+  const totalAllUsers = allUsersData?.data?.pagination.total ?? 0;
+
+  // Debug logging
+  console.log('📊 [COUNTS DEBUG]', {
+    agentCount,
+    investorCount,
+    demoCount,
+    testCount,
+    totalAllUsers,
+    agentData: agentData?.data?.pagination,
+    nonAgentData: nonAgentData?.data?.pagination,
+    demoData: demoData?.data?.pagination,
+    testData: testData?.data?.pagination,
+    allUsersData: allUsersData?.data?.pagination
+  });
 
   useEffect(() => {
     setPage(1);
   }, [userType]);
 
   useEffect(() => {
-    onTotalChange?.(totalExcludingDemoTest);
-  }, [totalExcludingDemoTest, onTotalChange]);
+    onTotalChange?.(totalAllUsers);
+  }, [totalAllUsers, onTotalChange]);
 
   useEffect(() => {
-    onCountsChange?.(agentCount, investorCount);
-  }, [agentCount, investorCount, onCountsChange]);
+    onCountsChange?.(agentCount, investorCount, demoCount, testCount);
+  }, [agentCount, investorCount, demoCount, testCount, onCountsChange]);
 
   const errorMessage = error instanceof Error ? error.message : 'Failed to fetch users';
 
@@ -1664,6 +1710,27 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
     ]);
   };
 
+  // Checkbox selection handlers
+  const handleCheckAll = (checked: boolean) => {
+    if (checked) {
+      const allUserIds = users.map(user => user._id);
+      onSelectionChange?.(allUserIds);
+    } else {
+      onSelectionChange?.([]);
+    }
+  };
+
+  const handleCheckUser = (userId: string, checked: boolean) => {
+    if (checked) {
+      onSelectionChange?.([...selectedUsers, userId]);
+    } else {
+      onSelectionChange?.(selectedUsers.filter(id => id !== userId));
+    }
+  };
+
+  const isAllChecked = users.length > 0 && selectedUsers.length === users.length;
+  const isSomeChecked = selectedUsers.length > 0 && selectedUsers.length < users.length;
+
   if (isLoading) {
     return (
       <div className="bg-[var(--surface)] rounded-xl shadow-[var(--shadow-card)] border border-[var(--border-subtle)] p-8 flex items-center justify-center">
@@ -1698,8 +1765,30 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
             hover
             className="app-table !bg-transparent min-w-[900px] cursor-pointer [&_.rs-table-row:hover_.rs-table-cell]:!bg-[var(--surface-hover)] [&_.rs-table-row:hover_.rs-table-cell]:!transition-colors [&_.rs-table-row:hover_.rs-table-cell]:!duration-200"
             rowKey="_id"
-            onRowClick={(rowData) => handleRowClick(rowData as User)}
+            onRowClick={(rowData) => !selectionMode && handleRowClick(rowData as User)}
           >
+            {/* Checkbox Column - Only visible in selection mode */}
+            {selectionMode && (
+              <Column width={50} align="center" fixed>
+                <HeaderCell className="!bg-[var(--surface-soft)] !border-b !border-[var(--border-subtle)]">
+                  <Checkbox
+                    checked={isAllChecked}
+                    indeterminate={isSomeChecked}
+                    onChange={(_, checked) => handleCheckAll(checked)}
+                  />
+                </HeaderCell>
+                <Cell className="!border-b !border-[var(--border-subtle)]">
+                  {(rowData: User) => (
+                    <Checkbox
+                      checked={selectedUsers.includes(rowData._id)}
+                      onChange={(_, checked) => handleCheckUser(rowData._id, checked)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  )}
+                </Cell>
+              </Column>
+            )}
+
             <Column flexGrow={2} minWidth={200} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">User</HeaderCell>
               <Cell className="!border-b !border-[var(--border-subtle)]">

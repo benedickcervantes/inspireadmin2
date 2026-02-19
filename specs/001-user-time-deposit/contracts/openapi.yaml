@@ -1,0 +1,327 @@
+openapi: 3.0.3
+info:
+  title: Inspire Admin - Time Deposit API
+  version: 0.1.0
+servers:
+  - url: http://localhost:4000
+paths:
+  /api/time-deposits/quote:
+    post:
+      summary: Quote time deposit earnings and estimated rates
+      description: Returns estimated interest rate (tier interpolation) and computed earnings fields for preview in the admin UI.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimeDepositQuoteRequest"
+      responses:
+        "200":
+          description: Quote computed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeDepositQuoteResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/firebase-users/{id}/time-deposits:
+    post:
+      summary: Create a time deposit for a specific user
+      description: Creates a time deposit record and updates user balance/logs using v1-compatible formulas.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-Request-Id
+          in: header
+          required: false
+          description: Client-supplied idempotency key (recommended). Use a stable UUID per submit.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimeDepositCreateRequest"
+      responses:
+        "200":
+          description: Time deposit created (or existing returned for idempotent retry)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimeDepositCreateResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Term:
+      type: string
+      enum: [sixMonths, oneYear, twoYears]
+
+    TimeDepositReferral:
+      type: object
+      properties:
+        referrerUserId:
+          type: string
+        commissionPercentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        mode:
+          type: string
+          enum: [manual, hierarchy]
+      required:
+        - referrerUserId
+
+    TimeDepositQuoteRequest:
+      type: object
+      required: [amount, term]
+      properties:
+        amount:
+          type: number
+          minimum: 0
+        term:
+          $ref: "#/components/schemas/Term"
+        initialDate:
+          type: string
+          format: date
+          description: Optional for quote; create requires this.
+        finalInterestRate:
+          type: number
+          minimum: 0
+          description: Optional override. When omitted, backend uses estimated interest rate for quote calculations.
+        referral:
+          $ref: "#/components/schemas/TimeDepositReferral"
+
+    TimeDepositQuoteResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required: [term, cycles, estimatedInterestRate, finalInterestRate, annualNetInterest, totalNetInterestForTerm, totalReturnAmount]
+          properties:
+            term:
+              $ref: "#/components/schemas/Term"
+            cycles:
+              type: integer
+              minimum: 0
+              description: 6-month cycles used for the term
+            estimatedInterestRate:
+              type: number
+              description: Percent, rounded to 4 decimals
+            finalInterestRate:
+              type: number
+              description: Percent used for earnings, may match estimate
+            annualNetInterest:
+              type: number
+              description: Net interest per 6-month cycle (after 20% tax), rounded to 2 decimals
+            totalNetInterestForTerm:
+              type: number
+              description: Net interest for the full term, rounded to 2 decimals
+            totalReturnAmount:
+              type: number
+              description: Principal + total net interest, rounded to 2 decimals
+            estimatedAgentRate:
+              type: number
+              description: Optional agent rate estimate, rounded to 4 decimals
+            referralNetCommission:
+              type: number
+              description: Optional net commission (after 20% tax), when referral provided
+
+    TimeDepositCreateRequest:
+      type: object
+      required: [amount, term, initialDate]
+      properties:
+        amount:
+          type: number
+          minimum: 0
+        term:
+          $ref: "#/components/schemas/Term"
+        initialDate:
+          type: string
+          format: date
+        finalInterestRate:
+          type: number
+          minimum: 0
+          description: Optional override. When omitted, backend may default to the estimated rate for the selected term.
+        referral:
+          $ref: "#/components/schemas/TimeDepositReferral"
+        contract:
+          $ref: "#/components/schemas/TimeDepositContract"
+
+    TimeDepositContract:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: When true, generate a contract record linked to the created time deposit.
+        strict:
+          type: boolean
+          description: When true, fail the create request if contract generation fails.
+
+    TimeDepositContractResult:
+      type: object
+      required: [contractId]
+      properties:
+        contractId:
+          type: string
+        urls:
+          type: object
+          properties:
+            view:
+              type: string
+              nullable: true
+            download:
+              type: string
+              nullable: true
+            pdf:
+              type: string
+              nullable: true
+        expiresAt:
+          type: string
+          nullable: true
+
+    TimeDeposit:
+      type: object
+      required:
+        - id
+        - displayId
+        - userId
+        - amount
+        - term
+        - initialDate
+        - completionDate
+        - status
+        - estimatedInterestRate
+        - finalInterestRate
+        - annualNetInterest
+        - totalNetInterestForTerm
+        - totalReturnAmount
+      properties:
+        id:
+          type: string
+          description: Firestore document ID
+        displayId:
+          type: string
+          example: "0000123"
+        userId:
+          type: string
+        amount:
+          type: number
+        term:
+          $ref: "#/components/schemas/Term"
+        initialDate:
+          type: string
+          format: date
+        completionDate:
+          type: string
+          format: date
+        status:
+          type: string
+          example: Active
+        estimatedInterestRate:
+          type: number
+        finalInterestRate:
+          type: number
+        annualNetInterest:
+          type: number
+        totalNetInterestForTerm:
+          type: number
+        totalReturnAmount:
+          type: number
+        requestId:
+          type: string
+          description: Idempotency key used for creation (recommended to match X-Request-Id)
+
+    TimeDepositCreateResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required: [timeDeposit]
+          properties:
+            timeDeposit:
+              $ref: "#/components/schemas/TimeDeposit"
+            idempotent:
+              type: boolean
+              description: True when an existing time deposit was returned for a duplicate request ID.
+            contract:
+              $ref: "#/components/schemas/TimeDepositContractResult"
+            contractWarning:
+              type: string
+              description: Warning message when contract generation is non-blocking and fails.
+
+    ErrorResponse:
+      type: object
+      required: [success, error]
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+        message:
+          type: string
+        requestId:
+          type: string

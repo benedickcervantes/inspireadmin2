@@ -54,7 +54,7 @@ const postAdminAuth = async (path: string, body: Record<string, unknown>) => {
 
 /**
  * Login admin with email and password
- * Uses Firebase RTDB /adminUsers for authentication
+ * Uses Firestore adminUsers for authentication
  */
 export const adminLogin = (payload: AdminLoginPayload) =>
     postAdminAuth("/api/admin-auth/login", {
@@ -64,7 +64,7 @@ export const adminLogin = (payload: AdminLoginPayload) =>
 
 /**
  * Register a new admin
- * Creates user in Firebase Auth and record in /adminUsers RTDB path
+ * Creates user in Firebase Auth and record in Firestore adminUsers
  */
 export const adminRegister = (payload: AdminRegisterPayload) =>
     postAdminAuth("/api/admin-auth/register", {

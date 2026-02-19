@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from "motion/react";
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Table, Drawer, Button, Modal, Nav, Badge, Avatar, Divider, Progress, ButtonGroup, Loader, Pagination, Dropdown } from 'rsuite';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Table, Drawer, Button, Modal, Nav, Badge, Avatar, Divider, Progress, ButtonGroup, Loader, Pagination, Dropdown, Checkbox } from 'rsuite';
 import { getFirebaseUserById, getFirebaseUsers } from '@/lib/api/firebaseUsers';
 import type { UserTypeTab } from './UserFilters';
 import EditUserDrawer from './EditUserDrawer';
+import AddTimeDepositModal from './AddTimeDepositModal';
+import PasswordConfirmationModal from './PasswordConfirmationModal';
 
 const { Column, HeaderCell, Cell } = Table;
 
@@ -125,6 +127,31 @@ const Icons = {
       <line x1="14" y1="11" x2="14" y2="17" />
     </svg>
   ),
+  EyeOff: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  ),
+  AlertTriangle: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  ),
+  AlertCircle: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+  ),
+  Star: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  ),
 };
 
 interface Transaction {
@@ -230,6 +257,9 @@ const parseNumber = (value: unknown): number | null => {
   }
   return null;
 };
+
+const formatCurrency = (value: number): string =>
+  value.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' });
 
 const getFirstNumber = (item: SubcollectionItem, keys: string[]): number => {
   for (const key of keys) {
@@ -436,7 +466,14 @@ const transformTransactions = (user: User): Transaction[] => {
     const amount = getFirstNumber(contract, ['amount', 'totalReturnAmount', 'totalNetInterestForTerm', 'annualNetInterest']);
     const dateValue = contract.initialDate ?? contract.createdAt ?? contract.contractDate;
     const contractType = typeof contract.contractType === 'string' ? contract.contractType : '';
-    const description = resolveDescription(contract, contractType ? `Time Deposit (${contractType})` : 'Time Deposit');
+    const totalReturn = getFirstNumber(contract, ['totalReturnAmount']);
+    const statusText = typeof contract.status === 'string'
+      ? contract.status
+      : (typeof contract.isActive === 'string' ? contract.isActive : 'Active');
+    const fallbackDescription = contractType
+      ? `Time Deposit (${formatContractType(contractType)}) - ${statusText} - Return ${formatCurrency(totalReturn)}`
+      : `Time Deposit - ${statusText}`;
+    const description = resolveDescription(contract, fallbackDescription);
     const reference = resolveReference(contract, `TD-${index + 1}`);
     normalized.push(buildTransaction({
       id: typeof contract._firebaseDocId === 'string' ? contract._firebaseDocId : `td-${index}`,
@@ -843,11 +880,13 @@ const TransactionList = ({ transactions, isLoading }: { transactions: Transactio
 const TransactionModal = ({
   open,
   onClose,
+  onAddTimeDeposit,
   user,
   isLoading
 }: {
   open: boolean;
   onClose: () => void;
+  onAddTimeDeposit: () => void;
   user: User;
   isLoading?: boolean;
 }) => {
@@ -1197,6 +1236,17 @@ const TransactionModal = ({
             <Button size="sm" appearance="subtle" onClick={onClose} className="!text-[var(--text-secondary)] hover:scale-[1.02] active:scale-[0.98] transition-transform">
               Close
             </Button>
+            <Button
+              size="sm"
+              appearance="primary"
+              onClick={onAddTimeDeposit}
+              className="!bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] hover:scale-[1.02] active:scale-[0.98] transition-transform"
+            >
+              <span className="flex items-center gap-1.5">
+                <Icons.Clock className="w-3.5 h-3.5" />
+                Add Time Deposit
+              </span>
+            </Button>
             <Button size="sm" appearance="primary" className="!bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] hover:scale-[1.02] active:scale-[0.98] transition-transform">
               Export CSV
             </Button>
@@ -1209,10 +1259,28 @@ const TransactionModal = ({
 
 // User Detail Panel Component - Dark Theme with CSS transitions
 const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit }: { user: User; onClose: () => void; onViewTransactions: () => void; onEdit: () => void }) => {
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const queryClient = useQueryClient();
   const walletBalance = user.walletAmount || 0;
   const availBalance = user.availBalanceAmount || 0;
   const subcollectionCount = user.subcollections ? Object.keys(user.subcollections).length : 0;
   const transactionCount = transformTransactions(user).length;
+
+  const handleDeleteUser = async () => {
+    try {
+      const { deleteFirebaseUser } = await import('@/lib/api/adminOperations');
+      await deleteFirebaseUser(user._id);
+      
+      // Refresh the user list
+      queryClient.invalidateQueries({ queryKey: ['firebase-users'] });
+      
+      // Close the panel
+      onClose();
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      throw error;
+    }
+  };
 
   const accountInfoItems = [
     { icon: Icons.Mail, label: "Email", value: user.emailAddress || 'Not provided' },
@@ -1316,41 +1384,67 @@ const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit }: { user: 
           </div>
         )}
 
-        {/* Actions - below Data Overview (or below Balance Summary when no Data Overview) */}
-        <div className="mt-1">
+        {/* Actions - Improved layout with primary buttons + dropdown */}
+        <div className="mt-1 space-y-2">
+          {/* Primary Action Buttons */}
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              size="sm"
+              appearance="primary"
+              onClick={onViewTransactions}
+              className="!bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] !rounded-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              <span className="flex items-center justify-center gap-1.5">
+                <Icons.Eye className="w-3.5 h-3.5" />
+                View Transactions
+              </span>
+            </Button>
+            <Button
+              size="sm"
+              appearance="primary"
+              onClick={onEdit}
+              className="!bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] !rounded-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              <span className="flex items-center justify-center gap-1.5">
+                <Icons.Edit className="w-3.5 h-3.5" />
+                Edit
+              </span>
+            </Button>
+          </div>
+
+          {/* Secondary Actions Dropdown */}
           <Dropdown
             renderToggle={(props, ref) => (
               <Button
                 {...props}
                 ref={ref}
                 size="sm"
-                appearance="primary"
+                appearance="ghost"
                 block
-                className="!bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] !rounded-lg hover:scale-[1.02] active:scale-[0.98] transition-transform"
+                className="!border !border-[var(--border)] !rounded-lg hover:!bg-[var(--surface-hover)] hover:scale-[1.01] active:scale-[0.99] transition-all"
               >
-                <span className="flex items-center justify-center gap-2">
+                <span className="flex items-center justify-center gap-2 !text-[var(--text-secondary)]">
                   <Icons.MoreHorizontal className="w-4 h-4" />
-                  Actions
+                  More Actions
                 </span>
               </Button>
             )}
           >
-            <Dropdown.Item className="!text-xs" onSelect={onViewTransactions}>
-              <span className="flex items-center gap-2">
-                <Icons.Eye className="w-3.5 h-3.5" />
-                View Transactions
-              </span>
-            </Dropdown.Item>
+            {/* View/Read Actions Group */}
             <Dropdown.Item className="!text-xs" onSelect={() => {}}>
               <span className="flex items-center gap-2">
                 <Icons.Phone className="w-3.5 h-3.5" />
                 Contact details
               </span>
             </Dropdown.Item>
+            
+            <Dropdown.Item divider />
+            
+            {/* Modify Actions Group */}
             <Dropdown.Item className="!text-xs" onSelect={() => {}}>
               <span className="flex items-center gap-2">
-                <Icons.Shield className="w-3.5 h-3.5" />
-                Remove agent
+                <Icons.Star className="w-3.5 h-3.5" />
+                Add 10 points
               </span>
             </Dropdown.Item>
             <Dropdown.Item className="!text-xs" onSelect={() => {}}>
@@ -1361,17 +1455,15 @@ const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit }: { user: 
             </Dropdown.Item>
             <Dropdown.Item className="!text-xs" onSelect={() => {}}>
               <span className="flex items-center gap-2">
-                <Icons.Plus className="w-3.5 h-3.5" />
-                Add 10 points
+                <Icons.Shield className="w-3.5 h-3.5" />
+                Remove agent
               </span>
             </Dropdown.Item>
-            <Dropdown.Item className="!text-xs" onSelect={onEdit}>
-              <span className="flex items-center gap-2">
-                <Icons.Edit className="w-3.5 h-3.5" />
-                Edit
-              </span>
-            </Dropdown.Item>
-            <Dropdown.Item className="!text-xs !text-[var(--danger)]" onSelect={() => {}}>
+            
+            <Dropdown.Item divider />
+            
+            {/* Dangerous Actions Group */}
+            <Dropdown.Item className="!text-xs !text-[var(--danger)] hover:!bg-[var(--danger-soft)]" onSelect={() => setShowDeleteModal(true)}>
               <span className="flex items-center gap-2">
                 <Icons.Trash2 className="w-3.5 h-3.5" />
                 Delete user
@@ -1380,6 +1472,14 @@ const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit }: { user: 
           </Dropdown>
         </div>
       </div>
+
+      {/* Password Confirmation Modal */}
+      <PasswordConfirmationModal
+        open={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteUser}
+        userName={getFullName(user)}
+      />
     </div>
   );
 };
@@ -1404,16 +1504,21 @@ interface UserTableProps {
   searchQuery?: string;
   userType?: UserTypeTab;
   onTotalChange?: (total: number) => void;
-  onCountsChange?: (agentCount: number, investorCount: number) => void;
+  onCountsChange?: (agentCount: number, investorCount: number, demoCount: number, testCount: number) => void;
+  selectionMode?: boolean;
+  selectedUsers?: string[];
+  onSelectionChange?: (userIds: string[]) => void;
 }
 
-export default function UserTable({ searchQuery, userType = 'all', onTotalChange, onCountsChange }: UserTableProps) {
+export default function UserTable({ searchQuery, userType = 'all', onTotalChange, onCountsChange, selectionMode = false, selectedUsers = [], onSelectionChange }: UserTableProps) {
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [timeDepositModalOpen, setTimeDepositModalOpen] = useState(false);
 
   const filterParams = userTypeToParams(userType);
   
@@ -1443,6 +1548,17 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
   });
 
   // Fetch agent and investor counts using pagination totals
+  // Delay fetching counts by 10 seconds to prioritize main user list
+  const [enableCountQueries, setEnableCountQueries] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setEnableCountQueries(true);
+    }, 10000); // 10 seconds delay
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const { data: agentData } = useQuery({
     queryKey: ['firebase-users-agent-count'],
     queryFn: () => getFirebaseUsers({
@@ -1450,6 +1566,8 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
       limit: 1,
       agent: true,
     }),
+    staleTime: 30000, // Cache for 30 seconds
+    enabled: enableCountQueries,
   });
 
   const { data: nonAgentData } = useQuery({
@@ -1459,6 +1577,8 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
       limit: 1,
       agent: false,
     }),
+    staleTime: 30000,
+    enabled: enableCountQueries,
   });
 
   const { data: demoData } = useQuery({
@@ -1468,6 +1588,8 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
       limit: 1,
       isDummyAccount: true,
     }),
+    staleTime: 30000,
+    enabled: enableCountQueries,
   });
 
   const { data: testData } = useQuery({
@@ -1477,6 +1599,18 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
       limit: 1,
       accountType: 'test',
     }),
+    staleTime: 30000,
+    enabled: enableCountQueries,
+  });
+
+  const { data: allUsersData } = useQuery({
+    queryKey: ['firebase-users-all-count'],
+    queryFn: () => getFirebaseUsers({
+      page: 1,
+      limit: 1,
+    }),
+    staleTime: 30000,
+    enabled: enableCountQueries,
   });
   
 
@@ -1490,19 +1624,33 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
   const investorCount = nonAgentData?.data?.pagination.total ?? 0;
   const demoCount = demoData?.data?.pagination.total ?? 0;
   const testCount = testData?.data?.pagination.total ?? 0;
-  const totalExcludingDemoTest = total - demoCount - testCount;
+  const totalAllUsers = allUsersData?.data?.pagination.total ?? 0;
+
+  // Debug logging
+  console.log('📊 [COUNTS DEBUG]', {
+    agentCount,
+    investorCount,
+    demoCount,
+    testCount,
+    totalAllUsers,
+    agentData: agentData?.data?.pagination,
+    nonAgentData: nonAgentData?.data?.pagination,
+    demoData: demoData?.data?.pagination,
+    testData: testData?.data?.pagination,
+    allUsersData: allUsersData?.data?.pagination
+  });
 
   useEffect(() => {
     setPage(1);
   }, [userType]);
 
   useEffect(() => {
-    onTotalChange?.(totalExcludingDemoTest);
-  }, [totalExcludingDemoTest, onTotalChange]);
+    onTotalChange?.(totalAllUsers);
+  }, [totalAllUsers, onTotalChange]);
 
   useEffect(() => {
-    onCountsChange?.(agentCount, investorCount);
-  }, [agentCount, investorCount, onCountsChange]);
+    onCountsChange?.(agentCount, investorCount, demoCount, testCount);
+  }, [agentCount, investorCount, demoCount, testCount, onCountsChange]);
 
   const errorMessage = error instanceof Error ? error.message : 'Failed to fetch users';
 
@@ -1544,6 +1692,45 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
     setEditDrawerOpen(false);
   };
 
+  const handleAddTimeDepositFromTransactions = () => {
+    setTransactionModalOpen(false);
+    setTimeDepositModalOpen(true);
+  };
+
+  const handleCloseTimeDeposit = () => {
+    setTimeDepositModalOpen(false);
+  };
+
+  const handleTimeDepositSuccess = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['firebase-users'] }),
+      queryClient.invalidateQueries({ queryKey: ['firebase-user', selectedUserId] }),
+      queryClient.invalidateQueries({ queryKey: ['firebase-users-agent-count'] }),
+      queryClient.invalidateQueries({ queryKey: ['firebase-users-non-agent-count'] })
+    ]);
+  };
+
+  // Checkbox selection handlers
+  const handleCheckAll = (checked: boolean) => {
+    if (checked) {
+      const allUserIds = users.map(user => user._id);
+      onSelectionChange?.(allUserIds);
+    } else {
+      onSelectionChange?.([]);
+    }
+  };
+
+  const handleCheckUser = (userId: string, checked: boolean) => {
+    if (checked) {
+      onSelectionChange?.([...selectedUsers, userId]);
+    } else {
+      onSelectionChange?.(selectedUsers.filter(id => id !== userId));
+    }
+  };
+
+  const isAllChecked = users.length > 0 && selectedUsers.length === users.length;
+  const isSomeChecked = selectedUsers.length > 0 && selectedUsers.length < users.length;
+
   if (isLoading) {
     return (
       <div className="bg-[var(--surface)] rounded-xl shadow-[var(--shadow-card)] border border-[var(--border-subtle)] p-8 flex items-center justify-center">
@@ -1578,8 +1765,30 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
             hover
             className="app-table !bg-transparent min-w-[900px] cursor-pointer [&_.rs-table-row:hover_.rs-table-cell]:!bg-[var(--surface-hover)] [&_.rs-table-row:hover_.rs-table-cell]:!transition-colors [&_.rs-table-row:hover_.rs-table-cell]:!duration-200"
             rowKey="_id"
-            onRowClick={(rowData) => handleRowClick(rowData as User)}
+            onRowClick={(rowData) => !selectionMode && handleRowClick(rowData as User)}
           >
+            {/* Checkbox Column - Only visible in selection mode */}
+            {selectionMode && (
+              <Column width={50} align="center" fixed>
+                <HeaderCell className="!bg-[var(--surface-soft)] !border-b !border-[var(--border-subtle)]">
+                  <Checkbox
+                    checked={isAllChecked}
+                    indeterminate={isSomeChecked}
+                    onChange={(_, checked) => handleCheckAll(checked)}
+                  />
+                </HeaderCell>
+                <Cell className="!border-b !border-[var(--border-subtle)]">
+                  {(rowData: User) => (
+                    <Checkbox
+                      checked={selectedUsers.includes(rowData._id)}
+                      onChange={(_, checked) => handleCheckUser(rowData._id, checked)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  )}
+                </Cell>
+              </Column>
+            )}
+
             <Column flexGrow={2} minWidth={200} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">User</HeaderCell>
               <Cell className="!border-b !border-[var(--border-subtle)]">
@@ -1720,6 +1929,7 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
         <TransactionModal
           open={transactionModalOpen}
           onClose={handleCloseTransactionModal}
+          onAddTimeDeposit={handleAddTimeDepositFromTransactions}
           user={activeUser}
           isLoading={isUserDetailPending}
         />
@@ -1730,6 +1940,16 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
         open={editDrawerOpen}
         onClose={handleCloseEditDrawer}
         user={activeUser}
+      />
+
+      <AddTimeDepositModal
+        open={timeDepositModalOpen}
+        onClose={handleCloseTimeDeposit}
+        user={activeUser}
+        onSuccess={async () => {
+          await handleTimeDepositSuccess();
+          handleCloseTimeDeposit();
+        }}
       />
     </>
   );

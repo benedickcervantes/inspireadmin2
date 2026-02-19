@@ -57,6 +57,10 @@ const paymentMethodOptions = [
   { label: "Maya", value: "maya" },
   { label: "Credit Card", value: "credit_card" },
   { label: "Crypto", value: "crypto" },
+  { label: "Time Deposit", value: "time_deposit" },
+  { label: "Topup Available Balance", value: "topup_available_balance" },
+  { label: "Stock", value: "stock" },
+  { label: "Top Up", value: "topup" },
 ];
 
 export default function DepositFilters({ filters, onFiltersChange }: DepositFiltersProps) {

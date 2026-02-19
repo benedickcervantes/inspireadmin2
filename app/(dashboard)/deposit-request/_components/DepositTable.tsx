@@ -1,12 +1,11 @@
 //app\(dashboard)\deposit-request\_components\DepositTable.tsx
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Table, Button, Drawer, Dropdown, Loader, Pagination } from "rsuite";
 import { getFirebaseDepositRequests } from "@/lib/api/firebaseDepositRequests";
-import { normalizeDepositRequest } from "@/lib/utils/depositHelpers";
 
 const { Column, HeaderCell, Cell } = Table;
 
@@ -127,12 +126,6 @@ const Icons = {
       <line x1="16" y1="3" x2="14" y2="21" />
     </svg>
   ),
-  TrendingUp: (props: IconProps) => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-      <polyline points="17 6 23 6 23 12" />
-    </svg>
-  ),
   AlertCircle: (props: IconProps) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
       <circle cx="12" cy="12" r="10" />
@@ -153,9 +146,6 @@ interface DepositRequest {
   processedAt?: string;
   notes?: string;
   proofUrl?: string;
-  type?: string;
-  maturityDate?: string;
-  contractPeriod?: string;
   user: {
     odId?: string;
     firstName?: string;
@@ -288,30 +278,6 @@ const PaymentMethodBadge = ({ method }: { method: string }) => {
       bg: "bg-[var(--warning-soft)]",
       text: "text-[var(--warning)]",
     },
-    time_deposit: {
-      icon: Icons.Clock,
-      label: "Time Deposit",
-      bg: "bg-purple-500/10",
-      text: "text-purple-500",
-    },
-    topup_available_balance: {
-      icon: Icons.DollarSign,
-      label: "Topup Balance",
-      bg: "bg-cyan-500/10",
-      text: "text-cyan-500",
-    },
-    stock: {
-      icon: Icons.TrendingUp,
-      label: "Stock",
-      bg: "bg-blue-500/10",
-      text: "text-blue-500",
-    },
-    topup: {
-      icon: Icons.DollarSign,
-      label: "Top Up",
-      bg: "bg-cyan-500/10",
-      text: "text-cyan-500",
-    },
   };
 
   const methodLower = (method || 'bank_transfer').toLowerCase().replace(/\s+/g, '_');
@@ -403,18 +369,6 @@ const DepositDetailPanel = ({
             </div>
           </div>
 
-          {deposit.type && (
-            <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface-soft)] rounded-md border border-[var(--border)]">
-              <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center flex-shrink-0">
-                <Icons.FileText className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-              </div>
-              <div>
-                <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Type</div>
-                <div className="text-[13px] font-medium text-[var(--text-primary)]">{deposit.type}</div>
-              </div>
-            </div>
-          )}
-
           <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface-soft)] rounded-md border border-[var(--border)]">
             <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center flex-shrink-0">
               <Icons.Calendar className="w-3.5 h-3.5 text-[var(--text-muted)]" />
@@ -490,36 +444,53 @@ export default function DepositTable({ filters }: DepositTableProps) {
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
 
-  const apiParams = useMemo(() => {
-    const params: Parameters<typeof getFirebaseDepositRequests>[0] = { page, limit };
-    if (filters.status && filters.status !== "all") params.status = filters.status;
-    if (filters.paymentMethod && filters.paymentMethod !== "all") params.paymentMethod = filters.paymentMethod;
-    if (filters.searchQuery?.trim()) params.search = filters.searchQuery.trim();
-    if (filters.dateRange?.[0]) params.dateFrom = filters.dateRange[0].toISOString();
-    if (filters.dateRange?.[1]) params.dateTo = filters.dateRange[1].toISOString();
-    return params;
-  }, [page, limit, filters.status, filters.paymentMethod, filters.searchQuery, filters.dateRange]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [filters.status, filters.paymentMethod, filters.searchQuery, filters.dateRange]);
-
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["firebase-deposit-requests", apiParams],
-    queryFn: () => getFirebaseDepositRequests(apiParams),
+    queryKey: ["firebase-deposit-requests", { page, limit }],
+    queryFn: () => getFirebaseDepositRequests({ page, limit }),
     placeholderData: keepPreviousData,
   });
 
-  const deposits = useMemo(() => {
-    const items = (data?.data?.items ?? []) as (DepositRequest & { 
-      maturity_date?: string; 
-      contract_period?: string;
-      payment_method?: string;
-      deposit_method?: string;
-    })[];
-    // Normalize field names from Firebase (handles both camelCase and snake_case)
-    return items.map((item) => normalizeDepositRequest(item)) as DepositRequest[];
-  }, [data?.data?.items]);
+  const deposits = (data?.data?.items ?? []) as DepositRequest[];
+  
+  const filteredDeposits = React.useMemo(() => {
+    let filtered = deposits;
+
+    if (filters.status !== "all") {
+      filtered = filtered.filter(deposit => 
+        (deposit.status || "pending").toLowerCase() === filters.status.toLowerCase()
+      );
+    }
+
+    if (filters.paymentMethod !== "all") {
+      filtered = filtered.filter(deposit => 
+        (deposit.paymentMethod || "bank_transfer").toLowerCase().replace(/\s+/g, '_') === filters.paymentMethod
+      );
+    }
+
+    if (filters.searchQuery) {
+      const query = filters.searchQuery.toLowerCase();
+      filtered = filtered.filter(deposit => {
+        const userName = getFullName(deposit.user).toLowerCase();
+        const email = (deposit.user.emailAddress || "").toLowerCase();
+        const reference = (deposit.referenceNumber || deposit._firebaseDocId).toLowerCase();
+        
+        return userName.includes(query) || 
+               email.includes(query) || 
+               reference.includes(query);
+      });
+    }
+
+    if (filters.dateRange && filters.dateRange[0] && filters.dateRange[1]) {
+      const [startDate, endDate] = filters.dateRange;
+      filtered = filtered.filter(deposit => {
+        if (!deposit.createdAt) return false;
+        const depositDate = new Date(deposit.createdAt);
+        return depositDate >= startDate && depositDate <= endDate;
+      });
+    }
+
+    return filtered;
+  }, [deposits, filters]);
 
   const total = data?.data?.pagination.total ?? 0;
   const errorMessage = error instanceof Error ? error.message : "Failed to fetch deposit requests";
@@ -583,7 +554,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
       >
         <div className="overflow-x-auto rounded-t-xl">
           <Table
-            data={deposits}
+            data={filteredDeposits}
             autoHeight
             rowHeight={60}
             headerHeight={40}
@@ -592,7 +563,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
             rowKey="_firebaseDocId"
             onRowClick={(rowData) => handleRowClick(rowData as DepositRequest)}
           >
-            <Column width={120} align="left">
+            <Column width={260} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Reference</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: DepositRequest) => (
@@ -601,7 +572,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
               </Cell>
             </Column>
 
-            <Column flexGrow={2} minWidth={200} align="left">
+            <Column width={250} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">User</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: DepositRequest) => {
@@ -620,7 +591,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
               </Cell>
             </Column>
 
-            <Column width={130} align="right">
+            <Column width={250} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Amount</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: DepositRequest) => (
@@ -629,7 +600,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
               </Cell>
             </Column>
 
-            <Column width={140} align="left">
+            <Column width={250} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Payment Method</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: DepositRequest) => (
@@ -638,7 +609,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
               </Cell>
             </Column>
 
-            <Column width={110} align="left">
+            <Column width={150} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Status</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: DepositRequest) => (
@@ -647,7 +618,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
               </Cell>
             </Column>
 
-            <Column flexGrow={1} minWidth={150} align="left">
+            <Column flexGrow={1} minWidth={200} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Date</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: DepositRequest) => (
@@ -656,55 +627,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
               </Cell>
             </Column>
 
-            <Column width={70} align="center">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Actions</HeaderCell>
-              <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
-                {(rowData: DepositRequest) => (
-                  <Dropdown
-                    renderToggle={(props, ref) => (
-                      <button
-                        {...props}
-                        ref={ref}
-                        className="w-7 h-7 rounded-lg hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-muted)]"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Icons.MoreHorizontal className="w-4 h-4" />
-                      </button>
-                    )}
-                    placement="bottomEnd"
-                  >
-                    <Dropdown.Item className="!text-xs !text-[var(--text-secondary)] hover:!bg-[var(--surface-hover)]" onClick={() => handleRowClick(rowData)}>
-                      <span className="flex items-center gap-2">
-                        <Icons.Eye className="w-3.5 h-3.5" />
-                        View Details
-                      </span>
-                    </Dropdown.Item>
-                    {(rowData.status || '').toLowerCase() === "pending" && (
-                      <>
-                        <Dropdown.Item className="!text-xs !text-[var(--success)] hover:!bg-[var(--success-soft)]">
-                          <span className="flex items-center gap-2">
-                            <Icons.Check className="w-3.5 h-3.5" />
-                            Approve
-                          </span>
-                        </Dropdown.Item>
-                        <Dropdown.Item className="!text-xs !text-[var(--danger)] hover:!bg-[var(--danger-soft)]">
-                          <span className="flex items-center gap-2">
-                            <Icons.X className="w-3.5 h-3.5" />
-                            Reject
-                          </span>
-                        </Dropdown.Item>
-                      </>
-                    )}
-                    <Dropdown.Item className="!text-xs !text-[var(--text-secondary)] hover:!bg-[var(--surface-hover)]">
-                      <span className="flex items-center gap-2">
-                        <Icons.Copy className="w-3.5 h-3.5" />
-                        Copy Reference
-                      </span>
-                    </Dropdown.Item>
-                  </Dropdown>
-                )}
-              </Cell>
-            </Column>
+           
           </Table>
         </div>
 
@@ -733,7 +656,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.5 }}
       >
-        {deposits.map((deposit: DepositRequest) => (
+        {filteredDeposits.map((deposit: DepositRequest) => (
           <motion.div
             key={deposit._firebaseDocId}
             className="bg-[var(--surface)] rounded-lg border border-[var(--border)] p-3 cursor-pointer hover:border-[var(--primary)] transition-colors"
@@ -756,12 +679,6 @@ export default function DepositTable({ filters }: DepositTableProps) {
               </div>
               <PaymentMethodBadge method={deposit.paymentMethod || 'bank_transfer'} />
             </div>
-            {((deposit.type || "").toLowerCase().includes("time deposit") || 
-              (deposit.paymentMethod || "").toLowerCase().includes("time") ||
-              deposit.maturityDate || 
-              deposit.contractPeriod) && (
-              <div className="text-xs text-[var(--text-muted)] mb-1">Maturity: {deposit.maturityDate || deposit.contractPeriod || "—"}</div>
-            )}
             <div className="text-xs text-[var(--text-muted)]">{formatDate(deposit.createdAt)}</div>
           </motion.div>
         ))}

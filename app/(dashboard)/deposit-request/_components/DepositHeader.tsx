@@ -72,15 +72,15 @@ const cardVariants = {
   },
 };
 
-const emptyStats: DepositStats = {
-  total: 0,
-  pending: 0,
-  approved: 0,
-  totalAmount: "0",
-};
-
 export default function DepositHeader({ stats }: DepositHeaderProps) {
-  const displayStats = stats ?? emptyStats;
+  const defaultStats: DepositStats = {
+    total: 1247,
+    pending: 48,
+    approved: 1156,
+    totalAmount: "2,450,000",
+  };
+
+  const displayStats = stats || defaultStats;
 
   return (
     <div className="flex flex-col gap-4">
@@ -160,17 +160,21 @@ export default function DepositHeader({ stats }: DepositHeaderProps) {
 
       {/* Stats Cards */}
       <motion.div
-        className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+        className="grid grid-cols-2 lg:grid-cols-5 gap-3"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
         <motion.div
-          className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-3 shadow-sm"
+          className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 shadow-sm"
           variants={cardVariants}
-          whileHover={{ scale: 1.02, borderColor: "var(--border-strong)" }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+          whileHover={{ scale: 1.02, boxShadow: "0 8px 20px rgba(16, 114, 185, 0.3)" }}
         >
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-8 h-8 rounded-lg bg-[var(--primary-soft)] flex items-center justify-center">
+              <Icons.TrendingUp className="w-4 h-4 text-[var(--primary)]" />
+            </div>
+          </div>
           <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Total Requests</div>
           <motion.div
             className="text-xl font-bold text-[var(--text-primary)] mt-1"
@@ -180,64 +184,91 @@ export default function DepositHeader({ stats }: DepositHeaderProps) {
           >
             {displayStats.total.toLocaleString()}
           </motion.div>
-          <div className="flex items-center gap-1 mt-1">
-            <Icons.TrendingUp className="w-3 h-3 text-[var(--success)]" />
-            <span className="text-[10px] text-[var(--success)]">+12%</span>
-          </div>
         </motion.div>
 
         <motion.div
-          className="bg-[var(--warning-soft)] rounded-xl border border-[var(--warning)]/20 p-3"
+          className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 shadow-sm"
           variants={cardVariants}
-          whileHover={{ scale: 1.02 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+          whileHover={{ scale: 1.02, boxShadow: "0 8px 20px rgba(245, 158, 11, 0.3)" }}
         >
-          <div className="text-[11px] text-[var(--warning)] uppercase tracking-wide font-medium">Pending</div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-8 h-8 rounded-lg bg-[var(--warning-soft)] flex items-center justify-center">
+              <Icons.CreditCard className="w-4 h-4 text-[var(--warning)]" />
+            </div>
+          </div>
+          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Pending</div>
           <motion.div
-            className="text-xl font-bold text-[var(--warning)] mt-1"
+            className="text-xl font-bold text-[var(--text-primary)] mt-1"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.5, type: "spring", stiffness: 300 }}
           >
-            {displayStats.pending}
+            {displayStats.pending.toLocaleString()}
           </motion.div>
-          <div className="text-[10px] text-[var(--text-muted)] mt-1">Awaiting review</div>
         </motion.div>
 
         <motion.div
-          className="bg-[var(--success-soft)] rounded-xl border border-[var(--success)]/20 p-3"
+          className="bg-[var(--surface)] rounded-xl p-4 shadow-sm border border-[var(--border)]"
           variants={cardVariants}
-          whileHover={{ scale: 1.02 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+          whileHover={{ scale: 1.02, boxShadow: "0 8px 20px rgba(16, 185, 129, 0.3)" }}
         >
-          <div className="text-[11px] text-[var(--success)] uppercase tracking-wide font-medium">Approved</div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-8 h-8 rounded-lg bg-[var(--success-soft)] flex items-center justify-center">
+              <Icons.Plus className="w-4 h-4 text-[var(--success)]" />
+            </div>
+          </div>
+          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Approved</div>
           <motion.div
-            className="text-xl font-bold text-[var(--success)] mt-1"
+            className="text-xl font-bold text-[var(--text-primary)] mt-1"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.6, type: "spring", stiffness: 300 }}
           >
             {displayStats.approved.toLocaleString()}
           </motion.div>
-          <div className="text-[10px] text-[var(--text-muted)] mt-1">This month</div>
         </motion.div>
 
         <motion.div
-          className="bg-gradient-to-br from-[var(--primary)]/20 to-[var(--accent)]/20 rounded-xl border border-[var(--primary)]/30 p-3"
+          className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 shadow-sm"
           variants={cardVariants}
-          whileHover={{ scale: 1.02 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+          whileHover={{ scale: 1.02, boxShadow: "0 8px 20px rgba(239, 68, 68, 0.3)" }}
         >
-          <div className="text-[11px] text-[var(--primary)] uppercase tracking-wide font-medium">Total Amount</div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-8 h-8 rounded-lg bg-[var(--danger-soft)] flex items-center justify-center">
+              <Icons.Download className="w-4 h-4 text-[var(--danger)]" />
+            </div>
+          </div>
+          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Rejected</div>
           <motion.div
             className="text-xl font-bold text-[var(--text-primary)] mt-1"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.7, type: "spring", stiffness: 300 }}
           >
+            0
+          </motion.div>
+        </motion.div>
+
+        <motion.div
+          className="bg-gradient-to-br from-[var(--primary)]/20 to-[var(--accent)]/20 rounded-xl border border-[var(--primary)]/30 p-4"
+          variants={cardVariants}
+          whileHover={{ scale: 1.02 }}
+          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-8 h-8 rounded-lg bg-[var(--primary)]/20 flex items-center justify-center">
+              <Icons.CreditCard className="w-4 h-4 text-[var(--primary)]" />
+            </div>
+          </div>
+          <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide font-medium">Total Deposited</div>
+          <motion.div
+            className="text-xl font-bold text-[var(--text-primary)] mt-1"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.8, type: "spring", stiffness: 300 }}
+          >
             ₱{displayStats.totalAmount}
           </motion.div>
-          <div className="text-[10px] text-[var(--text-muted)] mt-1">All deposits</div>
         </motion.div>
       </motion.div>
     </div>

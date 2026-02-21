@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "motion/react";
 import { Button, Stack } from "rsuite";
+import SendEmailModal from "./SendEmailModal";
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
@@ -61,9 +62,11 @@ export default function UserHeader({
   onDeleteSelected
 }: UserHeaderProps) {
   const displayCount = totalCount != null ? totalCount.toLocaleString() : "—";
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
 
   return (
-    <div className="flex flex-col gap-3">
+    <>
+      <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
           <motion.div
@@ -169,7 +172,12 @@ export default function UserHeader({
                   </Button>
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button size="sm" appearance="default" className="!h-8 !px-3 !rounded-lg !text-xs !text-[var(--text-secondary)] !border-[var(--border)] !bg-[var(--surface)] !shadow-none hover:!bg-[var(--surface-hover)] hover:!border-[var(--border-strong)] transition-all">
+                  <Button 
+                    size="sm" 
+                    appearance="default" 
+                    className="!h-8 !px-3 !rounded-lg !text-xs !text-[var(--text-secondary)] !border-[var(--border)] !bg-[var(--surface)] !shadow-none hover:!bg-[var(--surface-hover)] hover:!border-[var(--border-strong)] transition-all"
+                    onClick={() => setEmailModalOpen(true)}
+                  >
                     <span className="flex items-center gap-2">
                       <Icons.Mail className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                       Send Email
@@ -182,5 +190,11 @@ export default function UserHeader({
         </motion.div>
       </div>
     </div>
+
+    <SendEmailModal 
+      open={emailModalOpen} 
+      onClose={() => setEmailModalOpen(false)} 
+    />
+  </>
   );
 }

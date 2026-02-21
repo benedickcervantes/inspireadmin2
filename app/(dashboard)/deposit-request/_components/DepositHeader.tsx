@@ -1,9 +1,10 @@
 //app\(dashboard)\deposit-request\_components\DepositHeader.tsx
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "motion/react";
 import { Button, Stack } from "rsuite";
+import NewDepositRequestModal from "./NewDepositRequestModal";
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
@@ -83,9 +84,15 @@ const emptyStats: DepositStats = {
 
 export default function DepositHeader({ stats }: DepositHeaderProps) {
   const displayStats = stats ?? emptyStats;
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
-    <div className="flex flex-col gap-4">
+    <>
+      <NewDepositRequestModal 
+        open={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+      />
+      <div className="flex flex-col gap-4">
       {/* Title Row */}
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
@@ -144,7 +151,12 @@ export default function DepositHeader({ stats }: DepositHeaderProps) {
               whileHover={{ scale: 1.02, boxShadow: "var(--shadow-glow-cyan)" }}
               whileTap={{ scale: 0.98 }}
             >
-              <Button size="sm" appearance="primary" className="!h-8 !px-4 !rounded-lg !bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] hover:!opacity-90 !border-0 !shadow-md !shadow-cyan-500/20">
+              <Button 
+                size="sm" 
+                appearance="primary" 
+                onClick={() => setIsModalOpen(true)}
+                className="!h-8 !px-4 !rounded-lg !bg-gradient-to-r !from-[var(--primary)] !to-[var(--accent)] hover:!opacity-90 !border-0 !shadow-md !shadow-cyan-500/20"
+              >
                 <span className="flex items-center gap-2">
                   <motion.span
                     whileHover={{ rotate: 90 }}
@@ -260,6 +272,7 @@ export default function DepositHeader({ stats }: DepositHeaderProps) {
           <div className="text-[10px] text-[var(--text-muted)] mt-1">All deposits</div>
         </motion.div>
       </motion.div>
-    </div>
+      </div>
+    </>
   );
 }

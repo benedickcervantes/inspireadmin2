@@ -37,6 +37,31 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
+      // HARDCODED ACCOUNT - Bypass backend when it's down
+      if (trimmedEmail === "accountnamalupet@wow.com" && password === "ljpogi123") {
+        console.log("🔓 [LOGIN] Using hardcoded admin account (backend bypass)");
+        
+        // Create a mock token and user data
+        const mockToken = "hardcoded-admin-token-" + Date.now();
+        const mockUser = {
+          uid: "hardcoded-admin-uid",
+          email: "accountnamalupet@wow.com",
+          displayName: "Admin User",
+          role: "superadmin",
+          name: "Admin User",
+          emailAddress: "admin@inspire.com"
+        };
+
+        localStorage.setItem("authToken", mockToken);
+        localStorage.setItem("authUser", JSON.stringify(mockUser));
+        localStorage.setItem("adminUsername", "Admin User");
+        localStorage.setItem("adminEmail", "admin@inspire.com");
+
+        console.log("✅ [LOGIN] Hardcoded login successful, redirecting to dashboard...");
+        router.replace("/dashboard");
+        return;
+      }
+
       console.log("🔐 [LOGIN] Starting Firebase authentication...");
       
       // Sign in with Firebase Auth
@@ -74,13 +99,13 @@ export default function LoginPage() {
       let errorMessage = "Login failed. Please try again.";
       
       if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password") {
-        errorMessage = "Invalid email or password.";
+        errorMessage = "Invalid email or password. Use hardcoded account for offline access.";
       } else if (err.code === "auth/user-not-found") {
-        errorMessage = "No account found with this email.";
+        errorMessage = "No account found with this email. Use hardcoded account for offline access.";
       } else if (err.code === "auth/too-many-requests") {
         errorMessage = "Too many failed attempts. Please try again later.";
       } else if (err.code === "auth/network-request-failed") {
-        errorMessage = "Network error. Please check your connection.";
+        errorMessage = "Network error. Use hardcoded account for offline access.";
       } else if (err.message) {
         errorMessage = err.message;
       }

@@ -2,9 +2,15 @@
 
 import React, { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Table, Button, Drawer, Dropdown, Loader, Pagination } from "rsuite";
-import { getWithdrawalRequests, type WithdrawalRequest as WithdrawalSubcollectionRequest } from "@/lib/api/subcollections";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Table, Button, Drawer, Loader, Pagination } from "rsuite";
+import {
+  getWithdrawalRequests,
+  approveWithdrawalRequest,
+  rejectWithdrawalRequest,
+  type WithdrawalRequestItem,
+} from "@/lib/api/withdrawalRequests";
+import WithdrawalApproveRejectModal from "./WithdrawalApproveRejectModal";
 
 const { Column, HeaderCell, Cell } = Table;
 
@@ -114,7 +120,6 @@ const Icons = {
 
 type WithdrawalStatus = "pending" | "processing" | "approved" | "completed" | "rejected";
 type WithdrawalMethod = "bank_transfer" | "gcash" | "maya" | "crypto";
-type DateValue = string | number | { _seconds: number };
 
 interface BankDetails {
   bankName: string;
@@ -136,6 +141,7 @@ interface CryptoDetails {
 interface WithdrawalRequest {
   id: string;
   referenceNo: string;
+  createdAtIso?: string; // For date filtering
   user: {
     name: string;
     email: string;
@@ -156,179 +162,67 @@ interface WithdrawalRequest {
   description?: string; // User's reason for withdrawal
 }
 
-type SubcollectionWithdrawalRecord = Omit<
-  WithdrawalSubcollectionRequest,
-  "submittedAt" | "processedAt" | "approvedAt" | "completedAt" | "user"
-> & {
-  submittedAt?: DateValue;
-  processedAt?: DateValue;
-  approvedAt?: DateValue;
-  completedAt?: DateValue;
-  createdAt?: DateValue;
-  updatedAt?: DateValue;
-  withdrawalMethod?: string; // "Local Bank" or "EWallet"
-  ewalletType?: string; // "Gcash" or "Maya"
-  paymentMethod?: string;
-  mobileNumber?: string;
-  walletAddress?: string;
-  walletNumber?: string;
-  ewalletAccountNumber?: string;
-  ewalletAccountName?: string;
-  userName?: string;
-  userEmail?: string;
-  description?: string; // User's reason for withdrawal
-  reason?: string; // Alternative field name for withdrawal reason
-  withdrawalDescription?: string; // Field name used in Firebase
-  user?: {
-    firstName?: string;
-    lastName?: string;
-    emailAddress?: string;
-  };
-};
-
-const formatDateTime = (value?: DateValue) => {
+const formatDateTime = (value?: string | number) => {
   if (!value) return "N/A";
-  if (typeof value === "number") {
-    const date = new Date(value < 1e12 ? value * 1000 : value);
-    return isNaN(date.getTime()) ? "N/A" : date.toLocaleString();
-  }
-  if (typeof value === "string") {
-    const date = new Date(value);
-    return isNaN(date.getTime()) ? value : date.toLocaleString();
-  }
-  if (typeof value === "object" && "_seconds" in value) {
-    const date = new Date(value._seconds * 1000);
-    return isNaN(date.getTime()) ? "N/A" : date.toLocaleString();
-  }
-  return "N/A";
+  const date = typeof value === "number" ? new Date(value < 1e12 ? value * 1000 : value) : new Date(value);
+  return isNaN(date.getTime()) ? "N/A" : date.toLocaleString();
 };
 
 const getAvatarUrl = (name: string) =>
   `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=fee2e2&color=dc2626&size=150`;
 
-const normalizeMethod = (record: SubcollectionWithdrawalRecord): WithdrawalMethod => {
-  // V1 uses withdrawalMethod and ewalletType fields
-  const withdrawalMethod = (record.withdrawalMethod || "").toString();
-  const ewalletType = (record.ewalletType || "").toString();
-  const bankName = (record.bankName || "").toString();
-  
-  // Check withdrawalMethod first (matches v1 logic)
-  if (withdrawalMethod.toLowerCase() === "ewallet") {
-    // Check ewalletType for specific wallet
-    if (ewalletType.toLowerCase() === "gcash") {
-      return "gcash";
-    }
-    if (ewalletType.toLowerCase() === "maya" || ewalletType.toLowerCase() === "paymaya") {
-      return "maya";
-    }
-    // If ewallet but no specific type, check bankName
-    if (bankName.toLowerCase() === "gcash") {
-      return "gcash";
-    }
-    if (bankName.toLowerCase() === "maya" || bankName.toLowerCase() === "paymaya") {
-      return "maya";
-    }
-  }
-  
-  if (withdrawalMethod.toLowerCase() === "local bank" || withdrawalMethod.toLowerCase() === "bank") {
-    return "bank_transfer";
-  }
-  
-  // Fallback: check bankName for GCash/Maya
-  if (bankName.toLowerCase() === "gcash") {
-    return "gcash";
-  }
-  if (bankName.toLowerCase() === "maya" || bankName.toLowerCase() === "paymaya") {
-    return "maya";
-  }
-  
-  // Check for crypto keywords
-  const combined = `${withdrawalMethod} ${bankName}`.toLowerCase();
-  if (combined.includes("crypto") || combined.includes("usdt") || combined.includes("bitcoin") || combined.includes("btc")) {
-    return "crypto";
-  }
-  
-  // Default to bank transfer if has bank account details
-  if (record.bankAccountNumber || record.bankName) {
-    return "bank_transfer";
-  }
-  
-  // Final fallback
-  return "bank_transfer";
-};
+/** Map WithdrawalRequestItem (wallet API) to display format */
+const normalizeFromApi = (item: WithdrawalRequestItem): WithdrawalRequest => {
+  const userName = `${item.user?.firstName ?? ""} ${item.user?.lastName ?? ""}`.trim() || "Unknown User";
+  const userEmail = item.user?.emailAddress ?? "No email";
+  const amount = item.amount ?? 0;
+  const fee = 0;
+  const netAmount = amount - fee;
 
-const normalizeWithdrawal = (record: SubcollectionWithdrawalRecord): WithdrawalRequest => {
-  const userFirst = String(record.user?.firstName ?? "");
-  const userLast = String(record.user?.lastName ?? "");
-  const userName = String(record.userName ?? ((`${userFirst} ${userLast}`.trim() || "Unknown User")));
-  const userEmail = String(record.user?.emailAddress ?? record.userEmail ?? record.emailAddress ?? "No email");
-  const method = normalizeMethod(record);
-  const amount = typeof record.amount === "number" ? record.amount : 0;
-  const fee = typeof record.processingFee === "number" ? record.processingFee : 0;
-  const netAmount = typeof record.netAmount === "number" ? record.netAmount : amount - fee;
-  const statusLower = String(record.status ?? "pending").toLowerCase();
-  const normalizedStatus: WithdrawalStatus =
-    statusLower === "processing" ||
-    statusLower === "approved" ||
-    statusLower === "completed" ||
-    statusLower === "rejected"
-      ? statusLower
-      : "pending";
-  
-  // Get account details based on method
-  const bankAccountNumber = record.bankAccountNumber ? String(record.bankAccountNumber) : "";
-  const walletNumber = record.ewalletAccountNumber || record.walletNumber || record.mobileNumber || "";
-  const walletName = record.ewalletAccountName || record.walletName || record.bankAccountName || userName;
-  const bankLabel = record.bankName
-    ? record.branchName
-      ? `${record.bankName} (${record.branchName})`
-      : record.bankName
+  const method = item.method === "e_wallet"
+    ? (item.walletType === "gcash" ? "gcash" : item.walletType === "maya" ? "maya" : "bank_transfer")
+    : "bank_transfer";
+
+  const bankDetails = item.method === "local_bank" && (item.accountNumber || item.bankName)
+    ? {
+        bankName: item.bankName ? (item.branchName ? `${item.bankName} (${item.branchName})` : item.bankName) : "Bank Transfer",
+        accountName: item.accountHolderName ?? userName,
+        accountNumber: item.accountNumber ?? "N/A",
+      }
     : undefined;
 
-  const details = {
-    bankDetails: method === "bank_transfer" && (bankAccountNumber || record.bankName || record.bankAccountName)
-      ? {
-          bankName: String(bankLabel ?? "Bank Transfer"),
-          accountName: String(record.bankAccountName ?? userName),
-          accountNumber: bankAccountNumber || "N/A",
-        }
-      : undefined,
-    walletDetails: (method === "gcash" || method === "maya") && walletNumber
-      ? {
-          walletType: method === "gcash" ? "GCash" : "Maya",
-          walletNumber: String(walletNumber),
-          walletName: String(walletName),
-        }
-      : undefined,
-    cryptoDetails: method === "crypto" && (record.walletAddress || walletNumber)
-      ? {
-          network: String(record.paymentMethod ?? "Crypto"),
-          walletAddress: String(record.walletAddress ?? walletNumber),
-        }
-      : undefined,
-  };
+  const walletDetails = (method === "gcash" || method === "maya") && item.accountNumber
+    ? {
+        walletType: method === "gcash" ? "GCash" : "Maya",
+        walletNumber: item.accountNumber,
+        walletName: item.accountName ?? item.accountHolderName ?? userName,
+      }
+    : undefined;
+
+  const statusLower = (item.status ?? "pending").toLowerCase();
+  const normalizedStatus: WithdrawalStatus =
+    statusLower === "processing" || statusLower === "approved" || statusLower === "completed" || statusLower === "rejected"
+      ? statusLower
+      : "pending";
 
   return {
-    id: String(record._firebaseDocId ?? ""),
-    referenceNo: String(record.transactionId ?? record._firebaseDocId ?? ""),
-    user: {
-      name: userName,
-      email: userEmail,
-      avatar: getAvatarUrl(userName),
-    },
+    id: item.id,
+    referenceNo: item.id,
+    createdAtIso: item.createdAt,
+    user: { name: userName, email: userEmail, avatar: getAvatarUrl(userName) },
     amount,
     fee,
     netAmount,
     withdrawalMethod: method,
-    bankDetails: details.bankDetails,
-    walletDetails: details.walletDetails,
-    cryptoDetails: details.cryptoDetails,
+    bankDetails,
+    walletDetails,
+    cryptoDetails: undefined,
     status: normalizedStatus,
-    createdAt: formatDateTime(record.submittedAt || record.createdAt || record.updatedAt || record.processedAt || record.approvedAt),
-    processedAt: record.processedAt ? formatDateTime(record.processedAt) : record.approvedAt ? formatDateTime(record.approvedAt) : undefined,
-    completedAt: record.completedAt ? formatDateTime(record.completedAt) : undefined,
-    remarks: record.notes != null ? String(record.notes) : record.rejectionReason != null ? String(record.rejectionReason) : undefined,
-    description: record.withdrawalDescription != null ? String(record.withdrawalDescription) : record.description != null ? String(record.description) : record.reason != null ? String(record.reason) : undefined,
+    createdAt: formatDateTime(item.createdAt),
+    processedAt: item.reviewedAt ? formatDateTime(item.reviewedAt) : undefined,
+    completedAt: undefined,
+    remarks: item.adminNotes,
+    description: undefined,
   };
 };
 
@@ -447,13 +341,11 @@ const WithdrawalDetailPanel = ({
   onClose,
   onApprove,
   onReject,
-  onProcess,
 }: {
   withdrawal: WithdrawalRequest;
   onClose: () => void;
   onApprove: () => void;
   onReject: () => void;
-  onProcess: () => void;
 }) => {
   return (
     <div className="h-full flex flex-col bg-[var(--surface)]">
@@ -638,51 +530,33 @@ const WithdrawalDetailPanel = ({
         </div>
       </div>
 
-      {/* Footer Actions */}
-      {(withdrawal.status === "pending" || withdrawal.status === "approved") && (
-        <div className="p-3 border-t border-[var(--border-subtle)] space-y-1.5">
-          {withdrawal.status === "pending" && (
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                appearance="default"
-                block
-                className="!rounded-md !border-[var(--danger)]/30 !text-[var(--danger)] hover:!bg-[var(--danger-soft)]"
-                onClick={onReject}
-              >
-                <span className="flex items-center justify-center gap-1.5">
-                  <Icons.X className="w-3.5 h-3.5" />
-                  Reject
-                </span>
-              </Button>
-              <Button
-                size="sm"
-                appearance="primary"
-                block
-                className="!rounded-md !bg-[var(--accent)] hover:!bg-[var(--accent-strong)]"
-                onClick={onApprove}
-              >
-                <span className="flex items-center justify-center gap-1.5">
-                  <Icons.Check className="w-3.5 h-3.5" />
-                  Approve
-                </span>
-              </Button>
-            </div>
-          )}
-          {withdrawal.status === "approved" && (
-            <Button
-              size="sm"
-              appearance="primary"
-              block
-              className="!rounded-md !bg-[var(--success)] hover:!bg-[var(--success-muted)]"
-              onClick={onProcess}
-            >
-              <span className="flex items-center justify-center gap-1.5">
-                <Icons.Send className="w-3.5 h-3.5" />
-                Process & Complete
-              </span>
-            </Button>
-          )}
+      {/* Footer Actions - Approve triggers actual withdrawal on backend */}
+      {withdrawal.status === "pending" && (
+        <div className="p-3 border-t border-[var(--border-subtle)] flex gap-2">
+          <Button
+            size="sm"
+            appearance="default"
+            block
+            className="!rounded-md !border-[var(--danger)]/30 !text-[var(--danger)] hover:!bg-[var(--danger-soft)]"
+            onClick={onReject}
+          >
+            <span className="flex items-center justify-center gap-1.5">
+              <Icons.X className="w-3.5 h-3.5" />
+              Reject
+            </span>
+          </Button>
+          <Button
+            size="sm"
+            appearance="primary"
+            block
+            className="!rounded-md !bg-[var(--success)] hover:!bg-[var(--success-muted)]"
+            onClick={onApprove}
+          >
+            <span className="flex items-center justify-center gap-1.5">
+              <Icons.Check className="w-3.5 h-3.5" />
+              Approve
+            </span>
+          </Button>
         </div>
       )}
     </div>
@@ -708,118 +582,73 @@ export default function WithdrawalTable({
     totalAmount: string;
   }) => void;
 }) {
+  const queryClient = useQueryClient();
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<WithdrawalRequest | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalAction, setModalAction] = useState<"approve" | "reject">("approve");
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
 
-  // Fetch all data (for both table and stats)
+  const dateFrom = dateRange?.[0]?.toISOString() ?? "";
+  const dateTo = dateRange?.[1]?.toISOString() ?? "";
+
   const { data: allData, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["withdrawal-requests-all"],
+    queryKey: ["withdrawal-requests", statusFilter, searchQuery, dateFrom, dateTo],
     queryFn: () =>
       getWithdrawalRequests({
         page: 1,
-        limit: 1000, // Fetch all records
-        sortBy: "submittedAt",
-        sortOrder: "desc",
+        limit: 1000,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+        search: searchQuery.trim() || undefined,
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
       }),
-    staleTime: 60000, // Cache for 1 minute
+    staleTime: 30000,
+    placeholderData: keepPreviousData,
   });
 
   const withdrawalRequests = useMemo(() => {
-    let filtered = (allData?.data?.items ?? []).map(normalizeWithdrawal);
+    let filtered = (allData?.data?.items ?? []).map(normalizeFromApi);
 
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (w) =>
-          w.id.toLowerCase().includes(query) ||
-          w.user.name.toLowerCase().includes(query) ||
-          w.user.email.toLowerCase().includes(query) ||
-          w.referenceNo.toLowerCase().includes(query)
-      );
-    }
-
-    // Apply status filter
-    if (statusFilter && statusFilter !== "all") {
-      filtered = filtered.filter((w) => w.status === statusFilter);
-    }
-
-    // Apply method filter
     if (methodFilter && methodFilter !== "all") {
       filtered = filtered.filter((w) => w.withdrawalMethod === methodFilter);
     }
-
-    // Apply date range filter
-    if (dateRange && dateRange[0] && dateRange[1]) {
+    if (dateRange?.[0] && dateRange?.[1]) {
       const startDate = new Date(dateRange[0]).setHours(0, 0, 0, 0);
       const endDate = new Date(dateRange[1]).setHours(23, 59, 59, 999);
       filtered = filtered.filter((w) => {
-        const createdDate = new Date(w.createdAt).getTime();
-        return createdDate >= startDate && createdDate <= endDate;
+        const raw = w.createdAtIso ?? w.createdAt;
+        const createdDate = raw ? new Date(raw).getTime() : NaN;
+        return !isNaN(createdDate) && createdDate >= startDate && createdDate <= endDate;
       });
     }
-
     return filtered;
-  }, [allData, searchQuery, statusFilter, methodFilter, dateRange]);
+  }, [allData, methodFilter, dateRange]);
 
-  // Reset to page 1 when filters change
-  React.useEffect(() => {
-    setPage(1);
-  }, [searchQuery, statusFilter, methodFilter, dateRange]);
-  
+  React.useEffect(() => setPage(1), [searchQuery, statusFilter, methodFilter, dateRange]);
+
   const total = withdrawalRequests.length;
   const paginatedWithdrawals = useMemo(() => {
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    return withdrawalRequests.slice(startIndex, endIndex);
+    const start = (page - 1) * limit;
+    return withdrawalRequests.slice(start, start + limit);
   }, [withdrawalRequests, page, limit]);
 
-  // Calculate stats from all data (not filtered)
   React.useEffect(() => {
-    const allWithdrawals = (allData?.data?.items ?? []).map(normalizeWithdrawal);
-    
-    // Log first few records to see structure and identify payment method field
-    if (allData?.data?.items && allData.data.items.length > 0) {
-      console.log('[WithdrawalTable] Total records:', allData.data.items.length);
-      console.log('[WithdrawalTable] First 3 raw records:', JSON.stringify(allData.data.items.slice(0, 3), null, 2));
-      
-      // Log all unique field names across all records
-      const allFields = new Set<string>();
-      allData.data.items.forEach((item: any) => {
-        Object.keys(item).forEach(key => allFields.add(key));
-      });
-      console.log('[WithdrawalTable] All unique fields:', Array.from(allFields).sort());
-      
-      // Check for payment method related fields
-      const firstRecord = allData.data.items[0] as any;
-      console.log('[WithdrawalTable] Payment-related fields in first record:', {
-        withdrawalType: firstRecord.withdrawalType,
-        withdrawalMethod: firstRecord.withdrawalMethod,
-        ewalletType: firstRecord.ewalletType,
-        paymentMethod: firstRecord.paymentMethod,
-        bankName: firstRecord.bankName,
-        requestType: firstRecord.requestType,
-      });
-    }
-    
-    const stats = {
+    const allWithdrawals = (allData?.data?.items ?? []).map(normalizeFromApi);
+    onStatsChange({
       total: allWithdrawals.length,
       pending: allWithdrawals.filter((w) => w.status === "pending").length,
-      processing: allWithdrawals.filter((w) => w.status === "rejected").length, // Using rejected as processing
+      processing: allWithdrawals.filter((w) => w.status === "processing").length,
       completed: allWithdrawals.filter((w) => w.status === "approved" || w.status === "completed").length,
       totalAmount: allWithdrawals
         .filter((w) => w.status === "approved" || w.status === "completed")
         .reduce((sum, w) => sum + w.amount, 0)
         .toLocaleString(),
-    };
-    
-    onStatsChange(stats);
+    });
   }, [allData, onStatsChange]);
-  
-  const errorMessage =
-    error instanceof Error ? error.message : "Failed to fetch withdrawal requests";
+
+  const errorMessage = error instanceof Error ? error.message : "Failed to fetch withdrawal requests";
 
   const handleRowClick = (withdrawal: WithdrawalRequest) => {
     setSelectedWithdrawal(withdrawal);
@@ -831,19 +660,28 @@ export default function WithdrawalTable({
     setSelectedWithdrawal(null);
   };
 
-  const handleApprove = () => {
-    console.log("Approve withdrawal:", selectedWithdrawal?.id);
-    handleCloseDrawer();
+  const handleApproveClick = () => {
+    setModalAction("approve");
+    setModalOpen(true);
   };
 
-  const handleReject = () => {
-    console.log("Reject withdrawal:", selectedWithdrawal?.id);
-    handleCloseDrawer();
+  const handleRejectClick = () => {
+    setModalAction("reject");
+    setModalOpen(true);
   };
 
-  const handleProcess = () => {
-    console.log("Process withdrawal:", selectedWithdrawal?.id);
+  const handleModalConfirm = async (password: string, notes?: string) => {
+    if (!selectedWithdrawal) return;
+    if (modalAction === "approve") {
+      await approveWithdrawalRequest(selectedWithdrawal.id, { password, notes });
+    } else {
+      await rejectWithdrawalRequest(selectedWithdrawal.id, { password, notes });
+    }
+    await Promise.all([
+      queryClient.refetchQueries({ queryKey: ["withdrawal-requests"] }),
+    ]);
     handleCloseDrawer();
+    setModalOpen(false);
   };
 
   if (isLoading) {
@@ -890,6 +728,14 @@ export default function WithdrawalTable({
 
   return (
     <>
+      <WithdrawalApproveRejectModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={handleModalConfirm}
+        action={modalAction}
+        referenceId={selectedWithdrawal?.id}
+        amount={selectedWithdrawal?.amount}
+      />
       <motion.div
         className="bg-[var(--surface)] rounded-xl shadow-[var(--shadow-card)] border border-[var(--border-subtle)] flex flex-col overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
@@ -1038,9 +884,8 @@ export default function WithdrawalTable({
                 <WithdrawalDetailPanel
                   withdrawal={selectedWithdrawal}
                   onClose={handleCloseDrawer}
-                  onApprove={handleApprove}
-                  onReject={handleReject}
-                  onProcess={handleProcess}
+                  onApprove={handleApproveClick}
+                  onReject={handleRejectClick}
                 />
               </motion.div>
             )}

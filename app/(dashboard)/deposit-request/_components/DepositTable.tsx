@@ -204,6 +204,20 @@ const StatusBadge = ({ status }: { status: string }) => {
       dot: "bg-[var(--success)]",
       label: "Completed",
     },
+    active: {
+      bg: "bg-[var(--success-soft)]",
+      text: "text-[var(--success)]",
+      border: "border-[var(--success)]/30",
+      dot: "bg-[var(--success)]",
+      label: "Active",
+    },
+    matured: {
+      bg: "bg-[var(--success-soft)]",
+      text: "text-[var(--success)]",
+      border: "border-[var(--success)]/30",
+      dot: "bg-[var(--success)]",
+      label: "Matured",
+    },
     rejected: {
       bg: "bg-[var(--danger-soft)]",
       text: "text-[var(--danger)]",
@@ -446,6 +460,96 @@ const DepositDetailPanel = ({
             </div>
           )}
 
+          {(deposit.requestType === 'time_deposit' && (deposit.contractType ?? deposit.contractPeriod)) && (
+            <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface-soft)] rounded-md border border-[var(--border)]">
+              <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center flex-shrink-0">
+                <Icons.Clock className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+              </div>
+              <div>
+                <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Contract</div>
+                <div className="text-[13px] font-medium text-[var(--text-primary)]">
+                  {String(deposit.contractType ?? deposit.contractPeriod ?? '')}
+                  {deposit.depositSource && (
+                    <span className="text-[11px] text-[var(--text-muted)] ml-1">({deposit.depositSource})</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {deposit.requestType === 'stock' && deposit.stockSymbol && (
+            <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface-soft)] rounded-md border border-[var(--border)]">
+              <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center flex-shrink-0">
+                <Icons.TrendingUp className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+              </div>
+              <div>
+                <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Stock Symbol</div>
+                <div className="text-[13px] font-medium text-[var(--text-primary)]">{deposit.stockSymbol}</div>
+              </div>
+            </div>
+          )}
+
+          {deposit.requestType === 'time_deposit' && deposit.interestRate != null && (
+            <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface-soft)] rounded-md border border-[var(--border)]">
+              <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center flex-shrink-0">
+                <Icons.TrendingUp className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+              </div>
+              <div>
+                <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Interest Rate</div>
+                <div className="text-[13px] font-medium text-[var(--text-primary)]">{deposit.interestRate}%</div>
+              </div>
+            </div>
+          )}
+
+          {deposit.requestType === 'time_deposit' && deposit.payoutSchedule && deposit.payoutSchedule.length > 0 && (
+            <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface-soft)] rounded-md border border-[var(--border)]">
+              <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center flex-shrink-0">
+                <Icons.DollarSign className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Dividend Schedule (from backend)</div>
+                <div className="mt-1 space-y-1">
+                  {deposit.payoutSchedule.map((p, i) => (
+                    <div key={i} className="flex justify-between items-center text-[12px]">
+                      <span className="text-[var(--text-secondary)]">
+                        Payout #{p.payoutIndex ?? i + 1}
+                        {p.expectedDate && ` · ${p.expectedDate}`}
+                        {p.isLastPayout && p.principalReturned && (
+                          <span className="block text-[11px] text-[var(--text-muted)] mt-0.5">
+                            Principal: ₱{Number(p.principalReturned).toLocaleString()}
+                          </span>
+                        )}
+                      </span>
+                      <span className="font-medium text-[var(--text-primary)]">
+                        ₱{Number(p.amount ?? 0).toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 pt-2 border-t border-[var(--border)] flex justify-between text-[13px] font-semibold">
+                  <span>Total Dividend</span>
+                  <span className="text-[var(--primary)]">
+                    ₱{deposit.payoutSchedule.reduce((sum, p) => sum + Number(p.amount ?? 0), 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {deposit.requestType === 'time_deposit' && deposit.commission && (
+            <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface-soft)] rounded-md border border-[var(--border)]">
+              <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center flex-shrink-0">
+                <Icons.DollarSign className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+              </div>
+              <div>
+                <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Referrer Commission (Preview)</div>
+                <div className="text-[13px] font-medium text-[var(--text-primary)]">
+                  ₱{Number(deposit.commission?.totalCommission ?? 0).toLocaleString()}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface-soft)] rounded-md border border-[var(--border)]">
             <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center flex-shrink-0">
               <Icons.Calendar className="w-3.5 h-3.5 text-[var(--text-muted)]" />
@@ -603,13 +707,15 @@ export default function DepositTable({ filters }: DepositTableProps) {
       if (filters.status !== "all") {
         filtered = filtered.filter((deposit) => {
           const status = (deposit.status || '').toLowerCase();
+          const rawStatus = ((deposit as { rawStatus?: string }).rawStatus ?? '').toLowerCase();
           const filterStatus = filters.status.toLowerCase();
-          
-          // Handle "approved" to include both "approved" and "completed"
+
           if (filterStatus === 'approved') {
-            return status === 'approved' || status === 'completed';
+            return status === 'approved' || status === 'completed' || rawStatus === 'active' || rawStatus === 'matured';
           }
-          
+          if (filterStatus === 'rejected') {
+            return status === 'rejected' || rawStatus === 'cancelled';
+          }
           return status === filterStatus;
         });
       }

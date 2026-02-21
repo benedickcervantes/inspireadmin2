@@ -4941,3 +4941,21 @@ html[data-theme="light"] .app-rail .rs-dropdown-menu .rail-logout-item {
   background: var(--primary) !important;
   color: white !important;
 }
+
+
+/* User Filter Tab Active State - Match Sidebar Styling */
+.user-tab-active {
+  background: linear-gradient(135deg, rgba(27, 58, 75, 0.3) 0%, rgba(45, 90, 115, 0.5) 100%) !important;
+  border: 1px solid rgba(60, 120, 150, 0.5) !important;
+  border-radius: 10px !important;
+  box-shadow:
+    0 0 16px rgba(27, 58, 75, 0.25),
+    0 0 4px rgba(60, 120, 150, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  color: #7ec8e3 !important;
+}
+
+.user-tab-active svg {
+  color: #7ec8e3 !important;
+  filter: drop-shadow(0 0 6px rgba(126, 200, 227, 0.5));
+}

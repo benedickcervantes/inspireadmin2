@@ -20,6 +20,38 @@ const Icons = {
       <line x1="18" y1="6" x2="6" y2="18" />
       <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
+  ),
+  Users: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
+  TrendingUp: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+      <polyline points="17 6 23 6 23 12" />
+    </svg>
+  ),
+  Briefcase: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+    </svg>
+  ),
+  Play: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polygon points="5 3 19 12 5 21 5 3" />
+    </svg>
+  ),
+  TestTube: (props: IconProps) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5s-2.5-1.1-2.5-2.5V2" />
+      <path d="M8.5 2h7" />
+      <path d="M14.5 16h-5" />
+    </svg>
   )
 };
 
@@ -35,12 +67,12 @@ interface UserFiltersProps {
   testCount?: number;
 }
 
-const TABS: { key: UserTypeTab; label: string }[] = [
-  { key: "all", label: "All Accounts" },
-  { key: "investor", label: "Investor" },
-  { key: "agent", label: "Agent" },
-  { key: "demo", label: "Demo" },
-  { key: "test", label: "Test" }
+const TABS: { key: UserTypeTab; label: string; icon: keyof typeof Icons }[] = [
+  { key: "all", label: "All Accounts", icon: "Users" },
+  { key: "investor", label: "Investor", icon: "TrendingUp" },
+  { key: "agent", label: "Agent", icon: "Briefcase" },
+  { key: "demo", label: "Demo", icon: "Play" },
+  { key: "test", label: "Test", icon: "TestTube" }
 ];
 
 export default function UserFilters({
@@ -116,26 +148,37 @@ export default function UserFilters({
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
         {/* Type tabs */}
         <motion.div
-          className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-0.5 overflow-x-auto order-2 lg:order-1"
+          className="flex items-center gap-2 order-2 lg:order-1"
           initial={{ opacity: 0, x: 15 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.15, duration: 0.4 }}
         >
           {TABS.map((tab) => {
             const isActive = userType === tab.key;
+            const IconComponent = Icons[tab.icon];
             return (
-              <button
+              <motion.button
                 key={tab.key}
                 type="button"
                 onClick={() => onUserTypeChange(tab.key)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium font-google-sans transition-all whitespace-nowrap ${
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={`px-4 py-2 text-xs font-medium font-google-sans transition-all whitespace-nowrap flex items-center gap-2 ${
                   isActive
-                    ? "bg-[var(--primary)] text-white shadow-sm"
-                    : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+                    ? ""
+                    : "bg-[var(--surface-soft)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] border border-[var(--border)] rounded-[10px]"
                 }`}
+                style={isActive ? {
+                  background: 'linear-gradient(135deg, rgba(27, 58, 75, 0.3) 0%, rgba(45, 90, 115, 0.5) 100%)',
+                  border: '1px solid rgba(60, 120, 150, 0.5)',
+                  borderRadius: '10px',
+                  boxShadow: '0 0 16px rgba(27, 58, 75, 0.25), 0 0 4px rgba(60, 120, 150, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                  color: '#7ec8e3'
+                } : undefined}
               >
+                <IconComponent className="w-3.5 h-3.5" style={isActive ? { filter: 'drop-shadow(0 0 6px rgba(126, 200, 227, 0.5))' } : undefined} />
                 {tab.label}
-              </button>
+              </motion.button>
             );
           })}
         </motion.div>

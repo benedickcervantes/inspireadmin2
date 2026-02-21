@@ -109,7 +109,7 @@ export default function TaskWithdrawalFilters({
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
         {/* Status tabs */}
         <motion.div
-          className="flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-0.5 overflow-x-auto order-2 lg:order-1"
+          className="flex items-center gap-2 order-2 lg:order-1"
           initial={{ opacity: 0, x: 15 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.15, duration: 0.4 }}
@@ -117,18 +117,28 @@ export default function TaskWithdrawalFilters({
           {TABS.map((tab) => {
             const isActive = filter === tab.key;
             return (
-              <button
+              <motion.button
                 key={tab.key}
                 type="button"
                 onClick={() => onFilterChange(tab.key)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium font-google-sans transition-all whitespace-nowrap ${
-                  isActive
-                    ? "bg-[var(--primary)] text-white shadow-sm"
-                    : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
-                }`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="px-4 py-2 text-xs font-medium font-google-sans transition-all whitespace-nowrap"
+                style={isActive ? {
+                  background: 'linear-gradient(135deg, rgba(27, 58, 75, 0.3) 0%, rgba(45, 90, 115, 0.5) 100%)',
+                  border: '1px solid rgba(60, 120, 150, 0.5)',
+                  borderRadius: '10px',
+                  boxShadow: '0 0 16px rgba(27, 58, 75, 0.25), 0 0 4px rgba(60, 120, 150, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                  color: '#7ec8e3'
+                } : {
+                  background: 'var(--surface-soft)',
+                  color: 'var(--text-secondary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px'
+                }}
               >
                 {tab.label}
-              </button>
+              </motion.button>
             );
           })}
         </motion.div>

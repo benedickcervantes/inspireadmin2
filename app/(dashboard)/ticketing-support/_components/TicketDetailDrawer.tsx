@@ -229,7 +229,7 @@ export default function TicketDetailDrawer({
   };
 
   return (
-    <Drawer size="lg" open={open} onClose={onClose}>
+    <Drawer size="lg" open={open} onClose={onClose} closeButton={false}>
       <Drawer.Header>
         <Drawer.Title>Ticket Details</Drawer.Title>
       </Drawer.Header>

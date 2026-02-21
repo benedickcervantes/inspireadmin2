@@ -369,11 +369,11 @@ const DepositDetailPanel = ({
     <div className="h-full flex flex-col bg-[var(--surface)]">
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-[var(--border)]">
-        <div>
+        <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">Deposit Details</h3>
-          <p className="text-xs text-[var(--text-muted)] mt-0.5 font-mono">{deposit.id}</p>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5 font-mono truncate">{deposit.id}</p>
         </div>
-        <button onClick={onClose} className="w-7 h-7 rounded-md hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-muted)]">
+        <button onClick={onClose} className="w-7 h-7 rounded-md hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-muted)] flex-shrink-0 ml-2">
           <Icons.X className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -484,31 +484,35 @@ const DepositDetailPanel = ({
 
       {/* Footer Actions */}
       {(deposit.status || '').toLowerCase() === "pending" && (
-        <div className="p-3 border-t border-[var(--border)] flex gap-2">
-          <Button
-            size="sm"
-            appearance="default"
-            block
-            className="!rounded-md !border-[var(--danger)]/30 !bg-[var(--danger-soft)] !text-[var(--danger)] hover:!bg-[var(--danger)]/20"
-            onClick={onReject}
-          >
-            <span className="flex items-center justify-center gap-1.5">
-              <Icons.X className="w-3.5 h-3.5" />
-              Reject
-            </span>
-          </Button>
-          <Button
-            size="sm"
-            appearance="primary"
-            block
-            className="!rounded-md !bg-gradient-to-r !from-[var(--success)] !to-emerald-500 hover:!opacity-90"
-            onClick={onApprove}
-          >
-            <span className="flex items-center justify-center gap-1.5">
-              <Icons.Check className="w-3.5 h-3.5" />
-              Approve
-            </span>
-          </Button>
+        <div className="p-3 border-t border-[var(--border)] flex gap-3">
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
+            <Button
+              size="sm"
+              appearance="default"
+              block
+              className="!rounded-lg !border !border-[var(--danger)]/20 !bg-[var(--danger-soft)] hover:!bg-[var(--danger)]/20 !shadow-none"
+              onClick={onReject}
+            >
+              <span className="flex items-center justify-center gap-1.5 text-[var(--danger)] font-semibold uppercase tracking-wide">
+                <Icons.X className="w-3.5 h-3.5" />
+                Reject
+              </span>
+            </Button>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
+            <Button
+              size="sm"
+              appearance="default"
+              block
+              className="!rounded-lg !border !border-[var(--success)]/20 !bg-[var(--success-soft)] hover:!bg-[var(--success)]/20 !shadow-none"
+              onClick={onApprove}
+            >
+              <span className="flex items-center justify-center gap-1.5 text-[var(--success)] font-semibold uppercase tracking-wide">
+                <Icons.Check className="w-3.5 h-3.5" />
+                Approve
+              </span>
+            </Button>
+          </motion.div>
         </div>
       )}
     </div>
@@ -954,6 +958,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
         placement="right"
         size="sm"
         className="deposit-drawer !w-[380px]"
+        closeButton={false}
       >
         <Drawer.Body className="!p-0 !bg-[var(--surface)]">
           <AnimatePresence mode="wait">

@@ -243,18 +243,30 @@ export default function DepositApproveRejectModal({
       </Modal.Body>
       <Modal.Footer className="!bg-[var(--surface)] !border-t !border-[var(--border)] !pt-4 !pb-4">
         <div className="flex gap-3 justify-end mx-4">
-          <Button onClick={handleClose} appearance="subtle" disabled={isLoading}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleConfirm}
-            appearance="primary"
-            loading={isLoading}
-            disabled={!password.trim()}
-            className={isApprove ? "!bg-[var(--success)]" : "!bg-[var(--danger)]"}
-          >
-            {isApprove ? "Approve" : "Reject"}
-          </Button>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button 
+              onClick={handleClose} 
+              appearance="subtle" 
+              disabled={isLoading}
+              className="!text-[var(--text-secondary)] hover:!bg-[var(--surface-hover)]"
+            >
+              Cancel
+            </Button>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button
+              onClick={handleConfirm}
+              appearance="primary"
+              loading={isLoading}
+              disabled={!password.trim()}
+              className={isApprove 
+                ? "!bg-emerald-600 hover:!bg-emerald-700 hover:!shadow-lg" 
+                : "!bg-[var(--danger)] hover:!shadow-lg"
+              }
+            >
+              {isApprove ? "APPROVE" : "Reject"}
+            </Button>
+          </motion.div>
         </div>
       </Modal.Footer>
     </Modal>

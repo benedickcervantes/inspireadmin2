@@ -544,7 +544,7 @@ export default function MayaTable({
         </div>
       </motion.div>
 
-      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} placement="right" size="sm" className="maya-drawer !w-[380px]">
+      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} placement="right" size="sm" className="maya-drawer !w-[380px]" closeButton={false}>
         <Drawer.Body className="!p-0 !bg-[var(--surface)]">
           <AnimatePresence mode="wait">
             {selectedApplication && (

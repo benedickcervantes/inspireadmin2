@@ -472,7 +472,7 @@ export default function RequestTable({ searchQuery, statusFilter, dateRange }: R
         </div>
       </motion.div>
 
-      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} placement="right" size="sm" className="agent-drawer !w-[380px]">
+      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} placement="right" size="sm" className="agent-drawer !w-[380px]" closeButton={false}>
         <Drawer.Body className="!p-0 !bg-[var(--surface)]">
           <AnimatePresence mode="wait">
             {selectedRequest && (

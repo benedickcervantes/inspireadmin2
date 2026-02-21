@@ -730,6 +730,7 @@ export default function KycTable({ searchQuery, statusFilter, dateRange }: KycTa
         placement="right"
         size="sm"
         className="kyc-drawer !w-[380px]"
+        closeButton={false}
       >
         <Drawer.Body className="!p-0 !bg-[var(--surface)]">
           <AnimatePresence mode="wait">

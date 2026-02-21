@@ -104,6 +104,7 @@ export default function HeaderDrawers({
         placement="right"
         size="sm"
         className="!w-[400px] dark-drawer"
+        closeButton={false}
       >
         <Drawer.Header className="!p-0 !border-b-0">
           <div className="flex items-center justify-between p-4 border-b border-[var(--border-subtle)]">
@@ -212,6 +213,7 @@ export default function HeaderDrawers({
         placement="right"
         size="sm"
         className="!w-[400px] dark-drawer"
+        closeButton={false}
       >
         <Drawer.Header className="!p-0 !border-b-0">
           <div className="flex items-center justify-between p-4 border-b border-[var(--border-subtle)]">
@@ -346,6 +348,7 @@ export default function HeaderDrawers({
         placement="right"
         size="sm"
         className="!w-[400px] dark-drawer"
+        closeButton={false}
       >
         <Drawer.Header className="!p-0 !border-b-0">
           <div className="flex items-center justify-between p-4 border-b border-[var(--border-subtle)]">

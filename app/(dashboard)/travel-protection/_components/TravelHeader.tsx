@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import { motion } from "motion/react";
 import { Button, Stack } from "rsuite";
 import { useQuery } from "@tanstack/react-query";
-import { getFirebaseCollection } from "@/lib/api/firebaseCollections";
+import { getCollectionStub } from "@/lib/api/collectionStubs";
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
@@ -93,7 +93,7 @@ export default function TravelHeader() {
   const { data: allApplicationsData } = useQuery({
     queryKey: ["all-travel-applications"],
     queryFn: async () => {
-      const firstPage = await getFirebaseCollection<FirebaseTravelApplication>("travelApplications", {
+      const firstPage = await getCollectionStub<FirebaseTravelApplication>("travelApplications", {
         page: 1,
         limit: 20,
         sortBy: "createdAt",
@@ -109,7 +109,7 @@ export default function TravelHeader() {
         const pagePromises = [];
         for (let page = 2; page <= totalPages; page++) {
           pagePromises.push(
-            getFirebaseCollection<FirebaseTravelApplication>("travelApplications", {
+            getCollectionStub<FirebaseTravelApplication>("travelApplications", {
               page,
               limit: 20,
               sortBy: "createdAt",

@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from "motion/react";
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Table, Drawer, Button, Modal, Nav, Badge, Avatar, Divider, Progress, ButtonGroup, Loader, Pagination, Dropdown, Checkbox } from 'rsuite';
-import { getFirebaseUserById, getFirebaseUsers } from '@/lib/api/firebaseUsers';
+import { getUsers, deleteUser, mapWalletUserToTableUser } from '@/lib/api/walletUsers';
 import type { UserTypeTab } from './UserFilters';
 import EditUserDrawer from './EditUserDrawer';
 import AddTimeDepositModal from './AddTimeDepositModal';
@@ -1268,13 +1268,8 @@ const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit }: { user: 
 
   const handleDeleteUser = async () => {
     try {
-      const { deleteFirebaseUser } = await import('@/lib/api/adminOperations');
-      await deleteFirebaseUser(user._id);
-      
-      // Refresh the user list
-      queryClient.invalidateQueries({ queryKey: ['firebase-users'] });
-      
-      // Close the panel
+      await deleteUser(user._id);
+      queryClient.invalidateQueries({ queryKey: ['wallet-users'] });
       onClose();
     } catch (error) {
       console.error('Failed to delete user:', error);
@@ -1484,12 +1479,11 @@ const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit }: { user: 
   );
 };
 
-function userTypeToParams(userType: UserTypeTab): { agent?: boolean; accountType?: string; isDummyAccount?: boolean } {
+function userTypeToParams(userType: UserTypeTab): { agent?: boolean } {
   if (userType === 'all') return {};
   if (userType === 'agent') return { agent: true };
-  if (userType === 'demo') return { isDummyAccount: true };
-  if (userType === 'test') return { accountType: 'test' };
-  return { agent: false }; // investor: non-agents only
+  if (userType === 'investor') return { agent: false };
+  return {}; // demo/test: wallet API has no equivalent, show all
 }
 
 function filterUsersByType(users: User[], userType: UserTypeTab): User[] {
@@ -1505,12 +1499,13 @@ interface UserTableProps {
   userType?: UserTypeTab;
   onTotalChange?: (total: number) => void;
   onCountsChange?: (agentCount: number, investorCount: number, demoCount: number, testCount: number) => void;
+  onUsersLoad?: (users: User[]) => void;
   selectionMode?: boolean;
   selectedUsers?: string[];
   onSelectionChange?: (userIds: string[]) => void;
 }
 
-export default function UserTable({ searchQuery, userType = 'all', onTotalChange, onCountsChange, selectionMode = false, selectedUsers = [], onSelectionChange }: UserTableProps) {
+export default function UserTable({ searchQuery, userType = 'all', onTotalChange, onCountsChange, onUsersLoad, selectionMode = false, selectedUsers = [], onSelectionChange }: UserTableProps) {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
@@ -1521,29 +1516,16 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
   const [timeDepositModalOpen, setTimeDepositModalOpen] = useState(false);
 
   const filterParams = userTypeToParams(userType);
-  
-  console.log('🔍 [FRONTEND] UserTable filterParams:', { userType, filterParams });
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['firebase-users', { page, limit, searchQuery, userType, ...filterParams }],
-    queryFn: () => {
-      console.log('🚀 [FRONTEND] Calling getFirebaseUsers with:', {
+    queryKey: ['wallet-users', { page, limit, searchQuery, userType, ...filterParams }],
+    queryFn: () =>
+      getUsers({
         page,
         limit,
         search: searchQuery || undefined,
         ...filterParams,
-        sortBy: 'createdAt',
-        sortOrder: 'desc'
-      });
-      return getFirebaseUsers({
-        page,
-        limit,
-        search: searchQuery || undefined,
-        ...filterParams,
-        sortBy: 'createdAt',
-        sortOrder: 'desc'
-      });
-    },
+      }),
     placeholderData: keepPreviousData,
   });
 
@@ -1560,89 +1542,61 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
   }, []);
 
   const { data: agentData } = useQuery({
-    queryKey: ['firebase-users-agent-count'],
-    queryFn: () => getFirebaseUsers({
-      page: 1,
-      limit: 1,
-      agent: true,
-    }),
-    staleTime: 30000, // Cache for 30 seconds
+    queryKey: ['wallet-users-agent-count'],
+    queryFn: () => getUsers({ page: 1, limit: 1, agent: true }),
+    staleTime: 30000,
     enabled: enableCountQueries,
   });
 
   const { data: nonAgentData } = useQuery({
-    queryKey: ['firebase-users-non-agent-count'],
-    queryFn: () => getFirebaseUsers({
-      page: 1,
-      limit: 1,
-      agent: false,
-    }),
+    queryKey: ['wallet-users-non-agent-count'],
+    queryFn: () => getUsers({ page: 1, limit: 1, agent: false }),
     staleTime: 30000,
     enabled: enableCountQueries,
   });
 
   const { data: demoData } = useQuery({
-    queryKey: ['firebase-users-demo-count'],
-    queryFn: () => getFirebaseUsers({
-      page: 1,
-      limit: 1,
-      isDummyAccount: true,
-    }),
+    queryKey: ['wallet-users-demo-count'],
+    queryFn: () => getUsers({ page: 1, limit: 1 }),
     staleTime: 30000,
     enabled: enableCountQueries,
   });
 
   const { data: testData } = useQuery({
-    queryKey: ['firebase-users-test-count'],
-    queryFn: () => getFirebaseUsers({
-      page: 1,
-      limit: 1,
-      accountType: 'test',
-    }),
+    queryKey: ['wallet-users-test-count'],
+    queryFn: () => getUsers({ page: 1, limit: 1 }),
     staleTime: 30000,
     enabled: enableCountQueries,
   });
 
   const { data: allUsersData } = useQuery({
-    queryKey: ['firebase-users-all-count'],
-    queryFn: () => getFirebaseUsers({
-      page: 1,
-      limit: 1,
-    }),
+    queryKey: ['wallet-users-all-count'],
+    queryFn: () => getUsers({ page: 1, limit: 1 }),
     staleTime: 30000,
     enabled: enableCountQueries,
   });
   
 
-  const rawUsers = (data?.data?.users ?? []) as User[];
-  // API now handles filtering, so we use the data directly
-  const users = rawUsers;
-  const total = data?.data?.pagination.total ?? 0;
+  const users = useMemo(
+    () => (data?.users ?? []).map(mapWalletUserToTableUser) as User[],
+    [data?.users]
+  );
+  const total = data?.pagination?.total ?? 0;
 
-  // Get counts from pagination totals
-  const agentCount = agentData?.data?.pagination.total ?? 0;
-  const investorCount = nonAgentData?.data?.pagination.total ?? 0;
-  const demoCount = demoData?.data?.pagination.total ?? 0;
-  const testCount = testData?.data?.pagination.total ?? 0;
-  const totalAllUsers = allUsersData?.data?.pagination.total ?? 0;
+  const agentCount = agentData?.pagination?.total ?? 0;
+  const investorCount = nonAgentData?.pagination?.total ?? 0;
+  const demoCount = demoData?.pagination?.total ?? 0;
+  const testCount = testData?.pagination?.total ?? 0;
+  const totalAllUsers = allUsersData?.pagination?.total ?? 0;
 
-  // Debug logging
-  console.log('📊 [COUNTS DEBUG]', {
-    agentCount,
-    investorCount,
-    demoCount,
-    testCount,
-    totalAllUsers,
-    agentData: agentData?.data?.pagination,
-    nonAgentData: nonAgentData?.data?.pagination,
-    demoData: demoData?.data?.pagination,
-    testData: testData?.data?.pagination,
-    allUsersData: allUsersData?.data?.pagination
-  });
 
   useEffect(() => {
     setPage(1);
   }, [userType]);
+
+  useEffect(() => {
+    onUsersLoad?.(users);
+  }, [users, onUsersLoad]);
 
   useEffect(() => {
     onTotalChange?.(totalAllUsers);
@@ -1654,17 +1608,8 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
 
   const errorMessage = error instanceof Error ? error.message : 'Failed to fetch users';
 
-  const selectedUserId = selectedUser?._id;
-  const {
-    data: userDetailData,
-    isLoading: isUserDetailLoading
-  } = useQuery({
-    queryKey: ['firebase-user', selectedUserId],
-    queryFn: () => getFirebaseUserById(selectedUserId as string),
-    enabled: Boolean(selectedUserId),
-  });
-  const activeUser = (userDetailData?.data ?? selectedUser) as User | null;
-  const isUserDetailPending = isUserDetailLoading && !userDetailData;
+  const activeUser = selectedUser;
+  const isUserDetailPending = false;
 
   const handleRowClick = (user: User) => {
     setSelectedUser(user);
@@ -1702,12 +1647,7 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
   };
 
   const handleTimeDepositSuccess = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['firebase-users'] }),
-      queryClient.invalidateQueries({ queryKey: ['firebase-user', selectedUserId] }),
-      queryClient.invalidateQueries({ queryKey: ['firebase-users-agent-count'] }),
-      queryClient.invalidateQueries({ queryKey: ['firebase-users-non-agent-count'] })
-    ]);
+    await queryClient.invalidateQueries({ queryKey: ['wallet-users'] });
   };
 
   // Checkbox selection handlers

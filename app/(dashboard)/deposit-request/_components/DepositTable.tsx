@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Table, Button, Drawer, Dropdown, Loader, Pagination } from "rsuite";
-import { getFirebaseDepositRequests } from "@/lib/api/firebaseDepositRequests";
+import { getDepositRequestsStub } from "@/lib/api/collectionStubs";
 import { normalizeDepositRequest } from "@/lib/utils/depositHelpers";
 
 const { Column, HeaderCell, Cell } = Table;
@@ -495,7 +495,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
   const [isFetchingAll, setIsFetchingAll] = useState(false);
 
   const apiParams = useMemo(() => {
-    const params: Parameters<typeof getFirebaseDepositRequests>[0] = { 
+    const params: Parameters<typeof getDepositRequestsStub>[0] = { 
       page, 
       limit,
       sortBy: 'createdAt',
@@ -527,7 +527,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
         status: undefined // Remove status to fetch all statuses
       };
       
-      getFirebaseDepositRequests(fetchParams).then(async (firstResponse) => {
+      getDepositRequestsStub(fetchParams).then(async (firstResponse) => {
         const total = firstResponse.data?.pagination?.total ?? 0;
         const totalPages = Math.ceil(total / limit);
         
@@ -536,7 +536,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
         const promises = [];
         
         for (let p = 2; p <= totalPages; p++) {
-          promises.push(getFirebaseDepositRequests({ ...fetchParams, page: p }));
+          promises.push(getDepositRequestsStub({ ...fetchParams, page: p }));
         }
         
         const remainingPages = await Promise.all(promises);
@@ -567,7 +567,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["firebase-deposit-requests", apiParams],
-    queryFn: () => getFirebaseDepositRequests(apiParams),
+    queryFn: () => getDepositRequestsStub(apiParams),
     placeholderData: keepPreviousData,
     enabled: filters.paymentMethod === "all" && filters.status === "all", // Only fetch paginated data when no filters
   });

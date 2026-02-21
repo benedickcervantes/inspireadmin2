@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Table, Button, Drawer, Dropdown, Loader, Pagination, Modal } from "rsuite";
-import { getFirebaseCollection } from "@/lib/api/firebaseCollections";
+import { getCollectionStub } from "@/lib/api/collectionStubs";
 import { getUserById } from "@/lib/api/users";
 
 const { Column, HeaderCell, Cell } = Table;
@@ -557,7 +557,7 @@ export default function TravelTable({
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["travel-applications", { page, limit }],
     queryFn: () =>
-      getFirebaseCollection<TravelApplication>("travelApplications", {
+      getCollectionStub<TravelApplication>("travelApplications", {
         page,
         limit,
         sortBy: "createdAt",

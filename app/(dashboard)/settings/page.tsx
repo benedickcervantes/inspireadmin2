@@ -13,12 +13,12 @@ import CustomPushNotif from "./_components/CustomPushNotif";
 import EmailPasswordReset from "./_components/EmailPasswordReset";
 import MaintenanceMode from "./_components/MaintenanceMode";
 import CustomEvents from "./_components/CustomEvents";
-import { 
-  getAdminProfile,
-  updateAdminUsername, 
-  updateAdminEmail, 
-  updateAdminPassword, 
-  updateInvestmentRates 
+import { getMe } from "@/lib/api/walletAuth";
+import {
+  updateAdminUsername,
+  updateAdminEmail,
+  updateAdminPassword,
+  updateInvestmentRates,
 } from "@/lib/api/adminSettings";
 
 export default function SettingsPage() {
@@ -38,45 +38,35 @@ export default function SettingsPage() {
   const [email, setEmail] = useState("admin@example.com");
 
   useEffect(() => {
-    // Fetch admin profile from backend
     const fetchProfile = async () => {
       try {
-        const profile = await getAdminProfile();
-        
-        if (profile.data) {
-          const name = profile.data.name || "Admin User";
-          const emailAddress = profile.data.emailAddress || profile.data.email || "admin@example.com";
-          
-          setUsername(name);
-          setEmail(emailAddress);
-          
-          // Update localStorage cache
-          if (typeof window !== "undefined") {
-            localStorage.setItem("adminUsername", name);
-            localStorage.setItem("adminEmail", emailAddress);
-          }
+        const profile = await getMe();
+        const name =
+          [profile.firstName, profile.lastName].filter(Boolean).join(" ") ||
+          "Admin User";
+        const emailAddress = profile.email || "admin@example.com";
+
+        setUsername(name);
+        setEmail(emailAddress);
+
+        if (typeof window !== "undefined") {
+          localStorage.setItem("adminUsername", name);
+          localStorage.setItem("adminEmail", emailAddress);
         }
       } catch (error) {
         console.error("Failed to fetch admin profile:", error);
-        
-        // Fallback to localStorage if API fails
         if (typeof window !== "undefined") {
           const savedUsername = localStorage.getItem("adminUsername");
           const savedEmail = localStorage.getItem("adminEmail");
-          
           if (savedUsername) setUsername(savedUsername);
           if (savedEmail) setEmail(savedEmail);
-          
-          // Try to get email from authUser
           const authUser = localStorage.getItem("authUser");
           if (authUser && !savedEmail) {
             try {
               const user = JSON.parse(authUser);
-              if (user.emailAddress) {
-                setEmail(user.emailAddress);
-              }
-            } catch (e) {
-              console.error("Failed to parse auth user:", e);
+              setEmail(user.email || user.emailAddress || "admin@example.com");
+            } catch {
+              // ignore
             }
           }
         }

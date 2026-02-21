@@ -8,8 +8,8 @@ import UserFilters from "./_components/UserFilters";
 import type { UserTypeTab } from "./_components/UserFilters";
 import UserTable from "./_components/UserTable";
 import BulkDeleteModal from "./_components/BulkDeleteModal";
-import { verifyAdminPassword, deleteFirebaseUser } from "@/lib/api/adminOperations";
-import { getFirebaseUserById } from "@/lib/api/firebaseUsers";
+import { verifyAdminPassword } from "@/lib/api/adminOperations";
+import { deleteUser } from "@/lib/api/walletUsers";
 
 interface User {
   _id: string;
@@ -32,6 +32,7 @@ export default function UsersPage() {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
   const [usersToDelete, setUsersToDelete] = useState<User[]>([]);
+  const [currentPageUsers, setCurrentPageUsers] = useState<User[]>([]);
 
   // Debounce search input
   useEffect(() => {
@@ -67,52 +68,34 @@ export default function UsersPage() {
     setSelectedUsers(userIds);
   }, []);
 
-  const handleDeleteSelected = useCallback(async () => {
+  const handleDeleteSelected = useCallback(() => {
     if (selectedUsers.length === 0) return;
-
-    try {
-      // Fetch user details for all selected users
-      const userPromises = selectedUsers.map(userId => getFirebaseUserById(userId));
-      const userResponses = await Promise.all(userPromises);
-      const users = userResponses.map(response => response.data as User);
-      
-      setUsersToDelete(users);
-      setBulkDeleteModalOpen(true);
-    } catch (error) {
-      console.error('Failed to fetch user details:', error);
-      toaster.push(
-        <div className="text-sm">
-          <div className="font-semibold">Error</div>
-          <div>Failed to load user details</div>
-        </div>,
-        { placement: 'topEnd', duration: 3000 }
-      );
-    }
-  }, [selectedUsers]);
+    const users = currentPageUsers.filter((u) => selectedUsers.includes(u._id));
+    setUsersToDelete(users);
+    setBulkDeleteModalOpen(true);
+  }, [selectedUsers, currentPageUsers]);
 
   const handleBulkDeleteConfirm = useCallback(async (password: string) => {
-    // Verify admin password
     const isValid = await verifyAdminPassword(password);
     if (!isValid) {
       throw new Error("Invalid admin password");
     }
 
-    // Delete all selected users
-    const deletePromises = selectedUsers.map(userId => deleteFirebaseUser(userId));
+    const deletePromises = selectedUsers.map((userId) => deleteUser(userId));
     const results = await Promise.allSettled(deletePromises);
 
-    // Count successes and failures
-    const successCount = results.filter(r => r.status === 'fulfilled').length;
-    const failureCount = results.filter(r => r.status === 'rejected').length;
+    const successCount = results.filter((r) => r.status === "fulfilled").length;
+    const failureCount = results.filter((r) => r.status === "rejected").length;
 
-    // Show success/error messages
     if (successCount > 0) {
       toaster.push(
         <div className="text-sm">
           <div className="font-semibold">Success</div>
-          <div>Successfully deleted {successCount} user{successCount !== 1 ? 's' : ''}</div>
+          <div>
+            Successfully deleted {successCount} user{successCount !== 1 ? "s" : ""}
+          </div>
         </div>,
-        { placement: 'topEnd', duration: 4000 }
+        { placement: "topEnd", duration: 4000 }
       );
     }
 
@@ -120,18 +103,17 @@ export default function UsersPage() {
       toaster.push(
         <div className="text-sm">
           <div className="font-semibold">Warning</div>
-          <div>Failed to delete {failureCount} user{failureCount !== 1 ? 's' : ''}</div>
+          <div>
+            Failed to delete {failureCount} user{failureCount !== 1 ? "s" : ""}
+          </div>
         </div>,
-        { placement: 'topEnd', duration: 4000 }
+        { placement: "topEnd", duration: 4000 }
       );
     }
 
-    // Clear search input
     setSearchInput("");
     setDebouncedSearchQuery("");
-    
-    // Refresh user list and clear selection
-    await queryClient.invalidateQueries({ queryKey: ['firebase-users'] });
+    await queryClient.invalidateQueries({ queryKey: ["wallet-users"] });
     setSelectedUsers([]);
     setSelectionMode(false);
     setBulkDeleteModalOpen(false);
@@ -163,6 +145,7 @@ export default function UsersPage() {
         userType={userType}
         onTotalChange={setTotalCount}
         onCountsChange={handleCountsChange}
+        onUsersLoad={setCurrentPageUsers}
         selectionMode={selectionMode}
         selectedUsers={selectedUsers}
         onSelectionChange={handleUserSelectionChange}

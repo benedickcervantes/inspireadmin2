@@ -3,13 +3,12 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { getFirebaseAuth } from "@/lib/firebase/client";
-import { adminFirebaseLogin } from "@/lib/api/adminAuth";
+import { useRouter, useSearchParams } from "next/navigation";
+import { login } from "@/lib/api/walletAuth";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [emailAddress, setEmailAddress] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -21,8 +20,11 @@ export default function LoginPage() {
     const token = localStorage.getItem("authToken");
     if (token) {
       router.replace("/dashboard");
+      return;
     }
-  }, [router]);
+    const message = searchParams.get("message");
+    if (message) setError(decodeURIComponent(message));
+  }, [router, searchParams]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -37,79 +39,19 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      // HARDCODED ACCOUNT - Bypass backend when it's down
-      if (trimmedEmail === "accountnamalupet@wow.com" && password === "ljpogi123") {
-        console.log("🔓 [LOGIN] Using hardcoded admin account (backend bypass)");
-        
-        // Create a mock token and user data
-        const mockToken = "hardcoded-admin-token-" + Date.now();
-        const mockUser = {
-          uid: "hardcoded-admin-uid",
-          email: "accountnamalupet@wow.com",
-          displayName: "Admin User",
-          role: "superadmin",
-          name: "Admin User",
-          emailAddress: "admin@inspire.com"
-        };
+      const { access_token, user } = await login(trimmedEmail, password);
 
-        localStorage.setItem("authToken", mockToken);
-        localStorage.setItem("authUser", JSON.stringify(mockUser));
-        localStorage.setItem("adminUsername", "Admin User");
-        localStorage.setItem("adminEmail", "admin@inspire.com");
-
-        console.log("✅ [LOGIN] Hardcoded login successful, redirecting to dashboard...");
-        router.replace("/dashboard");
+      if (user.role !== "ADMIN") {
+        setError("Access denied. Admin privileges required.");
         return;
       }
 
-      console.log("🔐 [LOGIN] Starting Firebase authentication...");
-      
-      // Sign in with Firebase Auth
-      const auth = getFirebaseAuth();
-      console.log("🔐 [LOGIN] Firebase Auth initialized:", auth.app.name);
-      
-      const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, password);
-      console.log("✅ [LOGIN] Firebase sign-in successful. UID:", userCredential.user.uid);
-      
-      // Get Firebase ID token
-      const firebaseToken = await userCredential.user.getIdToken();
-      console.log("✅ [LOGIN] Got Firebase ID token (length):", firebaseToken.length);
-
-      // Send Firebase token to backend for admin verification
-      console.log("🚀 [LOGIN] Calling backend firebase-login endpoint...");
-      const payload = await adminFirebaseLogin(firebaseToken);
-      console.log("✅ [LOGIN] Backend response:", payload);
-
-      const token = payload.data?.token;
-      if (!token) {
-        throw new Error("Login response missing token.");
-      }
-
-      localStorage.setItem("authToken", token);
-      if (payload.data?.user) {
-        localStorage.setItem("authUser", JSON.stringify(payload.data.user));
-      }
-
-      console.log("✅ [LOGIN] Login complete, redirecting to dashboard...");
+      localStorage.setItem("authToken", access_token);
+      localStorage.setItem("authUser", JSON.stringify(user));
       router.replace("/dashboard");
-    } catch (err: any) {
-      console.error("❌ [LOGIN] Error:", err);
-      
-      // Handle Firebase auth errors
-      let errorMessage = "Login failed. Please try again.";
-      
-      if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password") {
-        errorMessage = "Invalid email or password. Use hardcoded account for offline access.";
-      } else if (err.code === "auth/user-not-found") {
-        errorMessage = "No account found with this email. Use hardcoded account for offline access.";
-      } else if (err.code === "auth/too-many-requests") {
-        errorMessage = "Too many failed attempts. Please try again later.";
-      } else if (err.code === "auth/network-request-failed") {
-        errorMessage = "Network error. Use hardcoded account for offline access.";
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-      
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Login failed. Please try again.";
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);

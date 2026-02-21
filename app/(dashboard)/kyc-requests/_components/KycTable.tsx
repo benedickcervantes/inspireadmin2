@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Button, Drawer, Dropdown, Loader, Modal, Pagination, Table } from "rsuite";
-import { getFirebaseCollection } from "@/lib/api/firebaseCollections";
+import { getCollectionStub } from "@/lib/api/collectionStubs";
 
 const { Column, HeaderCell, Cell } = Table;
 
@@ -483,7 +483,7 @@ export default function KycTable({ searchQuery, statusFilter, dateRange }: KycTa
       },
     ],
     queryFn: () =>
-      getFirebaseCollection<FirebaseKycRequest>("kycRequest", {
+      getCollectionStub<FirebaseKycRequest>("kycRequest", {
         page,
         limit,
         sortBy: "submittedAt",

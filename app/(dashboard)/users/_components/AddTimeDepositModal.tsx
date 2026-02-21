@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button, Checkbox, Input, Loader, Message, Modal, SelectPicker, Toggle } from "rsuite";
-import { getFirebaseUsers } from "@/lib/api/firebaseUsers";
+import { getUsers, mapWalletUserToTableUser } from "@/lib/api/walletUsers";
 import {
   createUserTimeDeposit,
   quoteTimeDeposit,
@@ -119,20 +119,14 @@ export default function AddTimeDepositModal({ open, onClose, user, onSuccess }: 
 
   const { data: referrersData, isLoading: isReferrersLoading } = useQuery({
     queryKey: ["time-deposit-referrers"],
-    queryFn: () =>
-      getFirebaseUsers({
-        page: 1,
-        limit: 100,
-        agent: true,
-        sortBy: "createdAt",
-        sortOrder: "desc",
-      }),
+    queryFn: () => getUsers({ page: 1, limit: 100, agent: true }),
     enabled: open && isReferralEnabled,
     staleTime: 5 * 60 * 1000,
   });
 
   const referrerOptions = useMemo(() => {
-    const users = referrersData?.data?.users ?? [];
+    const rawUsers = referrersData?.users ?? [];
+    const users = rawUsers.map(mapWalletUserToTableUser);
     return users.map((item) => {
       const fullName = `${item.firstName || ""} ${item.lastName || ""}`.trim() || item.emailAddress || item.userId || item._id;
       return {

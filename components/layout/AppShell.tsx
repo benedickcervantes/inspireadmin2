@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import Sidebar from "./Sidebar";
 import ChatSystem from "@/components/chat";
+import { getMe } from "@/lib/api/walletAuth";
 
 type AuthUser = {
   firstName?: string;
   lastName?: string;
   emailAddress?: string;
+  email?: string;
 };
 
 const getInitials = (user: AuthUser | null) => {
@@ -78,24 +80,39 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    setIsAuthorized(true);
-
-    const storedUser = localStorage.getItem("authUser");
-    if (storedUser) {
+    const validateAdmin = async () => {
       try {
-        setAuthUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error("Failed to parse auth user:", error);
+        const user = await getMe();
+        if (user.role !== "ADMIN") {
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("authUser");
+          setIsAuthorized(false);
+          setAuthUser(null);
+          router.replace("/login?message=Access denied. Admin privileges required.");
+          return;
+        }
+        setAuthUser({
+          firstName: user.firstName,
+          lastName: user.lastName,
+          emailAddress: user.email,
+          email: user.email,
+        });
+        setIsAuthorized(true);
+      } catch {
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("authUser");
+        setIsAuthorized(false);
         setAuthUser(null);
+        router.replace("/login");
       }
-    } else {
-      setAuthUser(null);
-    }
+    };
+
+    validateAdmin();
   }, [router]);
 
   const userDisplay = useMemo(() => {
     // Use custom username and email from state if available
-    const displayEmail = customEmail || authUser?.emailAddress;
+    const displayEmail = customEmail || authUser?.emailAddress || authUser?.email;
     
     if (customUsername) {
       return { 

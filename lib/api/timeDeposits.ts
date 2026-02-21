@@ -114,7 +114,7 @@ const parseErrorMessage = (payload: { error?: string; message?: string }, fallba
 export const quoteTimeDeposit = async (
   payload: TimeDepositQuoteRequest
 ): Promise<TimeDepositQuoteResponse> => {
-  const response = await fetch(`${API_BASE_URL}/api/time-deposits/quote`, {
+  const response = await fetch(`${API_BASE_URL}/time-deposits/quote`, {
     method: 'POST',
     headers: buildHeaders(),
     body: JSON.stringify(payload)
@@ -134,10 +134,10 @@ export const createUserTimeDeposit = async (
   payload: TimeDepositCreateRequest,
   requestId?: string
 ): Promise<TimeDepositCreateResponse> => {
-  const response = await fetch(`${API_BASE_URL}/api/firebase-users/${encodeURIComponent(userId)}/time-deposits`, {
+  const response = await fetch(`${API_BASE_URL}/time-deposits`, {
     method: 'POST',
     headers: buildHeaders(requestId),
-    body: JSON.stringify(payload)
+    body: JSON.stringify({ ...payload, userId })
   });
 
   const result = (await response.json()) as TimeDepositCreateResponse;

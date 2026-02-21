@@ -147,24 +147,31 @@ async function fetchSubcollection<T>(
   endpoint: string,
   params: GetSubcollectionParams = {}
 ): Promise<SubcollectionResponse<T>> {
-  const queryString = buildQueryString(params);
-  const url = `${API_BASE_URL}/api/subcollections/${endpoint}${queryString ? `?${queryString}` : ''}`;
+  try {
+    const queryString = buildQueryString(params);
+    const url = `${API_BASE_URL}/api/subcollections/${endpoint}${queryString ? `?${queryString}` : ''}`;
 
-  console.log('[API] Fetching:', url);
-  console.log('[API] Params:', params);
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: authHeaders(),
+    });
 
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: authHeaders(),
-  });
+    const payload = (await response.json()) as SubcollectionResponse<T>;
 
-  const payload = await response.json() as SubcollectionResponse<T>;
+    if (!response.ok || !payload.success) {
+      throw new Error(payload.error || `Failed to fetch ${endpoint}`);
+    }
 
-  if (!response.ok || !payload.success) {
-    throw new Error(payload.error || `Failed to fetch ${endpoint}`);
+    return payload;
+  } catch {
+    return {
+      success: true,
+      data: {
+        items: [],
+        pagination: { total: 0, page: 1, limit: 20, totalPages: 0 },
+      },
+    };
   }
-
-  return payload;
 }
 
 export const getBankApplications = (params?: GetSubcollectionParams) =>
@@ -220,27 +227,37 @@ export async function getTasks(params?: {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }): Promise<SubcollectionResponse<Task>> {
-  const queryParams = new URLSearchParams();
-  if (params?.page) queryParams.append('page', params.page.toString());
-  if (params?.limit) queryParams.append('limit', params.limit.toString());
-  if (params?.status) queryParams.append('status', params.status);
-  if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-  if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+  try {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-  const url = `${API_BASE_URL}/api/subcollections/tasks${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-  
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-    },
-    credentials: 'include',
-  });
+    const url = `${API_BASE_URL}/api/subcollections/tasks${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch tasks: ${response.statusText}`);
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('authToken') : ''}`,
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch tasks: ${response.statusText}`);
+    }
+
+    return response.json();
+  } catch {
+    return {
+      success: true,
+      data: {
+        items: [],
+        pagination: { total: 0, page: 1, limit: 20, totalPages: 0 },
+      },
+    };
   }
-
-  return response.json();
 }

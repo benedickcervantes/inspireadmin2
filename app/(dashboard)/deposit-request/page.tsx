@@ -6,7 +6,10 @@ import { useQuery } from "@tanstack/react-query";
 import DepositHeader from "./_components/DepositHeader";
 import DepositFilters from "./_components/DepositFilters";
 import DepositTable from "./_components/DepositTable";
-import { getFirebaseDepositRequestStats, getFirebaseDepositRequests } from "@/lib/api/firebaseDepositRequests";
+import {
+  getDepositRequestStatsStub,
+  getDepositRequestsStub,
+} from "@/lib/api/collectionStubs";
 
 export interface DepositFiltersType {
   status: string;
@@ -24,24 +27,21 @@ export default function DepositRequestPage() {
   });
 
   const { data: stats } = useQuery({
-    queryKey: ["firebase-deposit-requests-stats"],
-    queryFn: getFirebaseDepositRequestStats,
+    queryKey: ["deposit-requests-stats"],
+    queryFn: getDepositRequestStatsStub,
     refetchInterval: 30_000,
   });
 
-  // Fetch rejected count separately
   const { data: rejectedData } = useQuery({
-    queryKey: ["firebase-deposit-requests-rejected-count"],
-    queryFn: () => getFirebaseDepositRequests({ page: 1, limit: 1, status: "rejected" }),
+    queryKey: ["deposit-requests-rejected-count"],
+    queryFn: () => getDepositRequestsStub({ page: 1, limit: 1, status: "rejected" }),
     refetchInterval: 30_000,
   });
 
-  // Combine stats with rejected count
   const enhancedStats = useMemo(() => {
-    if (!stats) return undefined;
-    
+    if (!stats?.data) return undefined;
     return {
-      ...stats,
+      ...stats.data,
       rejected: rejectedData?.data?.pagination?.total ?? 0,
     };
   }, [stats, rejectedData]);

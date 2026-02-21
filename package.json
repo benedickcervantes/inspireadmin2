@@ -3,15 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3001",
     "lint": "eslint"
   },
   "dependencies": {
     "@rsuite/icons": "^1.4.0",
     "@tanstack/react-query": "^5.62.0",
-    "firebase": "^12.9.0",
     "gsap": "^3.12.5",
     "motion": "^12.23.26",
     "next": "^16.1.6",

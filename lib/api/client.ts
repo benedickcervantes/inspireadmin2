@@ -1,5 +1,5 @@
 // API client configuration and utilities
+// Admin portal connects exclusively to the wallet backend
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL || "http://localhost:4000";
-
-// Add your API client setup here (axios, fetch, etc.)
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_WALLET_BACKEND_URL || "http://localhost:3000";

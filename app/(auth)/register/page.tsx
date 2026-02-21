@@ -4,7 +4,7 @@ import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { adminRegister } from "@/lib/api/adminAuth";
+import { register } from "@/lib/api/walletAuth";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -38,8 +38,8 @@ export default function RegisterPage() {
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
       return;
     }
 
@@ -52,24 +52,15 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      const payload = await adminRegister({
+      const { access_token, user } = await register({
+        email: trimmedEmail,
+        password,
         firstName: trimmedFirst,
         lastName: trimmedLast,
-        emailAddress: trimmedEmail,
-        password,
-        confirmPassword,
       });
 
-      const token = payload.data?.token;
-      if (!token) {
-        throw new Error("Registration response missing token.");
-      }
-
-      localStorage.setItem("authToken", token);
-      if (payload.data?.user) {
-        localStorage.setItem("authUser", JSON.stringify(payload.data.user));
-      }
-
+      localStorage.setItem("authToken", access_token);
+      localStorage.setItem("authUser", JSON.stringify(user));
       router.replace("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed. Please try again.");

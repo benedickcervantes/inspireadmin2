@@ -29,19 +29,22 @@ export async function getAdminProfile() {
 }
 
 /**
- * Update admin username
+ * Update admin username (maps to PATCH /auth/profile firstName/lastName)
  */
 export async function updateAdminUsername(username: string) {
   try {
     const token = localStorage.getItem("authToken");
-    
-    const response = await fetch(`${API_BASE_URL}/api/admin/profile/username`, {
-      method: "PUT",
+    const parts = username.trim().split(/\s+/);
+    const firstName = parts[0] || "";
+    const lastName = parts.slice(1).join(" ") || "";
+
+    const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+      method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ username }),
+      body: JSON.stringify({ firstName, lastName }),
     });
 
     if (!response.ok) {
@@ -58,61 +61,17 @@ export async function updateAdminUsername(username: string) {
 }
 
 /**
- * Update admin email
+ * Update admin email - wallet backend does not expose email update via API
  */
-export async function updateAdminEmail(email: string) {
-  try {
-    const token = localStorage.getItem("authToken");
-    
-    const response = await fetch(`${API_BASE_URL}/api/admin/profile/email`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ email }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "Failed to update email");
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Error updating email:", error);
-    throw error;
-  }
+export async function updateAdminEmail(_email: string) {
+  throw new Error("Email update is not supported by the backend.");
 }
 
 /**
- * Update admin password
+ * Update admin password - wallet backend does not expose password update via API
  */
-export async function updateAdminPassword(currentPassword: string, newPassword: string) {
-  try {
-    const token = localStorage.getItem("authToken");
-    
-    const response = await fetch(`${API_BASE_URL}/api/admin/profile/password`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ currentPassword, newPassword }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || "Failed to update password");
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Error updating password:", error);
-    throw error;
-  }
+export async function updateAdminPassword(_currentPassword: string, _newPassword: string) {
+  throw new Error("Password update is not supported by the backend.");
 }
 
 /**

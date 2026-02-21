@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Table, Button, Drawer, Dropdown, Loader, Pagination } from "rsuite";
-import { getFirebaseCollection } from "@/lib/api/firebaseCollections";
+import { getCollectionStub } from "@/lib/api/collectionStubs";
 
 const { Column, HeaderCell, Cell } = Table;
 
@@ -262,7 +262,7 @@ export default function RequestTable({ searchQuery, statusFilter, dateRange }: R
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["agent-requests", { page, limit }],
     queryFn: async () => {
-      return await getFirebaseCollection<AgentRequest>("agentRequest", {
+      return await getCollectionStub<AgentRequest>("agentRequest", {
         page,
         limit,
         sortBy: "submittedAt",

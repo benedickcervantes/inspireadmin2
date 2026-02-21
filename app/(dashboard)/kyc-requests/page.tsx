@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getFirebaseCollection } from "@/lib/api/firebaseCollections";
+import { getCollectionStub } from "@/lib/api/collectionStubs";
 import KycFilters from "./_components/KycFilters";
 import KycHeader from "./_components/KycHeader";
 import KycTable from "./_components/KycTable";
@@ -18,44 +18,16 @@ export default function KycRequestsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateRange, setDateRange] = useState<[Date, Date] | null>(null);
 
-  // Fetch all KYC data for the header stats
   const { data: allKycData } = useQuery({
     queryKey: ["all-kyc-for-stats"],
     queryFn: async () => {
-      const firstPage = await getFirebaseCollection<FirebaseKycRequest>("kycRequest", {
+      const res = await getCollectionStub<FirebaseKycRequest>("kycRequest", {
         page: 1,
         limit: 20,
         sortBy: "submittedAt",
         sortOrder: "desc",
       });
-
-      if (!firstPage.data) return [];
-
-      const totalPages = firstPage.data.pagination.totalPages;
-      const allItems = [...firstPage.data.items];
-
-      if (totalPages > 1) {
-        const pagePromises = [];
-        for (let page = 2; page <= totalPages; page++) {
-          pagePromises.push(
-            getFirebaseCollection<FirebaseKycRequest>("kycRequest", {
-              page,
-              limit: 20,
-              sortBy: "submittedAt",
-              sortOrder: "desc",
-            })
-          );
-        }
-
-        const remainingPages = await Promise.all(pagePromises);
-        remainingPages.forEach(pageData => {
-          if (pageData.data?.items) {
-            allItems.push(...pageData.data.items);
-          }
-        });
-      }
-
-      return allItems;
+      return res.data?.items ?? [];
     },
     staleTime: 60000,
   });

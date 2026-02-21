@@ -11,6 +11,7 @@ import TransactionTable, { Transaction, TransactionStatus } from "./_components/
 import { MonthlySalesChart, OutflowChart, OutflowItem } from "./_components/Charts";
 import { getDashboardSummary, getInspireBankBalance, getInspireBankLedger } from "@/lib/api/dashboard";
 import { getUsers, User } from "@/lib/api/users";
+import { getTimeDepositDividendTotal } from "@/lib/api/depositRequests";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { staggerContainer, MotionDiv, MotionSection } from "./_components/motion";
 
@@ -457,6 +458,12 @@ export default function Dashboard() {
       agent: false,
       isDummyAccount: false
     })
+  });
+
+  // Dividend total from time deposit payout schedules (backend computed)
+  const { data: dividendTotal = 0 } = useQuery({
+    queryKey: ["time-deposit-dividend-total"],
+    queryFn: getTimeDepositDividendTotal,
   });
 
   const users = (usersData?.data?.users ?? []) as User[];
@@ -1373,6 +1380,31 @@ Status Distribution</h4>
                 </div>
               </motion.div>
 
+              {/* Amount Wallet (Dividend) - from backend time deposit payout schedules */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.15 }}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 hover:border-[var(--border)] hover:shadow-[var(--shadow-md)] hover:scale-[1.02] transition-all duration-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[var(--accent-soft)] border border-[var(--border-purple)] flex items-center justify-center">
+                      <Icons.DollarSign className="w-5 h-5 text-[var(--accent)]" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[var(--text-primary)]">Amount Wallet (Dividend)</div>
+                      <div className="text-xs text-[var(--text-muted)]">Computed dividend from time deposits</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-[var(--text-primary)]">
+                      {formatCurrency(dividendTotal)}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
               {/* Average Balance */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
@@ -1468,6 +1500,24 @@ Status Distribution</h4>
                       className="h-full bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] transition-all duration-500 rounded-full"
                       style={{ 
                         width: `${balanceBreakdown.totalWallet > 0 ? 100 : 0}%`
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Amount Wallet (Dividend) Bar */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs text-[var(--text-secondary)]">Amount Wallet (Dividend)</span>
+                    <span className="text-xs font-semibold text-[var(--text-primary)]">
+                      {formatCurrency(dividendTotal)}
+                    </span>
+                  </div>
+                  <div className="h-3 bg-[var(--surface-elevated)] rounded-full overflow-hidden border border-[var(--border-subtle)]">
+                    <div
+                      className="h-full bg-gradient-to-r from-[var(--accent)] to-[var(--primary)] transition-all duration-500 rounded-full"
+                      style={{
+                        width: `${balanceBreakdown.totalWallet > 0 ? Math.min(100, (dividendTotal / balanceBreakdown.totalWallet) * 100) : 0}%`
                       }}
                     />
                   </div>

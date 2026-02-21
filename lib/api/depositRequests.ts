@@ -25,6 +25,21 @@ export interface DepositRequestItem {
   createdAt?: string;
   processedAt?: string;
   notes?: string;
+  /** Original backend status (e.g. ACTIVE, CANCELLED for time deposits) */
+  rawStatus?: string;
+  /** Time deposit: contractType (e.g. oneYear), contractPeriod */
+  contractType?: string;
+  contractPeriod?: string;
+  /** Time deposit: AVAILABLE_BALANCE | REQUEST_AMOUNT */
+  depositSource?: string;
+  /** Stock investment: symbol e.g. AAPL */
+  stockSymbol?: string;
+  /** Time deposit: commission preview */
+  commission?: { totalCommission?: string; commissionRatePercent?: number; distribution?: unknown[] };
+  /** Time deposit: interest rate (e.g. "5.25") */
+  interestRate?: string;
+  /** Time deposit: dividend payout schedule from backend */
+  payoutSchedule?: Array<{ payoutIndex?: number; expectedDate?: string; amount?: string; status?: string; isLastPayout?: boolean; principalReturned?: string }>;
   user: {
     odId?: string;
     firstName?: string;
@@ -97,69 +112,135 @@ async function fetchJsonArray(url: string): Promise<unknown[] | null> {
   return Array.isArray(raw) ? raw : [];
 }
 
-/** Map frontend status filter to backend query param (PENDING|APPROVED|REJECTED). Approved includes COMPLETED. */
+/** Map frontend status filter to backend query param (PENDING|APPROVED|REJECTED). */
 function toStatusParam(status?: string): string | undefined {
   if (!status || status === "all") return undefined;
   const s = status.toLowerCase();
   if (s === "pending") return "PENDING";
-  if (s === "approved") return "APPROVED"; // backend may also return COMPLETED; we filter client-side
+  if (s === "approved") return "APPROVED";
   if (s === "rejected") return "REJECTED";
   return undefined;
 }
 
-/** Build URL with optional ?status= query param */
-function buildListUrl(base: string, statusParam?: string): string {
+/** Map frontend paymentMethod to backend requestType param. */
+function toRequestTypeParam(paymentMethod?: string): string | undefined {
+  if (!paymentMethod || paymentMethod === "all") return undefined;
+  const pm = paymentMethod.toLowerCase();
+  if (pm === "time_deposit") return "time_deposit";
+  if (pm === "topup_available_balance") return "top_up_balance";
+  if (pm === "stock") return "stock_investment";
+  return undefined;
+}
+
+/** Infer DepositRequestType from raw backend item (requestType field). */
+function inferRequestType(raw: Record<string, unknown>): DepositRequestType {
+  const rt = (raw.requestType ?? "").toString().toLowerCase();
+  if (rt === "time_deposit") return "time_deposit";
+  if (rt === "top_up_balance") return "top_up_balance";
+  if (rt === "stock_investment") return "stock";
+  if (rt === "stock") return "stock";
+  return "top_up_balance";
+}
+
+/** Build URL for GET /deposit-requests/admin with optional status and requestType query params. */
+function buildDepositRequestsAdminUrl(statusParam?: string, requestTypeParam?: string): string {
+  const base = `${API_BASE_URL}/deposit-requests/admin`;
+  const params = new URLSearchParams();
+  if (statusParam) params.set("status", statusParam);
+  if (requestTypeParam) params.set("requestType", requestTypeParam);
+  const qs = params.toString();
+  return qs ? `${base}?${qs}` : base;
+}
+
+/** Build URL with optional ?status= for legacy endpoints */
+function buildLegacyUrl(base: string, statusParam?: string): string {
   if (!statusParam) return base;
-  const sep = base.includes("?") ? "&" : "?";
-  return `${base}${sep}status=${encodeURIComponent(statusParam)}`;
+  return `${base}?status=${encodeURIComponent(statusParam)}`;
 }
 
-/** Fetch time deposits. When includeAllStatuses: tries /admin (all) first, falls back to /admin/pending */
-async function fetchTimeDeposits(includeAllStatuses: boolean, statusParam?: string): Promise<DepositRequestItem[]> {
-  const baseAll = `${API_BASE_URL}/time-deposits/admin`;
-  const basePending = `${API_BASE_URL}/time-deposits/admin/pending`;
-  const urls = includeAllStatuses
-    ? [buildListUrl(baseAll, statusParam), basePending]
-    : [basePending];
-  for (const url of urls) {
-    const items = await fetchJsonArray(url);
-    if (items !== null) return items.map((item) => normalizeItem(item as Record<string, unknown>, "time_deposit"));
+/** Fallback: fetch from legacy per-type endpoints when unified endpoint 404s */
+async function fetchDepositRequestsLegacy(
+  statusParam?: string,
+  requestTypeParam?: string
+): Promise<unknown[] | null> {
+  const all: unknown[] = [];
+  const includeTimeDeposit = !requestTypeParam || requestTypeParam === "time_deposit";
+  const includeTopUp = !requestTypeParam || requestTypeParam === "top_up_balance";
+  const includeStock = !requestTypeParam || requestTypeParam === "stock_investment";
+
+  if (includeTimeDeposit) {
+    const urls = [
+      `${API_BASE_URL}/time-deposits/admin/pending`,
+      `${API_BASE_URL}/api/time-deposits/admin/pending`,
+    ];
+    for (const u of urls) {
+      const arr = await fetchJsonArray(u);
+      if (arr !== null) {
+        all.push(...arr);
+        break;
+      }
+    }
   }
-  return [];
+  if (includeTopUp) {
+    const base = `${API_BASE_URL}/deposit-requests/admin/top-up`;
+    const urls = statusParam ? [buildLegacyUrl(base, statusParam)] : [`${base}/pending`, base];
+    for (const u of urls) {
+      const arr = await fetchJsonArray(u);
+      if (arr !== null) {
+        all.push(...arr);
+        break;
+      }
+    }
+  }
+  if (includeStock) {
+    const base = `${API_BASE_URL}/deposit-requests/admin/stock-investment`;
+    const urls = statusParam ? [buildLegacyUrl(base, statusParam)] : [`${base}/pending`, base];
+    for (const u of urls) {
+      const arr = await fetchJsonArray(u);
+      if (arr !== null) {
+        all.push(...arr);
+        break;
+      }
+    }
+  }
+  return all.length > 0 ? all : null;
 }
 
-/** Fetch top-up requests. Backend: GET /deposit-requests/admin/top-up?status=PENDING|APPROVED|REJECTED */
-async function fetchTopUp(includeAllStatuses: boolean, statusParam?: string): Promise<DepositRequestItem[]> {
-  const baseAll = `${API_BASE_URL}/deposit-requests/admin/top-up`;
-  const basePending = `${API_BASE_URL}/deposit-requests/admin/top-up/pending`;
-  const urls = includeAllStatuses
-    ? [buildListUrl(baseAll, statusParam), basePending]
-    : [basePending];
-  for (const url of urls) {
-    const items = await fetchJsonArray(url);
-    if (items !== null) return items.map((item) => normalizeItem(item as Record<string, unknown>, "top_up_balance"));
+/**
+ * Fetch total computed dividend from time deposit payout schedules (backend).
+ * Uses GET /deposit-requests/admin?requestType=time_deposit, fallback to /time-deposits/admin/pending.
+ */
+export async function getTimeDepositDividendTotal(): Promise<number> {
+  const url = buildDepositRequestsAdminUrl(undefined, "time_deposit");
+  let items = await fetchJsonArray(url);
+  if (items === null) {
+    const fallbackUrl = `${API_BASE_URL}/time-deposits/admin/pending`;
+    items = await fetchJsonArray(fallbackUrl);
   }
-  return [];
+  if (items === null) return 0;
+  let total = 0;
+  for (const raw of items) {
+    const schedule = (raw as Record<string, unknown>).payoutSchedule;
+    if (Array.isArray(schedule)) {
+      for (const p of schedule) {
+        total += Number((p as { amount?: string }).amount ?? 0);
+      }
+    }
+  }
+  return total;
 }
 
-/** Fetch stock investment requests. Backend: GET /deposit-requests/admin/stock-investment?status=PENDING|APPROVED|REJECTED */
-async function fetchStockInvestment(includeAllStatuses: boolean, statusParam?: string): Promise<DepositRequestItem[]> {
-  const baseAll = `${API_BASE_URL}/deposit-requests/admin/stock-investment`;
-  const basePending = `${API_BASE_URL}/deposit-requests/admin/stock-investment/pending`;
-  const urls = includeAllStatuses
-    ? [buildListUrl(baseAll, statusParam), basePending]
-    : [basePending];
-  for (const url of urls) {
-    const items = await fetchJsonArray(url);
-    if (items !== null) return items.map((item) => normalizeItem(item as Record<string, unknown>, "stock"));
-  }
-  return [];
+/** Map backend status to display-friendly value. Time deposits: ACTIVE/MATURED→approved, CANCELLED→rejected. */
+function toDisplayStatus(status: string | undefined): string {
+  const s = (status ?? "").toLowerCase();
+  if (s === "active" || s === "matured") return "approved";
+  if (s === "cancelled") return "rejected";
+  return s || "pending";
 }
 
 function normalizeItem(raw: Record<string, unknown>, requestType: DepositRequestType): DepositRequestItem {
   const id = String(raw.id ?? raw._firebaseDocId ?? "");
   const rawUser = (raw.user ?? raw.User ?? raw.userInfo ?? raw.owner ?? {}) as Record<string, unknown>;
-  // Merge with flat fields on item (userFirstName, userEmail, etc.)
   const flat = raw as Record<string, unknown>;
   const user = {
     odId: rawUser.odId as string | undefined,
@@ -174,24 +255,26 @@ function normalizeItem(raw: Record<string, unknown>, requestType: DepositRequest
     ?? (raw as { payment?: { reference?: string }; meta?: { referenceId?: string; reference?: string } }).meta?.referenceId
     ?? (raw as { payment?: { reference?: string }; meta?: { referenceId?: string; reference?: string } }).meta?.reference;
   const referenceNumber = (raw.referenceNumber ?? raw.reference ?? raw.displayId ?? raw.ref ?? raw.paymentReference ?? raw.transactionReference ?? raw.externalReference ?? nestedRef) as string | undefined;
+  const rawStatus = (raw.status as string) ?? "pending";
   return {
     ...raw,
     id,
     requestType,
     userId,
     amount: typeof raw.amount === "number" ? raw.amount : parseFloat(String(raw.amount || 0)) || undefined,
-    status: (raw.status as string) ?? "pending",
+    status: toDisplayStatus(rawStatus),
+    rawStatus, // keep original for filtering
     referenceNumber,
     createdAt: raw.createdAt as string | undefined,
-    processedAt: raw.processedAt as string | undefined,
+    processedAt: (raw.processedAt ?? raw.reviewedAt ?? (raw as { reviewed_at?: string }).reviewed_at) as string | undefined,
     notes: (raw.notes ?? raw.adminNotes ?? (raw as { admin_notes?: string }).admin_notes) as string | undefined,
-    user, // normalized last so email -> emailAddress, etc. take precedence over raw.user
+    user,
   };
 }
 
 /**
- * Fetch all deposit requests from wallet backend (time deposit, top-up, stock).
- * Merges results from the three admin endpoints per API-AUTH-AND-USERS.md.
+ * Fetch all deposit requests from wallet backend via GET /deposit-requests/admin.
+ * Uses status and requestType query params from dropdown selections.
  * Base URL: API_BASE_URL (NEXT_PUBLIC_WALLET_BACKEND_URL).
  */
 export async function getDepositRequests(params?: {
@@ -206,19 +289,26 @@ export async function getDepositRequests(params?: {
   sortOrder?: string;
 }): Promise<DepositRequestsResponse> {
   try {
-    const includeAllStatuses = !params?.status || params.status === "all" || params.status === "approved" || params.status === "rejected";
     const statusParam = toStatusParam(params?.status);
-    const [timeDeposits, topUp, stock] = await Promise.all([
-      fetchTimeDeposits(includeAllStatuses, statusParam),
-      fetchTopUp(includeAllStatuses, statusParam),
-      fetchStockInvestment(includeAllStatuses, statusParam),
-    ]);
+    const requestTypeParam = toRequestTypeParam(params?.paymentMethod);
+    const url = buildDepositRequestsAdminUrl(statusParam, requestTypeParam);
 
-    let items: DepositRequestItem[] = [
-      ...timeDeposits,
-      ...topUp,
-      ...stock,
-    ];
+    let rawItems = await fetchJsonArray(url);
+    if (rawItems === null) {
+      rawItems = await fetchDepositRequestsLegacy(statusParam, requestTypeParam);
+    }
+    if (rawItems === null) {
+      return {
+        success: true,
+        data: { items: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 0 } },
+      };
+    }
+
+    let items: DepositRequestItem[] = rawItems.map((raw) => {
+      const r = raw as Record<string, unknown>;
+      const requestType = inferRequestType(r);
+      return normalizeItem(r, requestType);
+    });
 
     // Enrich with user details when backend omits user (fetch by userId)
     const toEnrich = items.filter(
@@ -263,25 +353,7 @@ export async function getDepositRequests(params?: {
       });
     }
 
-    // Client-side filters
-    if (params?.status && params.status !== "all") {
-      const s = params.status.toLowerCase();
-      items = items.filter((i) => {
-        const status = (i.status ?? "").toLowerCase();
-        if (s === "approved") return status === "approved" || status === "completed";
-        return status === s;
-      });
-    }
-    if (params?.paymentMethod && params.paymentMethod !== "all") {
-      const pm = params.paymentMethod.toLowerCase();
-      items = items.filter((i) => {
-        const rt = i.requestType ?? "";
-        if (pm === "time_deposit") return rt === "time_deposit";
-        if (pm === "stock") return rt === "stock";
-        if (pm === "topup_available_balance") return rt === "top_up_balance";
-        return false;
-      });
-    }
+    // Client-side filters (search, date - backend handles status and requestType via query params)
     if (params?.search?.trim()) {
       const q = params.search.toLowerCase().trim();
       items = items.filter((i) => {

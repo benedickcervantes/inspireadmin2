@@ -33,8 +33,8 @@ export function getDepositRequestType(deposit: {
   depositType?: string;
 }): DepositRequestType {
   const rt = (deposit.requestType || '').toLowerCase();
-  if (rt === 'top_up_balance' || rt === 'time_deposit' || rt === 'stock') {
-    return rt as DepositRequestType;
+  if (rt === 'top_up_balance' || rt === 'time_deposit' || rt === 'stock' || rt === 'stock_investment') {
+    return rt === 'stock_investment' ? 'stock' : (rt as DepositRequestType);
   }
 
   const pm = (deposit.paymentMethod || '').toLowerCase();

@@ -1,15 +1,12 @@
 //app\(dashboard)\deposit-request\page.tsx
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import DepositHeader from "./_components/DepositHeader";
 import DepositFilters from "./_components/DepositFilters";
 import DepositTable from "./_components/DepositTable";
-import {
-  getDepositRequestStatsStub,
-  getDepositRequestsStub,
-} from "@/lib/api/collectionStubs";
+import { getDepositRequestStats, getDepositRequests } from "@/lib/api/depositRequests";
 
 export interface DepositFiltersType {
   status: string;
@@ -28,23 +25,11 @@ export default function DepositRequestPage() {
 
   const { data: stats } = useQuery({
     queryKey: ["deposit-requests-stats"],
-    queryFn: getDepositRequestStatsStub,
+    queryFn: getDepositRequestStats,
     refetchInterval: 30_000,
   });
 
-  const { data: rejectedData } = useQuery({
-    queryKey: ["deposit-requests-rejected-count"],
-    queryFn: () => getDepositRequestsStub({ page: 1, limit: 1, status: "rejected" }),
-    refetchInterval: 30_000,
-  });
-
-  const enhancedStats = useMemo(() => {
-    if (!stats?.data) return undefined;
-    return {
-      ...stats.data,
-      rejected: rejectedData?.data?.pagination?.total ?? 0,
-    };
-  }, [stats, rejectedData]);
+  const enhancedStats = stats?.data;
 
   const handleFiltersChange = (newFilters: Partial<DepositFiltersType>) => {
     setFilters(prev => ({ ...prev, ...newFilters }));

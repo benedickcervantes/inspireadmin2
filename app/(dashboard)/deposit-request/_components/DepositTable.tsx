@@ -5,13 +5,15 @@ import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Table, Button, Drawer, Dropdown, Loader, Pagination } from "rsuite";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getDepositRequestsStub } from "@/lib/api/collectionStubs";
 import {
   approveDepositRequest,
   rejectDepositRequest,
+  getDepositRequests,
+  getDepositRequestById,
   type DepositRequestType,
+  type DepositRequestItem,
 } from "@/lib/api/depositRequests";
-import { normalizeDepositRequest, getDepositRequestType } from "@/lib/utils/depositHelpers";
+import { getDepositRequestType } from "@/lib/utils/depositHelpers";
 import DepositApproveRejectModal from "./DepositApproveRejectModal";
 
 const { Column, HeaderCell, Cell } = Table;
@@ -148,30 +150,8 @@ const Icons = {
   ),
 };
 
-interface DepositRequest {
-  _firebaseDocId: string;
-  userId?: string;
-  referenceNumber?: string;
-  amount?: number;
-  paymentMethod?: string;
-  depositMethod?: string;
-  depositType?: string;
-  status?: string;
-  createdAt?: string;
-  processedAt?: string;
-  notes?: string;
-  proofUrl?: string;
-  type?: string;
-  maturityDate?: string;
-  contractPeriod?: string;
-  user: {
-    odId?: string;
-    firstName?: string;
-    lastName?: string;
-    emailAddress?: string;
-    accountNumber?: string;
-  };
-}
+/** Deposit request from wallet backend (id, requestType, etc.) */
+type DepositRequest = DepositRequestItem;
 
 // Helper functions
 const formatDate = (dateString?: string): string => {
@@ -391,7 +371,7 @@ const DepositDetailPanel = ({
       <div className="flex items-center justify-between p-3 border-b border-[var(--border)]">
         <div>
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">Deposit Details</h3>
-          <p className="text-xs text-[var(--text-muted)] mt-0.5 font-mono">{deposit._firebaseDocId}</p>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5 font-mono">{deposit.id}</p>
         </div>
         <button onClick={onClose} className="w-7 h-7 rounded-md hover:bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-muted)]">
           <Icons.X className="w-3.5 h-3.5" />
@@ -426,7 +406,7 @@ const DepositDetailPanel = ({
             </div>
             <div>
               <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Reference No.</div>
-              <div className="text-[13px] font-medium text-[var(--text-primary)] font-mono">{deposit.referenceNumber || 'N/A'}</div>
+              <div className="text-[13px] font-medium text-[var(--text-primary)] font-mono">{deposit.referenceNumber || deposit.id || 'N/A'}</div>
             </div>
           </div>
 
@@ -449,19 +429,19 @@ const DepositDetailPanel = ({
             <div>
               <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Payment Method</div>
               <div className="mt-0.5">
-                <PaymentMethodBadge method={deposit.paymentMethod || 'bank_transfer'} />
+                <PaymentMethodBadge method={String(deposit.paymentMethod ?? 'bank_transfer')} />
               </div>
             </div>
           </div>
 
-          {deposit.type && (
+          {deposit.type != null && String(deposit.type) && (
             <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface-soft)] rounded-md border border-[var(--border)]">
               <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center flex-shrink-0">
                 <Icons.FileText className="w-3.5 h-3.5 text-[var(--text-muted)]" />
               </div>
               <div>
                 <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Type</div>
-                <div className="text-[13px] font-medium text-[var(--text-primary)]">{deposit.type}</div>
+                <div className="text-[13px] font-medium text-[var(--text-primary)]">{String(deposit.type)}</div>
               </div>
             </div>
           )}
@@ -545,90 +525,74 @@ export default function DepositTable({ filters }: DepositTableProps) {
   const [limit] = useState(20);
   const [allDeposits, setAllDeposits] = useState<DepositRequest[]>([]);
   const [isFetchingAll, setIsFetchingAll] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Use primitive values for deps to avoid object reference loops
+  const dateFrom = filters.dateRange?.[0]?.toISOString() ?? "";
+  const dateTo = filters.dateRange?.[1]?.toISOString() ?? "";
 
   const apiParams = useMemo(() => {
-    const params: Parameters<typeof getDepositRequestsStub>[0] = { 
+    const params: Parameters<typeof getDepositRequests>[0] = { 
       page, 
       limit,
       sortBy: 'createdAt',
       sortOrder: 'desc'
     };
     if (filters.status && filters.status !== "all") params.status = filters.status;
-    // Don't send paymentMethod to API - we'll filter client-side to check multiple fields
     if (filters.searchQuery?.trim()) params.search = filters.searchQuery.trim();
-    if (filters.dateRange?.[0]) params.dateFrom = filters.dateRange[0].toISOString();
-    if (filters.dateRange?.[1]) params.dateTo = filters.dateRange[1].toISOString();
+    if (filters.paymentMethod && filters.paymentMethod !== "all") params.paymentMethod = filters.paymentMethod;
+    if (dateFrom) params.dateFrom = dateFrom;
+    if (dateTo) params.dateTo = dateTo;
     return params;
-  }, [page, limit, filters.status, filters.searchQuery, filters.dateRange]);
+  }, [page, limit, filters.status, filters.searchQuery, filters.paymentMethod, dateFrom, dateTo]);
 
   useEffect(() => {
     setPage(1);
-  }, [filters.status, filters.searchQuery, filters.dateRange]);
+  }, [filters.status, filters.searchQuery, dateFrom, dateTo]);
 
-  // Fetch all pages when deposit type filter OR status filter is active
+  // Fetch all pages when deposit type filter OR status filter is active (wallet backend)
+  const shouldFetchAll = filters.paymentMethod !== "all" || filters.status !== "all";
   useEffect(() => {
-    const shouldFetchAll = filters.paymentMethod !== "all" || filters.status !== "all";
-    
-    if (shouldFetchAll) {
-      setIsFetchingAll(true);
-      
-      // Build params without status if we're fetching all for status filtering
-      const fetchParams = { 
-        ...apiParams, 
-        page: 1,
-        status: undefined // Remove status to fetch all statuses
-      };
-      
-      getDepositRequestsStub(fetchParams).then(async (firstResponse) => {
-        const total = firstResponse.data?.pagination?.total ?? 0;
-        const totalPages = Math.ceil(total / limit);
-        
-        // Fetch all pages
-        const allPages = [firstResponse];
-        const promises = [];
-        
-        for (let p = 2; p <= totalPages; p++) {
-          promises.push(getDepositRequestsStub({ ...fetchParams, page: p }));
-        }
-        
-        const remainingPages = await Promise.all(promises);
-        allPages.push(...remainingPages);
-        
-        // Combine all items
-        const allItems = allPages.flatMap(response => 
-          (response.data?.items ?? []) as (DepositRequest & { 
-            maturity_date?: string; 
-            contract_period?: string;
-            payment_method?: string;
-            deposit_method?: string;
-            depositType?: string;
-          })[]
-        );
-        
-        // Normalize all items
-        const normalized = allItems.map((item) => normalizeDepositRequest(item)) as DepositRequest[];
-        setAllDeposits(normalized);
-        setIsFetchingAll(false);
-      }).catch(() => {
-        setIsFetchingAll(false);
-      });
-    } else {
+    if (!shouldFetchAll) {
       setAllDeposits([]);
+      return;
     }
-  }, [filters.paymentMethod, filters.status, apiParams, limit]);
 
+    setIsFetchingAll(true);
+    const fetchParams = { 
+      page: 1,
+      limit: 9999,
+      sortBy: 'createdAt' as const,
+      sortOrder: 'desc' as const,
+      ...(filters.status && filters.status !== "all" ? { status: filters.status } : {}),
+      ...(filters.paymentMethod && filters.paymentMethod !== "all" ? { paymentMethod: filters.paymentMethod } : {}),
+      ...(filters.searchQuery?.trim() ? { search: filters.searchQuery.trim() } : {}),
+      ...(dateFrom ? { dateFrom } : {}),
+      ...(dateTo ? { dateTo } : {}),
+    };
+    
+    getDepositRequests(fetchParams).then((response) => {
+      const items = (response.data?.items ?? []) as DepositRequest[];
+      setAllDeposits(items);
+      setIsFetchingAll(false);
+    }).catch(() => {
+      setIsFetchingAll(false);
+    });
+  }, [shouldFetchAll, filters.status, filters.paymentMethod, filters.searchQuery, dateFrom, dateTo, limit, refreshTrigger]);
+
+  const queryEnabled = filters.paymentMethod === "all" && filters.status === "all";
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["firebase-deposit-requests", apiParams],
-    queryFn: () => getDepositRequestsStub(apiParams),
+    queryKey: ["deposit-requests", page, limit, filters.status, filters.searchQuery, filters.paymentMethod, dateFrom, dateTo],
+    queryFn: () => getDepositRequests(apiParams),
     placeholderData: keepPreviousData,
-    enabled: filters.paymentMethod === "all" && filters.status === "all", // Only fetch paginated data when no filters
+    enabled: queryEnabled,
   });
 
   const deposits = useMemo(() => {
     // Use all deposits when any filter is active
     const hasActiveFilter = filters.paymentMethod !== "all" || filters.status !== "all";
     
-    if (hasActiveFilter && allDeposits.length > 0) {
+    if (hasActiveFilter) {
       let filtered = allDeposits;
       
       // Filter by status
@@ -646,41 +610,14 @@ export default function DepositTable({ filters }: DepositTableProps) {
         });
       }
       
-      // Filter by deposit type
+      // Filter by deposit type (requestType from wallet backend)
       if (filters.paymentMethod !== "all") {
+        const filterValue = filters.paymentMethod.toLowerCase();
         filtered = filtered.filter((deposit) => {
-          const paymentMethod = (deposit.paymentMethod || '').toLowerCase();
-          const type = (deposit.type || '').toLowerCase();
-          const depositMethod = (deposit.depositMethod || '').toLowerCase();
-          const depositType = ((deposit as any).depositType || '').toLowerCase();
-          
-          const filterValue = filters.paymentMethod.toLowerCase();
-          
-          // Check if any of the fields match the filter
-          if (filterValue === 'time_deposit') {
-            return paymentMethod.includes('time') || 
-                   type.includes('time') || 
-                   depositMethod.includes('time') ||
-                   depositType.includes('time');
-          } else if (filterValue === 'stock') {
-            return paymentMethod.includes('stock') || 
-                   type.includes('stock') || 
-                   depositMethod.includes('stock') ||
-                   depositType.includes('stock');
-          } else if (filterValue === 'topup_available_balance') {
-            return paymentMethod.includes('topup') || 
-                   paymentMethod.includes('top up') ||
-                   type.includes('topup') || 
-                   type.includes('top up') ||
-                   depositMethod.includes('topup') ||
-                   depositMethod.includes('top up') ||
-                   depositType.includes('topup') ||
-                   depositType.includes('top up') ||
-                   paymentMethod.includes('available balance') ||
-                   type.includes('available balance') ||
-                   depositType.includes('available balance');
-          }
-          
+          const rt = (deposit.requestType ?? getDepositRequestType(deposit));
+          if (filterValue === "time_deposit") return rt === "time_deposit";
+          if (filterValue === "stock") return rt === "stock";
+          if (filterValue === "topup_available_balance") return rt === "top_up_balance";
           return false;
         });
       }
@@ -689,9 +626,9 @@ export default function DepositTable({ filters }: DepositTableProps) {
       if (filters.searchQuery?.trim()) {
         const query = filters.searchQuery.toLowerCase().trim();
         filtered = filtered.filter((deposit) => {
-          const userName = `${deposit.user.firstName || ''} ${deposit.user.lastName || ''}`.toLowerCase();
-          const email = (deposit.user.emailAddress || '').toLowerCase();
-          const reference = (deposit.referenceNumber || deposit._firebaseDocId).toLowerCase();
+          const userName = `${deposit.user?.firstName || ''} ${deposit.user?.lastName || ''}`.toLowerCase();
+          const email = (deposit.user?.emailAddress || '').toLowerCase();
+          const reference = (deposit.referenceNumber || deposit.id).toLowerCase();
           const userId = (deposit.userId || '').toLowerCase();
           
           return userName.includes(query) || 
@@ -704,16 +641,8 @@ export default function DepositTable({ filters }: DepositTableProps) {
       return filtered;
     }
     
-    // Use paginated data when no filters
-    const items = (data?.data?.items ?? []) as (DepositRequest & { 
-      maturity_date?: string; 
-      contract_period?: string;
-      payment_method?: string;
-      deposit_method?: string;
-      depositType?: string;
-    })[];
-    
-    return items.map((item) => normalizeDepositRequest(item)) as DepositRequest[];
+    // Use paginated data when no filters (from wallet backend)
+    return (data?.data?.items ?? []) as DepositRequest[];
   }, [data?.data?.items, filters.paymentMethod, filters.status, filters.searchQuery, allDeposits]);
 
   const total = (filters.paymentMethod !== "all" || filters.status !== "all") ? deposits.length : (data?.data?.pagination.total ?? 0);
@@ -722,6 +651,15 @@ export default function DepositTable({ filters }: DepositTableProps) {
   const handleRowClick = (deposit: DepositRequest) => {
     setSelectedDeposit(deposit);
     setDrawerOpen(true);
+    // Fetch full details (e.g. reference) for the details modal
+    const requestType = getDepositRequestType(deposit);
+    getDepositRequestById(deposit.id, requestType).then((fetched) => {
+      if (fetched) {
+        setSelectedDeposit((prev) =>
+          prev?.id === deposit.id ? { ...prev, ...fetched, id: prev.id } : prev
+        );
+      }
+    });
   };
 
   const handleCloseDrawer = () => {
@@ -742,15 +680,17 @@ export default function DepositTable({ filters }: DepositTableProps) {
   const handleModalConfirm = async (password: string, notes?: string) => {
     if (!selectedDeposit) return;
     const requestType = getDepositRequestType(selectedDeposit);
-    const id = selectedDeposit._firebaseDocId;
+    const id = selectedDeposit.id;
     if (modalAction === "approve") {
       await approveDepositRequest(id, requestType, { password, notes });
     } else {
       await rejectDepositRequest(id, requestType, { password, notes });
     }
-    queryClient.invalidateQueries({ queryKey: ["firebase-deposit-requests"] });
-    queryClient.invalidateQueries({ queryKey: ["deposit-requests-stats"] });
-    queryClient.invalidateQueries({ queryKey: ["deposit-requests-rejected-count"] });
+    await Promise.all([
+      queryClient.refetchQueries({ queryKey: ["deposit-requests"] }),
+      queryClient.refetchQueries({ queryKey: ["deposit-requests-stats"] }),
+    ]);
+    setRefreshTrigger((t) => t + 1); // Re-fetch allDeposits when filters are active
     handleCloseDrawer();
   };
 
@@ -807,14 +747,14 @@ export default function DepositTable({ filters }: DepositTableProps) {
             headerHeight={40}
             hover
             className="app-table deposit-table !bg-transparent min-w-[900px] cursor-pointer [&_.rs-table-row:hover_.rs-table-cell]:!bg-[var(--surface-hover)] [&_.rs-table-row:hover_.rs-table-cell]:!transition-colors [&_.rs-table-row:hover_.rs-table-cell]:!duration-200"
-            rowKey="_firebaseDocId"
+            rowKey="id"
             onRowClick={(rowData) => handleRowClick(rowData as DepositRequest)}
           >
             <Column width={120} align="left">
               <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Reference</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: DepositRequest) => (
-                  <span className="text-xs font-mono font-medium text-[var(--primary)]">{rowData.referenceNumber || rowData._firebaseDocId.substring(0, 8)}</span>
+                  <span className="text-xs font-mono font-medium text-[var(--primary)]">{rowData.referenceNumber || rowData.id.substring(0, 8)}</span>
                 )}
               </Cell>
             </Column>
@@ -975,7 +915,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
       >
         {deposits.map((deposit: DepositRequest) => (
           <motion.div
-            key={deposit._firebaseDocId}
+            key={deposit.id}
             className="bg-[var(--surface)] rounded-lg border border-[var(--border)] p-3 cursor-pointer hover:border-[var(--primary)] transition-colors"
             onClick={() => handleRowClick(deposit)}
             whileHover={{ scale: 1.02 }}
@@ -983,7 +923,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
           >
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-mono text-[var(--primary)] truncate">{deposit.referenceNumber || deposit._firebaseDocId.substring(0, 8)}</div>
+                <div className="text-xs font-mono text-[var(--primary)] truncate">{deposit.referenceNumber || deposit.id.substring(0, 8)}</div>
                 <div className="text-sm font-medium text-[var(--text-primary)] truncate">{getFullName(deposit.user)}</div>
                 <div className="text-xs text-[var(--text-muted)] truncate">{deposit.user.emailAddress}</div>
               </div>
@@ -996,12 +936,12 @@ export default function DepositTable({ filters }: DepositTableProps) {
               </div>
               <RequestTypeBadge requestType={getDepositRequestType(deposit)} />
             </div>
-            {((deposit.type || "").toLowerCase().includes("time deposit") || 
-              (deposit.paymentMethod || "").toLowerCase().includes("time") ||
-              deposit.maturityDate || 
-              deposit.contractPeriod) && (
-              <div className="text-xs text-[var(--text-muted)] mb-1">Maturity: {deposit.maturityDate || deposit.contractPeriod || "—"}</div>
-            )}
+            {((String(deposit.type ?? "")).toLowerCase().includes("time deposit") || 
+              (String(deposit.paymentMethod ?? "")).toLowerCase().includes("time") ||
+              !!deposit.maturityDate || 
+              !!deposit.contractPeriod) ? (
+              <div className="text-xs text-[var(--text-muted)] mb-1">Maturity: {String(deposit.maturityDate ?? deposit.contractPeriod ?? "—")}</div>
+            ) : null}
             <div className="text-xs text-[var(--text-muted)]">{formatDate(deposit.createdAt)}</div>
           </motion.div>
         ))}
@@ -1019,7 +959,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
           <AnimatePresence mode="wait">
             {selectedDeposit && (
               <motion.div
-                key={selectedDeposit._firebaseDocId}
+                key={selectedDeposit.id}
                 initial={{ opacity: 0, x: 20, scale: 0.98 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: -20, scale: 0.98 }}

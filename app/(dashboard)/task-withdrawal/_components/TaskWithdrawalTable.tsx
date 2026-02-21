@@ -495,6 +495,7 @@ export default function TaskWithdrawalTable({
         placement="right"
         size="sm"
         className="!w-[380px] dark-drawer"
+        closeButton={false}
       >
         <Drawer.Body className="!p-0 !bg-[var(--surface)]">
           <AnimatePresence mode="wait">

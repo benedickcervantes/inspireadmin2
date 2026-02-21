@@ -1849,6 +1849,7 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
         placement="right"
         size="sm"
         className="!w-[400px] dark-drawer"
+        closeButton={false}
       >
         <Drawer.Body className="!p-0 !bg-[var(--surface)]">
           <AnimatePresence mode="wait">

@@ -354,7 +354,7 @@ export default function BankTable() {
         </div>
       </motion.div>
 
-      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} placement="right" size="sm" className="!w-[380px] dark-drawer">
+      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} placement="right" size="sm" className="!w-[380px] dark-drawer" closeButton={false}>
         <Drawer.Body className="!p-0 !bg-[var(--surface)]">
           <AnimatePresence mode="wait">
             {selectedApplication && (

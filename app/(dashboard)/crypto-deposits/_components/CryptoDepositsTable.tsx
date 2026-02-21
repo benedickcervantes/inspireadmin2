@@ -531,6 +531,7 @@ export default function CryptoDepositsTable() {
         placement="right"
         size="sm"
         className="crypto-deposit-drawer !w-[380px]"
+        closeButton={false}
       >
         <Drawer.Body className="!p-0 !bg-[var(--surface)]">
           <AnimatePresence mode="wait">

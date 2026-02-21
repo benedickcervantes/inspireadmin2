@@ -280,7 +280,7 @@ export default function NewDepositRequestModal({ open, onClose }: NewDepositRequ
               <SelectPicker
                 data={currencies}
                 value={currency}
-                onChange={setCurrency}
+                onChange={(value) => setCurrency(value || "")}
                 placeholder="Select currency"
                 block
                 disabled={isSubmitting}
@@ -363,7 +363,7 @@ export default function NewDepositRequestModal({ open, onClose }: NewDepositRequ
               <InputNumber
                 placeholder="Enter amount"
                 value={amount}
-                onChange={setAmount}
+                onChange={(value) => setAmount(typeof value === 'number' ? value : null)}
                 disabled={isSubmitting}
                 min={0}
                 step={1000}

@@ -618,7 +618,7 @@ Three deposit options are available as **request-only** flows (no bank participa
 ### 1. Time Deposit (existing)
 
 - **Create request:** `POST /time-deposits` (user) — creates PENDING time deposit
-- **Admin list pending:** `GET /time-deposits/admin/pending` (ADMIN only)
+- **Admin list pending:** `GET /time-deposits/admin/pending` (ADMIN only). Each item includes `requestType: "time_deposit"`.
 - **Admin approve:** `POST /time-deposits/:id/approve` (ADMIN only)
 - **Admin reject:** `POST /time-deposits/:id/reject` (ADMIN only)
 
@@ -627,7 +627,7 @@ Three deposit options are available as **request-only** flows (no bank participa
 - **Create request:** `POST /deposit-requests/top-up` (user)
 - **List own:** `GET /deposit-requests/top-up` (user)
 - **Get one:** `GET /deposit-requests/top-up/:id` (user)
-- **Admin list pending:** `GET /deposit-requests/admin/top-up/pending` (ADMIN only)
+- **Admin list pending:** `GET /deposit-requests/admin/top-up/pending` (ADMIN only). Each item includes `requestType: "top_up_balance"`.
 - **Admin approve:** `POST /deposit-requests/admin/top-up/:id/approve` (ADMIN only)
 - **Admin reject:** `POST /deposit-requests/admin/top-up/:id/reject` (ADMIN only)
 
@@ -644,7 +644,7 @@ Three deposit options are available as **request-only** flows (no bank participa
 - **Create request:** `POST /deposit-requests/stock-investment` (user)
 - **List own:** `GET /deposit-requests/stock-investment` (user)
 - **Get one:** `GET /deposit-requests/stock-investment/:id` (user)
-- **Admin list pending:** `GET /deposit-requests/admin/stock-investment/pending` (ADMIN only)
+- **Admin list pending:** `GET /deposit-requests/admin/stock-investment/pending` (ADMIN only). Each item includes `requestType: "stock"`.
 - **Admin approve:** `POST /deposit-requests/admin/stock-investment/:id/approve` (ADMIN only)
 - **Admin reject:** `POST /deposit-requests/admin/stock-investment/:id/reject` (ADMIN only)
 
@@ -656,11 +656,25 @@ Three deposit options are available as **request-only** flows (no bank participa
 | `amount`    | string | Yes      | Decimal (e.g. `"5000"`) |
 | `stockSymbol` | string | No     | Stock symbol (optional) |
 
-**Approve/Reject body (optional)**
+**Approve/Reject body (required for all deposit request types)**
 
-| Field  | Type   | Description              |
-|--------|--------|--------------------------|
-| `notes`| string | Admin notes (max 500 chars) |
+Every approve and reject call **must** include the admin’s password for re-confirmation. JWT identifies the user; password verifies identity before financial actions.
+
+| Field      | Type   | Required | Description                                  |
+|------------|--------|----------|----------------------------------------------|
+| `password` | string | Yes      | Admin password (verified via login logic).   |
+| `notes`    | string | No       | Admin notes (max 500 chars).                 |
+
+**Validation:** `password` is required and non-empty. If missing or invalid, return **401** with `Invalid or missing password`.
+
+**Error responses:**
+
+| Scenario                              | Status | Example body                                              |
+|--------------------------------------|--------|-----------------------------------------------------------|
+| Missing password                     | 400    | `{ "message": "Password is required" }`                   |
+| Invalid password                     | 401    | `{ "message": "Invalid or missing password" }`            |
+| Not ADMIN                            | 403    | `{ "message": "Forbidden" }`                              |
+| Request not found / already processed| 404    | `{ "message": "Request not found or already processed" }` |
 
 ---
 

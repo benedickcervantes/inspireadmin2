@@ -8,16 +8,12 @@ This document describes the **internal central bank** named **InspireBank** and 
 
 **InspireBank** is a single internal account per currency (e.g. one for PHP) that represents the system’s position for that currency. A partner bank can reconcile and settle against this account.
 
-- **Deposit (top-up):** When a user adds balance (e.g. from card or bank), the user’s wallet balance **increases** and the **InspireBank balance also increases**. A ledger entry (DEPOSIT) is recorded.
-- **Withdrawal:** When a user withdraws (e.g. to bank or cash-out), the user’s wallet balance **decreases** and the **InspireBank balance also decreases**. A ledger entry (WITHDRAWAL) is recorded.
-- **Transfer (user → user):** When a user sends money to another user, only the two wallets change; **InspireBank balance does not change**. A ledger entry (TRANSFER) is still created for a full audit trail of all movements.
+- **Deposit (top-up):** User adds balance from outside; admin approves. User wallet +amount, InspireBank +amount. Ledger: DEPOSIT.
+- **Credit from reserve:** Bank gives money (interest, commission, gift). User wallet +amount, InspireBank -amount. Ledger: CREDIT_FROM_RESERVE.
+- **Withdrawal:** User withdraws to external bank. User wallet -amount. Ledger: WITHDRAWAL only (InspireBank unchanged).
+- **Transfer (user → user):** Only the two wallets change. Ledger: TRANSFER only (InspireBank unchanged).
 
-So:
-
-- **Adding balance** and **withdrawing** always go through InspireBank (balance + ledger).
-- **Transfers** are recorded in the InspireBank ledger but do not change the central bank balance.
-
-Partner bank integration can focus on the InspireBank account and ledger to handle all client transactions.
+All movements are recorded in the InspireBank ledger for full audit.
 
 ---
 
@@ -88,7 +84,7 @@ Returns the created transaction (same shape as **Transactions** API), with decry
 **`POST /deposits/by-account-number`**  
 **Protected:** Yes. **ADMIN** role only.
 
-Credits a user's main PHP wallet from InspireBank using their **account number** instead of wallet ID. Use when you have the recipient's account number (e.g. from a form or customer record). The target user's main (PHP) wallet is credited; it is created if it does not exist.
+Credits a user's main PHP wallet **from InspireBank reserve** (decreases InspireBank). Use when you have the recipient's account number (e.g. from a form). The target user's main (PHP) wallet is credited; it is created if it does not exist. Creates a **REFUND** transaction and **CREDIT_FROM_RESERVE** ledger entry.
 
 **Request body**
 
@@ -119,7 +115,7 @@ Same shape as `POST /deposits`: the created transaction with decrypted `amount` 
   "toWalletId": null,
   "amount": "10000.00",
   "currencyId": "clxx...",
-  "type": "TOP_UP",
+  "type": "REFUND",
   "status": "COMPLETED",
   "description": "Credit from Inspire Bank",
   "createdAt": "2026-02-18T12:00:00.000Z",
@@ -134,6 +130,20 @@ Same shape as `POST /deposits`: the created transaction with decrypted `amount` 
 - **404** – No user found with the given account number.
 - **401** – Missing or invalid token.
 - **403** – Caller does not have ADMIN role.
+- **400** – InspireBank has insufficient reserve to credit this amount.
+
+---
+
+## Credit from Reserve (Admin Only)
+
+**`POST /credit-from-reserve`**  
+**Protected:** Yes. **ADMIN** role only.
+
+Credits a user wallet from InspireBank reserve (decreases InspireBank). Use for explicit credit by walletId (e.g. interest, commission automation). Same behavior as deposit-by-account-number but requires walletId directly.
+
+**Request body:** Same as `POST /deposits` (walletId, amount, description).
+
+**Response:** Same shape as deposit, with `type: "REFUND"`.
 
 ---
 
@@ -142,7 +152,7 @@ Same shape as `POST /deposits`: the created transaction with decrypted `amount` 
 **`POST /withdrawals`**  
 **Protected:** Yes.
 
-Decreases the user’s wallet balance and the InspireBank balance. Creates a **PAYMENT** transaction and a central bank **WITHDRAWAL** ledger entry. Fails if the user has insufficient balance or if InspireBank has insufficient balance.
+Decreases the user’s wallet balance and the InspireBank balance. Creates a **PAYMENT** transaction and a central bank **WITHDRAWAL** ledger entry. Fails only if the user has insufficient balance.
 
 **Request body**
 
@@ -168,8 +178,7 @@ Same shape as deposit: the created transaction with `type: "PAYMENT"` and `statu
 
 **Errors**
 
-- **400** – Insufficient balance in the user’s wallet, or **insufficient funds in the bank reserve** (InspireBank cannot cover this withdrawal). Message: `"Insufficient funds in bank reserve for this withdrawal. The bank cannot process this amount at the moment."`
-- **404** – Wallet not found or not owned by user.
+- **400** – Insufficient balance in the user’s wallet- **404** – Wallet not found or not owned by user.
 
 ---
 
@@ -207,6 +216,51 @@ If no InspireBank row exists for the currency yet, the API returns `null` (or 40
 
 ---
 
+## InspireBank Ledger
+
+**`GET /inspire-bank/ledger`**  
+**Protected:** Yes. **ADMIN** role only.
+
+Returns paginated InspireBank ledger entries for a currency. All records (DEPOSIT, WITHDRAWAL, TRANSFER, CREDIT_FROM_RESERVE) are included.
+
+**Query parameters**
+
+| Parameter      | Type   | Required | Description                          |
+|----------------|--------|----------|--------------------------------------|
+| `currencyId`   | string | No       | Currency id.                         |
+| `currencyCode` | string | No       | Currency code (e.g. `PHP`). Default `PHP` if neither is set. |
+| `page`         | number | No       | Page number (1-based). Default 1.    |
+| `limit`        | number | No       | Items per page. Default 20, max 100. |
+
+**Example**
+
+```http
+GET /inspire-bank/ledger?currencyCode=PHP&page=1&limit=20
+```
+
+**Example success response** `200`
+
+```json
+{
+  "items": [
+    {
+      "id": "clxx...",
+      "type": "DEPOSIT",
+      "amount": "500.00",
+      "walletId": "clxx...",
+      "toWalletId": null,
+      "transactionId": "clxx...",
+      "createdAt": "2026-02-18T12:00:00.000Z"
+    }
+  ],
+  "total": 150,
+  "page": 1,
+  "limit": 20
+}
+```
+
+---
+
 ## Transfers (User → User)
 
 Transfers are documented in **API-TRANSFERS.md**. They:
@@ -216,11 +270,11 @@ Transfers are documented in **API-TRANSFERS.md**. They:
 - **Do not** change the InspireBank balance.
 - **Do** create an InspireBank ledger entry of type **TRANSFER** for global audit.
 
-So the central bank has a full record of deposits, withdrawals, and transfers, but only deposit and withdrawal change its balance.
+So the central bank has a full record of deposits, withdrawals, transfers, and credits-from-reserve. Only DEPOSIT (increases) and CREDIT_FROM_RESERVE (decreases) change InspireBank balance.
 
 ---
 
 ## Encryption and Ledger
 
 - **Amounts** and **descriptions** in transactions and in the InspireBank ledger are stored encrypted (Supabase via Prisma). The frontend always sends and receives plain values.
-- The **InspireBankLedger** table stores every DEPOSIT, WITHDRAWAL, and TRANSFER with encrypted amount, wallet references, and optional transaction id for audit and partner bank reconciliation.
+- The **InspireBankLedger** table stores every DEPOSIT, WITHDRAWAL, TRANSFER, and CREDIT_FROM_RESERVE with encrypted amount, wallet references, and optional transaction id for audit and partner bank reconciliation.

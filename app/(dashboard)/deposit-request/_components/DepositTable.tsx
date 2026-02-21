@@ -3,10 +3,16 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Table, Button, Drawer, Dropdown, Loader, Pagination } from "rsuite";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDepositRequestsStub } from "@/lib/api/collectionStubs";
-import { normalizeDepositRequest } from "@/lib/utils/depositHelpers";
+import {
+  approveDepositRequest,
+  rejectDepositRequest,
+  type DepositRequestType,
+} from "@/lib/api/depositRequests";
+import { normalizeDepositRequest, getDepositRequestType } from "@/lib/utils/depositHelpers";
+import DepositApproveRejectModal from "./DepositApproveRejectModal";
 
 const { Column, HeaderCell, Cell } = Table;
 
@@ -333,6 +339,37 @@ const PaymentMethodBadge = ({ method }: { method: string }) => {
   );
 };
 
+/** Badge for request type: Top Up Balance, Time Deposit, Stock */
+const RequestTypeBadge = ({ requestType }: { requestType: DepositRequestType }) => {
+  const config: Record<DepositRequestType, { icon: React.ComponentType<IconProps>; label: string; bg: string; text: string }> = {
+    top_up_balance: {
+      icon: Icons.DollarSign,
+      label: "Top Up Balance",
+      bg: "bg-cyan-500/10",
+      text: "text-cyan-500",
+    },
+    time_deposit: {
+      icon: Icons.Clock,
+      label: "Time Deposit",
+      bg: "bg-purple-500/10",
+      text: "text-purple-500",
+    },
+    stock: {
+      icon: Icons.TrendingUp,
+      label: "Stock",
+      bg: "bg-blue-500/10",
+      text: "text-blue-500",
+    },
+  };
+  const { icon: Icon, label, bg, text } = config[requestType] ?? config.top_up_balance;
+  return (
+    <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg ${bg} ${text} text-[11px] font-medium`}>
+      <Icon className="w-3 h-3" />
+      {label}
+    </div>
+  );
+};
+
 // Detail Panel Component
 const DepositDetailPanel = ({
   deposit,
@@ -395,10 +432,22 @@ const DepositDetailPanel = ({
 
           <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface-soft)] rounded-md border border-[var(--border)]">
             <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center flex-shrink-0">
+              <Icons.FileText className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+            </div>
+            <div>
+              <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Request Type</div>
+              <div className="mt-0.5">
+                <RequestTypeBadge requestType={getDepositRequestType(deposit)} />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2.5 p-2.5 bg-[var(--surface-soft)] rounded-md border border-[var(--border)]">
+            <div className="w-7 h-7 rounded-md bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center flex-shrink-0">
               <Icons.CreditCard className="w-3.5 h-3.5 text-[var(--text-muted)]" />
             </div>
             <div>
-              <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Deposit Type</div>
+              <div className="text-[11px] text-[var(--text-muted)] uppercase tracking-wide">Payment Method</div>
               <div className="mt-0.5">
                 <PaymentMethodBadge method={deposit.paymentMethod || 'bank_transfer'} />
               </div>
@@ -487,8 +536,11 @@ const DepositDetailPanel = ({
 };
 
 export default function DepositTable({ filters }: DepositTableProps) {
+  const queryClient = useQueryClient();
   const [selectedDeposit, setSelectedDeposit] = useState<DepositRequest | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalAction, setModalAction] = useState<"approve" | "reject">("approve");
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [allDeposits, setAllDeposits] = useState<DepositRequest[]>([]);
@@ -677,13 +729,28 @@ export default function DepositTable({ filters }: DepositTableProps) {
     setSelectedDeposit(null);
   };
 
-  const handleApprove = () => {
-    console.log("Approve deposit:", selectedDeposit?._firebaseDocId);
-    handleCloseDrawer();
+  const handleApproveClick = () => {
+    setModalAction("approve");
+    setModalOpen(true);
   };
 
-  const handleReject = () => {
-    console.log("Reject deposit:", selectedDeposit?._firebaseDocId);
+  const handleRejectClick = () => {
+    setModalAction("reject");
+    setModalOpen(true);
+  };
+
+  const handleModalConfirm = async (password: string, notes?: string) => {
+    if (!selectedDeposit) return;
+    const requestType = getDepositRequestType(selectedDeposit);
+    const id = selectedDeposit._firebaseDocId;
+    if (modalAction === "approve") {
+      await approveDepositRequest(id, requestType, { password, notes });
+    } else {
+      await rejectDepositRequest(id, requestType, { password, notes });
+    }
+    queryClient.invalidateQueries({ queryKey: ["firebase-deposit-requests"] });
+    queryClient.invalidateQueries({ queryKey: ["deposit-requests-stats"] });
+    queryClient.invalidateQueries({ queryKey: ["deposit-requests-rejected-count"] });
     handleCloseDrawer();
   };
 
@@ -717,6 +784,14 @@ export default function DepositTable({ filters }: DepositTableProps) {
 
   return (
     <>
+      <DepositApproveRejectModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={handleModalConfirm}
+        action={modalAction}
+        requestType={selectedDeposit ? getDepositRequestType(selectedDeposit) : "top_up_balance"}
+        referenceNumber={selectedDeposit?.referenceNumber}
+      />
       {/* Desktop Table View */}
       <motion.div
         className="bg-[var(--surface)] rounded-xl shadow-sm border border-[var(--border)] flex flex-col hidden md:flex"
@@ -773,10 +848,10 @@ export default function DepositTable({ filters }: DepositTableProps) {
             </Column>
 
             <Column width={140} align="left">
-              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Deposit Type</HeaderCell>
+              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide !border-b !border-[var(--border)]">Request Type</HeaderCell>
               <Cell className="!bg-[var(--surface)] !border-b !border-[var(--border)]">
                 {(rowData: DepositRequest) => (
-                  <PaymentMethodBadge method={rowData.paymentMethod || 'bank_transfer'} />
+                  <RequestTypeBadge requestType={getDepositRequestType(rowData)} />
                 )}
               </Cell>
             </Column>
@@ -824,13 +899,29 @@ export default function DepositTable({ filters }: DepositTableProps) {
                     </Dropdown.Item>
                     {(rowData.status || '').toLowerCase() === "pending" && (
                       <>
-                        <Dropdown.Item className="!text-xs !text-[var(--success)] hover:!bg-[var(--success-soft)]">
+                        <Dropdown.Item
+                          className="!text-xs !text-[var(--success)] hover:!bg-[var(--success-soft)]"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedDeposit(rowData);
+                            setModalAction("approve");
+                            setModalOpen(true);
+                          }}
+                        >
                           <span className="flex items-center gap-2">
                             <Icons.Check className="w-3.5 h-3.5" />
                             Approve
                           </span>
                         </Dropdown.Item>
-                        <Dropdown.Item className="!text-xs !text-[var(--danger)] hover:!bg-[var(--danger-soft)]">
+                        <Dropdown.Item
+                          className="!text-xs !text-[var(--danger)] hover:!bg-[var(--danger-soft)]"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedDeposit(rowData);
+                            setModalAction("reject");
+                            setModalOpen(true);
+                          }}
+                        >
                           <span className="flex items-center gap-2">
                             <Icons.X className="w-3.5 h-3.5" />
                             Reject
@@ -903,7 +994,7 @@ export default function DepositTable({ filters }: DepositTableProps) {
                 <div className="text-xs text-[var(--text-muted)]">Amount</div>
                 <div className="text-sm font-semibold text-[var(--text-primary)]">₱{(deposit.amount || 0).toLocaleString()}</div>
               </div>
-              <PaymentMethodBadge method={deposit.paymentMethod || 'bank_transfer'} />
+              <RequestTypeBadge requestType={getDepositRequestType(deposit)} />
             </div>
             {((deposit.type || "").toLowerCase().includes("time deposit") || 
               (deposit.paymentMethod || "").toLowerCase().includes("time") ||
@@ -943,8 +1034,8 @@ export default function DepositTable({ filters }: DepositTableProps) {
                 <DepositDetailPanel
                   deposit={selectedDeposit}
                   onClose={handleCloseDrawer}
-                  onApprove={handleApprove}
-                  onReject={handleReject}
+                  onApprove={handleApproveClick}
+                  onReject={handleRejectClick}
                 />
               </motion.div>
             )}

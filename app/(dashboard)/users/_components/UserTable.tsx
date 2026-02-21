@@ -1258,24 +1258,11 @@ const TransactionModal = ({
 };
 
 // User Detail Panel Component - Dark Theme with CSS transitions
-const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit }: { user: User; onClose: () => void; onViewTransactions: () => void; onEdit: () => void }) => {
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const queryClient = useQueryClient();
+const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit, onDeleteRequest }: { user: User; onClose: () => void; onViewTransactions: () => void; onEdit: () => void; onDeleteRequest: () => void }) => {
   const walletBalance = user.walletAmount || 0;
   const availBalance = user.availBalanceAmount || 0;
   const subcollectionCount = user.subcollections ? Object.keys(user.subcollections).length : 0;
   const transactionCount = transformTransactions(user).length;
-
-  const handleDeleteUser = async () => {
-    try {
-      await deleteUser(user._id);
-      queryClient.invalidateQueries({ queryKey: ['wallet-users'] });
-      onClose();
-    } catch (error) {
-      console.error('Failed to delete user:', error);
-      throw error;
-    }
-  };
 
   const accountInfoItems = [
     { icon: Icons.Mail, label: "Email", value: user.emailAddress || 'Not provided' },
@@ -1458,7 +1445,7 @@ const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit }: { user: 
             <Dropdown.Item divider />
             
             {/* Dangerous Actions Group */}
-            <Dropdown.Item className="!text-xs !text-[var(--danger)] hover:!bg-[var(--danger-soft)]" onSelect={() => setShowDeleteModal(true)}>
+            <Dropdown.Item className="!text-xs !text-[var(--danger)] hover:!bg-[var(--danger-soft)]" onSelect={onDeleteRequest}>
               <span className="flex items-center gap-2">
                 <Icons.Trash2 className="w-3.5 h-3.5" />
                 Delete user
@@ -1467,14 +1454,6 @@ const UserDetailPanel = ({ user, onClose, onViewTransactions, onEdit }: { user: 
           </Dropdown>
         </div>
       </div>
-
-      {/* Password Confirmation Modal */}
-      <PasswordConfirmationModal
-        open={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={handleDeleteUser}
-        userName={getFullName(user)}
-      />
     </div>
   );
 };
@@ -1514,8 +1493,24 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [timeDepositModalOpen, setTimeDepositModalOpen] = useState(false);
+  const [selectedUserForDelete, setSelectedUserForDelete] = useState<User | null>(null);
 
   const filterParams = userTypeToParams(userType);
+
+  const handleRequestDelete = (user: User) => {
+    setSelectedUserForDelete(user);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedUserForDelete) return;
+    await deleteUser(selectedUserForDelete._id);
+    await queryClient.invalidateQueries({ queryKey: ['wallet-users'] });
+    if (selectedUser?._id === selectedUserForDelete._id) {
+      setSelectedUser(null);
+      setDrawerOpen(false);
+    }
+    setSelectedUserForDelete(null);
+  };
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['wallet-users', { page, limit, searchQuery, userType, ...filterParams }],
@@ -1806,6 +1801,25 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
                 )}
               </Cell>
             </Column>
+
+            <Column width={80} align="center" fixed="right">
+              <HeaderCell className="!bg-[var(--surface-soft)] !text-[var(--text-muted)] !font-semibold !text-[11px] !uppercase !tracking-wide">Actions</HeaderCell>
+              <Cell className="!border-b !border-[var(--border-subtle)]">
+                {(rowData: User) => (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRequestDelete(rowData as User);
+                    }}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger-soft)] transition-colors"
+                    title="Delete user"
+                  >
+                    <Icons.Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </Cell>
+            </Column>
           </Table>
         </div>
 
@@ -1857,6 +1871,7 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
                   onClose={handleCloseDrawer}
                   onViewTransactions={handleViewTransactions}
                   onEdit={handleEdit}
+                  onDeleteRequest={() => handleRequestDelete(activeUser)}
                 />
               </motion.div>
             )}
@@ -1890,6 +1905,13 @@ export default function UserTable({ searchQuery, userType = 'all', onTotalChange
           await handleTimeDepositSuccess();
           handleCloseTimeDeposit();
         }}
+      />
+
+      <PasswordConfirmationModal
+        open={!!selectedUserForDelete}
+        onClose={() => setSelectedUserForDelete(null)}
+        onConfirm={handleDeleteConfirm}
+        userName={selectedUserForDelete ? getFullName(selectedUserForDelete) : ""}
       />
     </>
   );

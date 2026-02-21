@@ -9,9 +9,11 @@ Endpoints that **increase or decrease InspireBank balance** (or expose it) are s
 | Endpoint | Risk if unrestricted |
 |----------|----------------------|
 | **POST /deposits** | Attacker credits their wallet and inflates InspireBank → unlimited self-credit. |
-| **POST /deposits/by-account-number** | Attacker credits any user's wallet by account number → unlimited credit to arbitrary accounts. |
+| **POST /deposits/by-account-number** | Attacker credits any user wallet from reserve by account number → unlimited credit to arbitrary accounts. |
 | **POST /withdrawals** | User can only debit their own wallet (ownership checked); risk is limited to their balance. |
 | **GET /inspire-bank/balance** | Leak of central bank position; useful for partner reconciliation but must be restricted. |
+| **GET /inspire-bank/ledger** | Leak of full transaction ledger; ADMIN only. |
+| **POST /credit-from-reserve** | Attacker credits any wallet from reserve; ADMIN only. |
 
 So the **critical** restriction is on **deposits**. Balance read is restricted to avoid information leakage.
 
@@ -35,6 +37,8 @@ Users have a **role** in the database: `USER`, `ADMIN`, or `PAYMENT_SERVICE`.
 | **POST /deposits/by-account-number** | **ADMIN** only | Credits a user's main PHP wallet by account number. Can credit any user. |
 | **POST /withdrawals** | **USER**, **ADMIN**, **PAYMENT_SERVICE** | Ownership of `walletId` is always checked (must belong to authenticated user unless you add “on behalf” logic). |
 | **GET /inspire-bank/balance** | **ADMIN** only | Hides central bank position from normal users and from PAYMENT_SERVICE. |
+| **GET /inspire-bank/ledger** | **ADMIN** only | Paginated ledger for Inspire Admin. |
+| **POST /credit-from-reserve** | **ADMIN** only | Credits any wallet from InspireBank reserve. Decreases InspireBank. |
 
 Implementation: `JwtAuthGuard` + `RolesGuard` + `@Roles(...)` on the controller methods. The user’s role is read from the DB in the JWT strategy and attached to `request.user.role`.
 

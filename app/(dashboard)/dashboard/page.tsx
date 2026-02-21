@@ -9,7 +9,7 @@ import Header from "@/components/layout/Header";
 import StatsCard from "./_components/StatsCard";
 import TransactionTable, { Transaction, TransactionStatus } from "./_components/TransactionTable";
 import { MonthlySalesChart, OutflowChart, OutflowItem } from "./_components/Charts";
-import { getDashboardSummary } from "@/lib/api/dashboard";
+import { getDashboardSummary, getInspireBankBalance, getInspireBankLedger } from "@/lib/api/dashboard";
 import { getUsers, User } from "@/lib/api/users";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { staggerContainer, MotionDiv, MotionSection } from "./_components/motion";
@@ -422,6 +422,18 @@ export default function Dashboard() {
     queryFn: getDashboardSummary
   });
 
+  // InspireBank balance = central bank available balance (per API-INSPIREBANK-ECONOMIC-FLOW.md)
+  const { data: inspireBankBalance } = useQuery({
+    queryKey: ["inspire-bank-balance"],
+    queryFn: () => getInspireBankBalance("PHP"),
+  });
+
+  // InspireBank ledger = latest transactions (DEPOSIT, WITHDRAWAL, TRANSFER, CREDIT_FROM_RESERVE)
+  const { data: ledgerData, isLoading: isLedgerLoading } = useQuery({
+    queryKey: ["inspire-bank-ledger"],
+    queryFn: () => getInspireBankLedger("PHP", 1, 20),
+  });
+
   const { data: usersData, isLoading: isUsersLoading } = useQuery({
     queryKey: ["dashboard-users"],
     queryFn: () => getUsers({ page: 1, limit: 50, sortBy: "lastLogin", sortOrder: "desc" })
@@ -451,7 +463,7 @@ export default function Dashboard() {
   const summary = summaryData?.data;
 
   const {
-    recentTransactions,
+    recentTransactions: userRecentTransactions,
     monthlyTotal,
     activityTotal,
     activityChange,
@@ -459,9 +471,51 @@ export default function Dashboard() {
   } = useMemo(() => buildDashboardInsights(users), [users]);
   const hasActivity = activityItems.length > 0;
 
-  const totalUsers = summary?.totals.users ?? usersData?.data?.pagination.total ?? 0;
+  // Map InspireBank ledger to Transaction format for the table (preferred source)
+  const recentTransactions = useMemo((): Transaction[] => {
+    const items = ledgerData?.items ?? [];
+    if (items.length === 0) return userRecentTransactions;
+    const typeLabels: Record<string, string> = {
+      DEPOSIT: "Deposit",
+      WITHDRAWAL: "Withdrawal",
+      TRANSFER: "Transfer",
+      CREDIT_FROM_RESERVE: "Credit from Reserve",
+    };
+    const typeInitials: Record<string, string> = {
+      DEPOSIT: "D",
+      WITHDRAWAL: "W",
+      TRANSFER: "T",
+      CREDIT_FROM_RESERVE: "C",
+    };
+    return items.map((entry) => {
+      const num = parseFloat(String(entry.amount)) || 0;
+      const typeLabel = typeLabels[entry.type] ?? entry.type;
+      let amountStr: string;
+      if (entry.type === "DEPOSIT") {
+        amountStr = `+${formatCurrency(num)}`;
+      } else if (entry.type === "WITHDRAWAL" || entry.type === "CREDIT_FROM_RESERVE") {
+        amountStr = `-${formatCurrency(num)}`;
+      } else {
+        amountStr = formatCurrency(num);
+      }
+      return {
+        id: entry.id,
+        name: typeLabel,
+        category: "Inspire Bank Ledger",
+        date: formatDateValue(entry.createdAt),
+        amount: amountStr,
+        status: "Paid" as TransactionStatus,
+        initials: typeInitials[entry.type] ?? "—",
+      };
+    });
+  }, [ledgerData?.items, userRecentTransactions]);
+
   const totalTimeDeposits = summary?.totals.timeDeposits ?? 0;
-  const totalAvailBalance = summary?.totals.availableBalance ?? 0;
+  // Total Available Balance = InspireBank (central bank) available balance from database
+  const totalAvailBalance =
+    inspireBankBalance?.balance != null
+      ? parseFloat(String(inspireBankBalance.balance)) || 0
+      : (summary?.totals.availableBalance ?? 0);
   const userTrend = summary?.trends.users;
   const depositTrend = summary?.trends.timeDeposits;
   const balanceTrend = summary?.trends.availableBalance;
@@ -505,6 +559,9 @@ export default function Dashboard() {
       totalStock, // ✅ ADD stock total here
     };
   }, [agentCountData, investorCountData, users]); // ✅ ADD users to dependency array
+
+  // Total Users = agents + investors only (excludes demo/test accounts)
+  const totalUsers = userBreakdown.total;
 
   // Calculate time deposits breakdown
   const depositsBreakdown = useMemo(() => {
@@ -665,7 +722,10 @@ export default function Dashboard() {
             />
           </div>
           <div>
-            <TransactionTable transactions={recentTransactions} isLoading={isUsersLoading} />
+            <TransactionTable
+              transactions={recentTransactions}
+              isLoading={isLedgerLoading}
+            />
           </div>
         </motion.div>
 

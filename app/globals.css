@@ -122,12 +122,12 @@
 
   /* Background layers - Cool neutral grays (no warm tones) */
   --background: #f8f9fa;
-  --background-subtle: #f1f3f5;
-  --background-elevated: #ffffff;
+  --background-subtle: #b6b7b9;
+  --background-elevated: #dbd7d7;
 
   /* Surface layers - Clean cool grays */
   --surface: #f3f4f6;
-  --surface-soft: #e5e7eb;
+  --surface-soft: #f3f4f6;
   --surface-elevated: #ffffff;
   --surface-hover: #e5e7eb;
 
@@ -4819,4 +4819,125 @@ body > div[class*="rs-picker"] {
   display: inline-block !important;
   height: auto !important;
   max-height: 24px !important;
+}
+
+
+/* Remove red hover effect from logout button */
+.rail-logout-item:hover,
+.rs-dropdown-item.rail-logout-item:hover,
+.rs-dropdown-menu .rail-logout-item:hover {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+}
+
+.rail-logout-item:hover *,
+.rs-dropdown-item.rail-logout-item:hover *,
+.rs-dropdown-menu .rail-logout-item:hover * {
+  color: var(--text-primary) !important;
+}
+
+/* Light theme */
+[data-theme="light"] .rail-logout-item:hover,
+[data-theme="light"] .rs-dropdown-item.rail-logout-item:hover,
+[data-theme="light"] .rs-dropdown-menu .rail-logout-item:hover {
+  background: transparent !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .rail-logout-item:hover *,
+[data-theme="light"] .rs-dropdown-item.rail-logout-item:hover *,
+[data-theme="light"] .rs-dropdown-menu .rail-logout-item:hover * {
+  color: var(--text-primary) !important;
+}
+
+
+/* Solid background for logout button */
+.rail-logout-item,
+.rs-dropdown-item.rail-logout-item,
+.rs-dropdown-menu .rail-logout-item,
+.app-rail--expanded .rs-dropdown-menu .rail-logout-item,
+.app-rail--collapsed .rs-dropdown-menu .rail-logout-item {
+  background: #2d3748 !important;
+  background-color: #2d3748 !important;
+  border: 1px solid rgba(139, 148, 158, 0.2) !important;
+  border-radius: 8px !important;
+}
+
+/* Light theme solid background */
+[data-theme="light"] .rail-logout-item,
+[data-theme="light"] .rs-dropdown-item.rail-logout-item,
+[data-theme="light"] .rs-dropdown-menu .rail-logout-item,
+[data-theme="light"] .app-rail--expanded .rs-dropdown-menu .rail-logout-item,
+[data-theme="light"] .app-rail--collapsed .rs-dropdown-menu .rail-logout-item {
+  background: #f3f4f6 !important;
+  background-color: #f3f4f6 !important;
+  border: 1px solid #d1d5db !important;
+}
+
+
+/* Ultra-specific override for expanded sidebar logout button background */
+html body .app-rail--expanded .rail-footer .rs-dropdown-menu .rail-logout-item,
+html body .app-rail--expanded .rs-dropdown-menu .rs-dropdown-item.rail-logout-item,
+html body .app-rail .rail-footer .rs-dropdown-menu .rail-logout-item,
+html body div.app-rail .rs-dropdown-menu .rail-logout-item {
+  background: #2d3748 !important;
+  background-color: #2d3748 !important;
+}
+
+/* Light theme ultra-specific */
+html[data-theme="light"] body .app-rail--expanded .rail-footer .rs-dropdown-menu .rail-logout-item,
+html[data-theme="light"] body .app-rail--expanded .rs-dropdown-menu .rs-dropdown-item.rail-logout-item,
+html[data-theme="light"] body .app-rail .rail-footer .rs-dropdown-menu .rail-logout-item,
+html[data-theme="light"] body div.app-rail .rs-dropdown-menu .rail-logout-item {
+  background: #f3f4f6 !important;
+  background-color: #f3f4f6 !important;
+}
+
+/* Remove dropdown container styling to prevent double box */
+.rail-footer .rs-dropdown-menu,
+.rail-user-toggle ~ .rs-dropdown-menu {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+
+/* MAXIMUM SPECIFICITY - Force background color in all cases */
+html body div.app-root div.app-rail--expanded div.rail-footer div.rs-dropdown-menu div.rail-logout-item,
+html body div.app-root div.app-rail--expanded div.rail-footer div.rs-dropdown-menu a.rail-logout-item,
+html body div.app-root div.app-rail--expanded .rs-dropdown-menu .rs-dropdown-item.rail-logout-item,
+html body .app-root .app-rail--expanded .rail-footer .rs-dropdown-menu .rail-logout-item,
+html body .app-root .app-rail--expanded .rs-dropdown-menu .rail-logout-item,
+body div[class*="app-rail"] .rs-dropdown-menu .rail-logout-item,
+body .app-rail .rs-dropdown-menu .rail-logout-item,
+.app-rail .rs-dropdown-menu .rail-logout-item {
+  background: #2d3748 !important;
+  background-color: #2d3748 !important;
+}
+
+/* Light theme maximum specificity */
+html[data-theme="light"] body div.app-root div.app-rail--expanded div.rail-footer div.rs-dropdown-menu div.rail-logout-item,
+html[data-theme="light"] body div.app-root div.app-rail--expanded div.rail-footer div.rs-dropdown-menu a.rail-logout-item,
+html[data-theme="light"] body div.app-root div.app-rail--expanded .rs-dropdown-menu .rs-dropdown-item.rail-logout-item,
+html[data-theme="light"] body .app-root .app-rail--expanded .rail-footer .rs-dropdown-menu .rail-logout-item,
+html[data-theme="light"] body .app-root .app-rail--expanded .rs-dropdown-menu .rail-logout-item,
+html[data-theme="light"] body div[class*="app-rail"] .rs-dropdown-menu .rail-logout-item,
+html[data-theme="light"] body .app-rail .rs-dropdown-menu .rail-logout-item,
+html[data-theme="light"] .app-rail .rs-dropdown-menu .rail-logout-item {
+  background: #f3f4f6 !important;
+  background-color: #f3f4f6 !important;
+}
+
+
+/* Chat FAB Tooltip - Change from red to theme color */
+.chat-fab-tooltip {
+  background: var(--primary) !important;
+  color: white !important;
+}
+
+/* Light theme */
+[data-theme="light"] .chat-fab-tooltip {
+  background: var(--primary) !important;
+  color: white !important;
 }
